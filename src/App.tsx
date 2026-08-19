@@ -1,0 +1,74 @@
+import { useState } from "react";
+import { Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import { Header } from "./components/layout/Header";
+import { Footer } from "./components/layout/Footer";
+import { FloatingSideButtons } from "./components/layout/FloatingSideButtons";
+import { ScrollToHash } from "./components/layout/ScrollToHash";
+import { LevelTestModal } from "./components/modals/LevelTestModal";
+import { ContactModal } from "./components/modals/ContactModal";
+import { HomePage } from "./pages/HomePage";
+import { AboutPage } from "./pages/AboutPage";
+import { ProgramPage } from "./pages/ProgramPage";
+import { CurriculumPage } from "./pages/CurriculumPage";
+import { ProcessPage } from "./pages/ProcessPage";
+import { PlaceholderPage } from "./pages/PlaceholderPage";
+
+function App() {
+  const [levelTestOpen, setLevelTestOpen] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
+  const openLevelTest = () => setLevelTestOpen(true);
+
+  return (
+    <AuthProvider>
+      <ScrollToHash />
+      <div className="flex min-h-screen flex-col">
+        <Header />
+
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={<HomePage onOpenLevelTest={openLevelTest} />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/program" element={<ProgramPage onOpenLevelTest={openLevelTest} />} />
+            <Route
+              path="/curriculum"
+              element={<CurriculumPage onOpenLevelTest={openLevelTest} />}
+            />
+            <Route
+              path="/process"
+              element={<ProcessPage onOpenLevelTest={openLevelTest} />}
+            />
+            <Route path="/notice" element={<PlaceholderPage title="공지사항" />} />
+            <Route path="/counsel" element={<PlaceholderPage title="1:1 상담" />} />
+            <Route path="/admin" element={<PlaceholderPage title="홈페이지 관리" />} />
+            <Route path="/mypage" element={<PlaceholderPage title="정보변경" />} />
+            <Route
+              path="/install/zoom"
+              element={<PlaceholderPage title="ZOOM 설치 안내" />}
+            />
+            <Route
+              path="/install/tencent"
+              element={<PlaceholderPage title="텐센트 미팅 설치 안내" />}
+            />
+            <Route
+              path="/install/teams"
+              element={<PlaceholderPage title="Microsoft Teams 설치 안내" />}
+            />
+            <Route path="*" element={<PlaceholderPage title="페이지를 찾을 수 없습니다" />} />
+          </Routes>
+        </main>
+
+        <Footer onOpenContact={() => setContactOpen(true)} />
+        <FloatingSideButtons
+          onOpenLevelTest={openLevelTest}
+          onOpenContact={() => setContactOpen(true)}
+        />
+      </div>
+
+      <LevelTestModal open={levelTestOpen} onClose={() => setLevelTestOpen(false)} />
+      <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
+    </AuthProvider>
+  );
+}
+
+export default App;
