@@ -1,11 +1,24 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Star, Quote } from "lucide-react";
+import { Star, Quote, User } from "lucide-react";
 import { Container } from "../ui/Container";
 import { SectionHeading } from "../ui/SectionHeading";
 import { REVIEWS } from "../../data/reviews";
+import { listPublishedReviews } from "../../services/reviewService";
+import type { StudentReview } from "../../lib/community/types";
+
+function formatDate(iso: string) {
+  return iso.slice(0, 10);
+}
 
 export function ReviewsSection() {
   const { t } = useTranslation("home");
+  const { t: tReviews } = useTranslation("reviews");
+  const [liveReviews, setLiveReviews] = useState<StudentReview[]>([]);
+
+  useEffect(() => {
+    listPublishedReviews().then(setLiveReviews);
+  }, []);
 
   return (
     <section id="reviews" className="scroll-mt-28 bg-white py-20 sm:py-24">
@@ -55,6 +68,38 @@ export function ReviewsSection() {
             </div>
           ))}
         </div>
+
+        {liveReviews.length > 0 && (
+          <div className="mt-14">
+            <h3 className="text-center text-lg font-bold text-brand-950">
+              {tReviews("live_section_title")}
+            </h3>
+            <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {liveReviews.map((r) => (
+                <div
+                  key={r.id}
+                  className="flex flex-col rounded-2xl border border-slate-100 bg-brand-50/30 p-6"
+                >
+                  <p className="flex-1 text-[13.5px] leading-relaxed text-slate-600">{r.content}</p>
+                  <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-brand-600">
+                        <User size={14} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-brand-950">{r.studentEnglishName}</p>
+                        <p className="text-xs text-slate-400">
+                          {tReviews("taught_by", { teacher: r.teacherName })}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-medium text-slate-400">{formatDate(r.createdAt)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </Container>
     </section>
   );

@@ -107,6 +107,19 @@
     "title": "我的教室",
     "loading": "加载中...",
     "not_found": "未找到学习信息。",
-    "schedule_table_title": "课程安排表"
+    "schedule_table_title": "课程安排表",
+    "write_review_cta": "撰写学习评价"
+  },
+  "review_modal": {
+    "title": "撰写学习评价",
+    "intro": "您撰写的评价经管理员确认后将公开在官网上。教师姓名和您的姓名会自动填写，无法任意修改。",
+    "teacher_label": "授课教师",
+    "content_label": "评价内容",
+    "content_placeholder": "请自由分享您上课的感受。",
+    "validation_error": "请输入评价内容。",
+    "submitting": "提交中...",
+    "submit": "提交评价",
+    "success": "感谢您宝贵的评价。经管理员确认后将公开在官网上。",
+    "confirm_ok": "确认"
   }
 }

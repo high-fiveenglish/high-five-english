@@ -16,7 +16,7 @@ export function PricingSection({
     PRICING_DURATIONS.find((d) => d.id === activeId) ?? PRICING_DURATIONS[0];
 
   return (
-    <section id="pricing" className="scroll-mt-28 bg-white py-20 sm:py-24">
+    <section id="pricing" className="scroll-mt-20 bg-white py-14 sm:py-20">
       <Container>
         <SectionHeading
           eyebrow={t("pricing.eyebrow")}

@@ -107,6 +107,19 @@
     "title": "Lớp học của tôi",
     "loading": "Đang tải...",
     "not_found": "Không tìm thấy thông tin khóa học.",
-    "schedule_table_title": "Bảng lịch học"
+    "schedule_table_title": "Bảng lịch học",
+    "write_review_cta": "Viết đánh giá"
+  },
+  "review_modal": {
+    "title": "Viết đánh giá",
+    "intro": "Đánh giá của bạn sẽ được hiển thị trên trang chủ sau khi quản trị viên duyệt. Tên giáo viên và tên của bạn được tự động điền và không thể chỉnh sửa.",
+    "teacher_label": "Giáo viên phụ trách",
+    "content_label": "Nội dung đánh giá",
+    "content_placeholder": "Hãy chia sẻ cảm nhận của bạn về buổi học.",
+    "validation_error": "Vui lòng nhập nội dung đánh giá.",
+    "submitting": "Đang gửi...",
+    "submit": "Gửi đánh giá",
+    "success": "Cảm ơn đánh giá quý báu của bạn. Đánh giá sẽ hiển thị trên trang chủ sau khi được duyệt.",
+    "confirm_ok": "Xác nhận"
   }
 }

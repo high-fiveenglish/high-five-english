@@ -10,6 +10,7 @@ import { LessonScheduleTable } from "../components/classroom/LessonScheduleTable
 import { InstructorModal } from "../components/home/InstructorModal";
 import { RescheduleConfirmModal } from "../components/modals/RescheduleConfirmModal";
 import { EvaluationDetailModal } from "../components/modals/EvaluationDetailModal";
+import { ReviewSubmitModal } from "../components/modals/ReviewSubmitModal";
 import { useAuth } from "../context/AuthContext";
 import { getMyClassroom, type MyClassroomSnapshot } from "../services/classroomService";
 import type { Lesson } from "../lib/scheduling/types";
@@ -23,6 +24,7 @@ function ClassroomContent() {
   const [teacherModalOpen, setTeacherModalOpen] = useState(false);
   const [rescheduleTarget, setRescheduleTarget] = useState<Lesson | null>(null);
   const [evaluationTarget, setEvaluationTarget] = useState<Lesson | null>(null);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
   const load = () => {
     if (!actor) return;
@@ -78,6 +80,15 @@ function ClassroomContent() {
           <TextbookInfoCard textbook={textbook} />
         </div>
 
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={() => setReviewModalOpen(true)}
+            className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-brand-700 transition hover:border-brand-300 hover:bg-brand-50"
+          >
+            {t("page.write_review_cta")}
+          </button>
+        </div>
+
         <div className="mt-6">
           <LessonCalendar
             lessons={lessons}
@@ -115,6 +126,11 @@ function ClassroomContent() {
         onRescheduled={() => load()}
       />
       <EvaluationDetailModal lesson={evaluationTarget} onClose={() => setEvaluationTarget(null)} />
+      <ReviewSubmitModal
+        open={reviewModalOpen}
+        teacherName={teacher.name}
+        onClose={() => setReviewModalOpen(false)}
+      />
     </section>
   );
 }

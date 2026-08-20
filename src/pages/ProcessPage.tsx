@@ -106,7 +106,7 @@ export function ProcessPage({
       {/* detailed steps */}
       <section className="py-16 sm:py-20">
         <Container className="max-w-3xl">
-          <div className="relative space-y-6">
+          <div className="relative space-y-7 sm:space-y-8">
             <div className="absolute bottom-6 left-6 top-6 hidden w-px bg-brand-100 sm:block" />
             {PROCESS_STEPS.map((s) => {
               const Icon = STEP_ICONS[s.icon];
@@ -124,14 +124,14 @@ export function ProcessPage({
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-extrabold text-white sm:hidden">
                         {s.step}
                       </span>
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                        <Icon size={19} />
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 sm:h-16 sm:w-16">
+                        <Icon size={28} />
                       </div>
                       <div>
                         <span className="block text-[11px] font-bold uppercase tracking-wide text-accent-500">
                           STEP {s.step}
                         </span>
-                        <h3 className="text-lg font-bold text-brand-950">
+                        <h3 className="text-lg font-bold text-brand-950 sm:text-xl">
                           {t(`steps.${s.step}.title`)}
                         </h3>
                       </div>

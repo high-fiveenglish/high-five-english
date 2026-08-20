@@ -46,7 +46,10 @@
       "holidays": "휴일 관리",
       "meetingLinks": "화상회의 링크 관리",
       "payments": "결제 관리",
-      "siteSettings": "사이트 설정"
+      "siteSettings": "사이트 설정",
+      "notices": "공지사항 관리",
+      "reviews": "수강후기 관리",
+      "levelTest": "레벨테스트 신청 관리"
     }
   },
   "reschedule": {
@@ -95,6 +98,53 @@
     "title": "홈페이지 관리",
     "link_reschedule": "수업 연기 신청 내역 보기",
     "link_meeting_settings": "화상회의 프로그램 설정",
-    "link_accounts": "계정 및 권한 관리"
+    "link_accounts": "계정 및 권한 관리",
+    "link_notices": "공지사항 관리",
+    "link_reviews": "수강후기 관리",
+    "link_level_test": "레벨테스트 신청 내역 보기"
+  },
+  "notices": {
+    "admin_title": "공지사항 관리",
+    "table_headers": { "title": "제목", "author": "작성자", "created_at": "작성일시", "status": "상태", "actions": "관리" },
+    "no_rows": "등록된 공지사항이 없습니다.",
+    "new_button": "새 공지사항 작성",
+    "create_title": "공지사항 작성",
+    "edit_title": "공지사항 수정",
+    "field_title": "제목",
+    "field_content": "내용",
+    "field_published": "공개",
+    "validation_error": "제목과 내용을 모두 입력해주세요.",
+    "saving": "저장 중...",
+    "save": "저장",
+    "status_published": "공개",
+    "status_hidden": "비공개",
+    "delete_button": "삭제"
+  },
+  "reviews": {
+    "admin_title": "수강후기 관리",
+    "admin_description": "학생이 작성한 후기를 확인하고 공개 여부를 관리합니다. 공개로 전환한 후기만 홈페이지에 노출됩니다.",
+    "no_rows": "작성된 후기가 없습니다.",
+    "about_teacher": "· {{teacher}} 선생님",
+    "status_published": "공개",
+    "status_hidden": "비공개"
+  },
+  "level_test": {
+    "admin_title": "레벨테스트 신청 내역",
+    "admin_description": "홈페이지에서 접수된 무료 레벨테스트 신청 내역입니다. 희망 시간은 신청자의 현지 시간과 한국시간(KST)을 함께 표시합니다.",
+    "table_headers": {
+      "created_at": "신청일시",
+      "contact": "신청자 · 연락처",
+      "student": "수강생 · 나이",
+      "preferred_time": "희망 수업 시간",
+      "plan": "희망 수업",
+      "platform": "희망 프로그램",
+      "referred_teacher": "추천 강사",
+      "status": "상태"
+    },
+    "no_rows": "접수된 신청 내역이 없습니다.",
+    "age_value": "{{age}}세",
+    "kst_label": "한국시간",
+    "min_suffix": "분",
+    "status_labels": { "new": "신규", "contacted": "연락완료" }
   }
 }

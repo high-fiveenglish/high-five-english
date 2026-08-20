@@ -40,6 +40,9 @@ export type ClassroomTextbook = {
 export type ClassroomStudent = {
   id: string;
   name: string;
+  /** The name shown on the student's behalf wherever displaying their legal Korean
+   * name isn't appropriate (e.g. a public review) — see findStudentEnglishName. */
+  englishName: string;
 };
 
 export type LevelTestResult = {
@@ -93,12 +96,12 @@ const TEACHER_SARAH = INSTRUCTORS.find((i) => i.id === "sarah")!;
 const TEACHER_EMILY = INSTRUCTORS.find((i) => i.id === "emily")!;
 
 export const STUDENTS: ClassroomStudent[] = [
-  { id: "demo-student", name: "김민준" },
-  { id: "student-2", name: "이서연" },
-  { id: "student-3", name: "박도윤" },
-  { id: "student-4", name: "최지우" },
-  { id: "student-5", name: "정하은" },
-  { id: "student-6", name: "강태오" },
+  { id: "demo-student", name: "김민준", englishName: "Minjun Kim" },
+  { id: "student-2", name: "이서연", englishName: "Seoyeon Lee" },
+  { id: "student-3", name: "박도윤", englishName: "Doyoon Park" },
+  { id: "student-4", name: "최지우", englishName: "Jiwoo Choi" },
+  { id: "student-5", name: "정하은", englishName: "Haeun Jung" },
+  { id: "student-6", name: "강태오", englishName: "Taeo Kang" },
 ];
 
 export const CLOSURES: ClosureDate[] = [

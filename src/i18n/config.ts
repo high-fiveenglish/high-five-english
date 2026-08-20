@@ -16,16 +16,20 @@ export interface SupportedLanguageInput {
   /** The language's own name for itself — never translated (한국어 stays 한국어 to a Chinese reader). */
   nativeName: string;
   flag: string;
+  /** IANA zone the level-test modal shows class-time slots in for this language. Omit
+   * for a language with no single associated country (e.g. "en") — the modal falls back
+   * to the browser's own detected zone via lib/timezone.ts's detectLocalTimeZone(). */
+  timeZone?: string;
 }
 
 // `as const satisfies` derives a precise "ko"|"en"|"zh"|"vi" union for Lang below, the
 // same extensibility pattern already used for MeetingPlatformId in data/meetingPlatforms.ts —
 // adding a language here automatically widens Lang everywhere it's used.
 export const SUPPORTED_LANGUAGES = [
-  { code: "ko", nativeName: "한국어", flag: "🇰🇷" },
+  { code: "ko", nativeName: "한국어", flag: "🇰🇷", timeZone: "Asia/Seoul" },
   { code: "en", nativeName: "English", flag: "🇺🇸" },
-  { code: "zh", nativeName: "中文", flag: "🇨🇳" },
-  { code: "vi", nativeName: "Tiếng Việt", flag: "🇻🇳" },
+  { code: "zh", nativeName: "中文", flag: "🇨🇳", timeZone: "Asia/Shanghai" },
+  { code: "vi", nativeName: "Tiếng Việt", flag: "🇻🇳", timeZone: "Asia/Ho_Chi_Minh" },
 ] as const satisfies SupportedLanguageInput[];
 
 export type Lang = (typeof SUPPORTED_LANGUAGES)[number]["code"];
@@ -60,6 +64,8 @@ const ALL_NAMESPACES = [
   "textbooks",
   "courses",
   "legal",
+  "notices",
+  "reviews",
   "classroom",
   "admin",
   "teacher",

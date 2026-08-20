@@ -33,13 +33,13 @@ export function AboutTeaserSection() {
           <span className="inline-block rounded-full bg-accent-50 px-3.5 py-1 text-xs font-semibold text-accent-600">
             {t("aboutTeaser.eyebrow")}
           </span>
-          <h2 className="mt-4 text-2xl font-bold text-brand-950 sm:text-3xl">
+          <h2 className="mt-4 text-2xl font-bold leading-tight text-brand-950 sm:text-3xl md:mt-5 md:text-[2.25rem]">
             {t("aboutTeaser.heading")}
           </h2>
-          <p className="mt-5 text-[15px] leading-relaxed text-slate-500">
+          <p className="mt-5 text-[15px] leading-relaxed text-slate-500 sm:text-base">
             {t("aboutTeaser.paragraph1")}
           </p>
-          <p className="mt-4 text-[15px] leading-relaxed text-slate-500">
+          <p className="mt-4 text-[15px] leading-relaxed text-slate-500 sm:text-base">
             {t("aboutTeaser.paragraph2")}
           </p>
           <LocalizedLink

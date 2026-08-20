@@ -175,3 +175,7 @@ export function blockedDatesFor(teacherId: string): Set<string> {
 export function findStudentName(studentId: string): string {
   return STUDENTS.find((s) => s.id === studentId)?.name ?? studentId;
 }
+
+export function findStudentEnglishName(studentId: string): string {
+  return STUDENTS.find((s) => s.id === studentId)?.englishName ?? studentId;
+}

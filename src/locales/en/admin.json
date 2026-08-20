@@ -46,7 +46,10 @@
       "holidays": "Holidays",
       "meetingLinks": "Meeting Links",
       "payments": "Payments",
-      "siteSettings": "Settings"
+      "siteSettings": "Settings",
+      "notices": "Notices",
+      "reviews": "Reviews",
+      "levelTest": "Level Test Requests"
     }
   },
   "reschedule": {
@@ -95,6 +98,53 @@
     "title": "Site Management",
     "link_reschedule": "View Reschedule Requests",
     "link_meeting_settings": "Video Meeting Settings",
-    "link_accounts": "Accounts & Permissions"
+    "link_accounts": "Accounts & Permissions",
+    "link_notices": "Manage Notices",
+    "link_reviews": "Manage Reviews",
+    "link_level_test": "View Level Test Requests"
+  },
+  "notices": {
+    "admin_title": "Notices",
+    "table_headers": { "title": "Title", "author": "Author", "created_at": "Created", "status": "Status", "actions": "Actions" },
+    "no_rows": "No notices yet.",
+    "new_button": "New Notice",
+    "create_title": "Write Notice",
+    "edit_title": "Edit Notice",
+    "field_title": "Title",
+    "field_content": "Content",
+    "field_published": "Published",
+    "validation_error": "Please fill in both the title and content.",
+    "saving": "Saving...",
+    "save": "Save",
+    "status_published": "Published",
+    "status_hidden": "Hidden",
+    "delete_button": "Delete"
+  },
+  "reviews": {
+    "admin_title": "Reviews",
+    "admin_description": "Review what students have submitted and manage which ones are published. Only published reviews appear on the homepage.",
+    "no_rows": "No reviews submitted yet.",
+    "about_teacher": "· with {{teacher}}",
+    "status_published": "Published",
+    "status_hidden": "Hidden"
+  },
+  "level_test": {
+    "admin_title": "Level Test Requests",
+    "admin_description": "Free level test requests submitted from the homepage. Preferred times are shown both in the requester's own timezone and in Korea Standard Time (KST).",
+    "table_headers": {
+      "created_at": "Submitted",
+      "contact": "Contact",
+      "student": "Student · Age",
+      "preferred_time": "Preferred Time",
+      "plan": "Plan",
+      "platform": "Program",
+      "referred_teacher": "Referred Teacher",
+      "status": "Status"
+    },
+    "no_rows": "No requests yet.",
+    "age_value": "age {{age}}",
+    "kst_label": "KST",
+    "min_suffix": " min",
+    "status_labels": { "new": "New", "contacted": "Contacted" }
   }
 }

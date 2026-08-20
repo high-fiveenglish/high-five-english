@@ -1,0 +1,10 @@
+{
+  "meta": {
+    "title": "Notices | HiFive English",
+    "description": "Read the latest notices from HiFive English."
+  },
+  "eyebrow": "Support",
+  "title": "Notices",
+  "loading": "Loading...",
+  "empty": "No notices yet."
+}

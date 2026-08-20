@@ -107,6 +107,19 @@
     "title": "My Classroom",
     "loading": "Loading...",
     "not_found": "Enrollment information not found.",
-    "schedule_table_title": "Class Schedule"
+    "schedule_table_title": "Class Schedule",
+    "write_review_cta": "Write a Review"
+  },
+  "review_modal": {
+    "title": "Write a Review",
+    "intro": "Your review will be shown on the homepage once an admin approves it. Your teacher's name and your own name are filled in automatically and can't be edited.",
+    "teacher_label": "Your Teacher",
+    "content_label": "Review",
+    "content_placeholder": "Share what you've enjoyed about your classes.",
+    "validation_error": "Please enter your review.",
+    "submitting": "Submitting...",
+    "submit": "Submit Review",
+    "success": "Thank you for your review! It will appear on the homepage once approved.",
+    "confirm_ok": "OK"
   }
 }

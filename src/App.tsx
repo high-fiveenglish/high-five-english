@@ -19,8 +19,12 @@ import { ClassroomPage } from "./pages/ClassroomPage";
 import { AdminReschedulePage } from "./pages/AdminReschedulePage";
 import { InstallPage } from "./pages/InstallPage";
 import { LegalPage } from "./pages/LegalPage";
+import { NoticeListPage } from "./pages/NoticeListPage";
 import { AdminMeetingSettingsPage } from "./pages/AdminMeetingSettingsPage";
 import { AdminAccountsPage } from "./pages/AdminAccountsPage";
+import { AdminNoticesPage } from "./pages/AdminNoticesPage";
+import { AdminReviewsPage } from "./pages/AdminReviewsPage";
+import { AdminLevelTestPage } from "./pages/AdminLevelTestPage";
 import { TeacherDashboardPage } from "./pages/TeacherDashboardPage";
 import { RouteGuard } from "./components/auth/RouteGuard";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
@@ -58,7 +62,7 @@ function App() {
                 />
                 <Route path="process" element={<ProcessPage onOpenLevelTest={openLevelTest} />} />
                 <Route path="install" element={<InstallPage />} />
-                <Route path="notice" element={<PlaceholderPage title={t("nav.notice")} />} />
+                <Route path="notice" element={<NoticeListPage />} />
                 <Route path="counsel" element={<PlaceholderPage title={t("nav.counsel")} />} />
                 <Route path="terms" element={<LegalPage doc="terms" path="/terms" />} />
                 <Route path="privacy" element={<LegalPage doc="privacy" path="/privacy" />} />
@@ -84,6 +88,9 @@ function App() {
                         { label: t("admin:home.link_reschedule"), to: "/admin/reschedule-requests" },
                         { label: t("admin:home.link_meeting_settings"), to: "/admin/meeting-settings" },
                         { label: t("admin:home.link_accounts"), to: "/admin/accounts" },
+                        { label: t("admin:home.link_notices"), to: "/admin/notices" },
+                        { label: t("admin:home.link_reviews"), to: "/admin/reviews" },
+                        { label: t("admin:home.link_level_test"), to: "/admin/level-test-requests" },
                       ]}
                     />
                   </RouteGuard>
@@ -100,6 +107,18 @@ function App() {
               <Route
                 path="/admin/accounts"
                 element={<AdminAccountsPage onOpenLogin={openLogin} />}
+              />
+              <Route
+                path="/admin/notices"
+                element={<AdminNoticesPage onOpenLogin={openLogin} />}
+              />
+              <Route
+                path="/admin/reviews"
+                element={<AdminReviewsPage onOpenLogin={openLogin} />}
+              />
+              <Route
+                path="/admin/level-test-requests"
+                element={<AdminLevelTestPage onOpenLogin={openLogin} />}
               />
               <Route path="/mypage" element={<PlaceholderPage title={t("topbar.my_info")} />} />
               <Route path="*" element={<PlaceholderPage title={t("errors.not_found_title")} />} />

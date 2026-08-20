@@ -10,6 +10,8 @@ import {
 } from "../data/classroomMock";
 import { MEETING_PLATFORMS, type MeetingPlatformId } from "../data/meetingPlatforms";
 import { DEFAULT_ENTRY_WINDOW, type EntryWindowSettings } from "../data/siteSettings";
+import { SEED_NOTICES } from "../data/noticesSeed";
+import { SEED_STUDENT_REVIEWS } from "../data/reviewsSeed";
 import type {
   ClosureDate,
   DailyEvaluation,
@@ -19,6 +21,7 @@ import type {
   TeacherUnavailability,
 } from "../lib/scheduling/types";
 import type { PermissionKey } from "../lib/auth/types";
+import type { LevelTestRequest, Notice, StudentReview } from "../lib/community/types";
 
 export type TeacherMeetingLinks = Partial<Record<MeetingPlatformId, string>>;
 
@@ -44,6 +47,9 @@ export const store = {
   // Same overlay pattern for each account's chosen UI language, keyed by accountId —
   // overlays Account.preferredLanguage rather than mutating the static ACCOUNTS array.
   preferredLanguageOverrides: {} as Record<string, string>,
+  notices: [...SEED_NOTICES] as Notice[],
+  studentReviews: [...SEED_STUDENT_REVIEWS] as StudentReview[],
+  levelTestRequests: [] as LevelTestRequest[],
 };
 
 function cloneLinks(
