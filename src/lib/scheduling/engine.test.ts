@@ -30,6 +30,7 @@ function makeEnrollment(overrides: Partial<Enrollment> = {}): Enrollment {
     weeklyDays: [1, 3, 5] as WeekDay[], // Mon/Wed/Fri
     classTime: "19:00",
     status: "active",
+    meetingPlatform: "zoom",
     ...overrides,
   };
 }

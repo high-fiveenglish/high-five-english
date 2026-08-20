@@ -96,6 +96,7 @@ const enrollmentDraft: Enrollment = {
   weeklyDays: [1, 3, 5],
   classTime: "19:00",
   status: "active",
+  meetingPlatform: "zoom",
 };
 
 function buildSeed(): {
@@ -224,6 +225,17 @@ function buildSeed(): {
       enrollment = { ...enrollment, remainingLessons: enrollment.remainingLessons - 1 };
     }
   }
+
+  // --- demo join links: an admin has already registered URLs for the next two
+  // upcoming classes, but not further out yet — shows both button states in the UI.
+  // (Placeholder Zoom join links — not a real scheduled meeting.)
+  const upcomingScheduled = lessons
+    .filter((l) => l.status === "scheduled" && l.scheduledDate >= todayIso)
+    .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+  const demoUrls = ["https://zoom.us/j/1234567890", "https://zoom.us/j/1234567891"];
+  upcomingScheduled.slice(0, demoUrls.length).forEach((lesson, i) => {
+    replace({ ...lesson, meetingUrl: demoUrls[i] });
+  });
 
   return { enrollment, lessons, evaluations, rescheduleRequests };
 }

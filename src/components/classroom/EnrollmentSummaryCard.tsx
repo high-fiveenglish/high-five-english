@@ -1,7 +1,9 @@
-import { Calendar, Clock, Repeat, User, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Calendar, Clock, Repeat, User, Sparkles, Video } from "lucide-react";
 import type { Enrollment } from "../../lib/scheduling/types";
 import type { ClassroomCourse, LevelTestResult } from "../../data/classroomMock";
 import type { Instructor } from "../../data/instructors";
+import { getMeetingPlatform } from "../../data/meetingPlatforms";
 
 const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -39,6 +41,7 @@ export function EnrollmentSummaryCard({
     .sort((a, b) => a - b)
     .map((d) => WEEKDAY_LABELS[d])
     .join(", ");
+  const platform = getMeetingPlatform(enrollment.meetingPlatform);
 
   return (
     <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_8px_24px_rgba(20,44,88,0.06)] sm:p-7">
@@ -80,6 +83,28 @@ export function EnrollmentSummaryCard({
         </div>
         <User size={16} className="shrink-0 text-slate-400" />
       </button>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 p-4">
+        <div className="flex items-center gap-2.5">
+          <div
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-extrabold text-white"
+            style={{ backgroundColor: platform.brandColor }}
+          >
+            <Video size={15} />
+          </div>
+          <p className="text-sm text-slate-500">
+            수업 프로그램{" "}
+            <span className="font-bold text-brand-950">{platform.shortName}</span>
+          </p>
+        </div>
+        <Link
+          to="/install"
+          state={{ scrollTo: platform.id }}
+          className="rounded-lg bg-brand-600 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-brand-700"
+        >
+          설치 안내 보기
+        </Link>
+      </div>
 
       <div className="mt-4 grid grid-cols-3 gap-2 text-center">
         <div className="rounded-xl bg-brand-50/60 p-3">

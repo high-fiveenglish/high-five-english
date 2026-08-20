@@ -1,3 +1,5 @@
+import type { MeetingPlatformId } from "../../data/meetingPlatforms";
+
 /** Calendar date, e.g. "2026-08-25" */
 export type ISODate = string;
 /** 24h wall-clock time, e.g. "19:00". Always interpreted as Asia/Seoul (KST). */
@@ -56,6 +58,10 @@ export interface Enrollment {
   weeklyDays: WeekDay[];
   classTime: ISOTime;
   status: EnrollmentStatus;
+  /** Which video-meeting program this enrollment's classes use. Set at enrollment
+   * creation (optionally pre-filled from the teacher's default) and shown as-is to
+   * the student — never recomputed at read time. */
+  meetingPlatform: MeetingPlatformId;
 }
 
 export interface Lesson {
@@ -69,6 +75,9 @@ export interface Lesson {
   /** Set on the original lesson once it has been superseded by a new tail lesson. */
   rescheduledToLessonId?: string;
   evaluationStatus: EvaluationStatus;
+  /** The join link for this specific class session, set by an admin/teacher ahead of
+   * time. Undefined until registered — the "수업 입장" button stays disabled until then. */
+  meetingUrl?: string;
 }
 
 export interface DailyEvaluation {

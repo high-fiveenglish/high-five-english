@@ -14,6 +14,8 @@ import { CurriculumPage } from "./pages/CurriculumPage";
 import { ProcessPage } from "./pages/ProcessPage";
 import { ClassroomPage } from "./pages/ClassroomPage";
 import { AdminReschedulePage } from "./pages/AdminReschedulePage";
+import { InstallPage } from "./pages/InstallPage";
+import { AdminMeetingSettingsPage } from "./pages/AdminMeetingSettingsPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 
 function App() {
@@ -57,24 +59,17 @@ function App() {
               element={
                 <PlaceholderPage
                   title="홈페이지 관리"
-                  links={[{ label: "수업 연기 신청 내역 보기", to: "/admin/reschedule-requests" }]}
+                  links={[
+                    { label: "수업 연기 신청 내역 보기", to: "/admin/reschedule-requests" },
+                    { label: "화상회의 프로그램 설정", to: "/admin/meeting-settings" },
+                  ]}
                 />
               }
             />
             <Route path="/admin/reschedule-requests" element={<AdminReschedulePage />} />
+            <Route path="/admin/meeting-settings" element={<AdminMeetingSettingsPage />} />
             <Route path="/mypage" element={<PlaceholderPage title="정보변경" />} />
-            <Route
-              path="/install/zoom"
-              element={<PlaceholderPage title="ZOOM 설치 안내" />}
-            />
-            <Route
-              path="/install/tencent"
-              element={<PlaceholderPage title="텐센트 미팅 설치 안내" />}
-            />
-            <Route
-              path="/install/teams"
-              element={<PlaceholderPage title="Microsoft Teams 설치 안내" />}
-            />
+            <Route path="/install" element={<InstallPage />} />
             <Route path="*" element={<PlaceholderPage title="페이지를 찾을 수 없습니다" />} />
           </Routes>
         </main>

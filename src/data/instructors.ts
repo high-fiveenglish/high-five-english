@@ -1,3 +1,5 @@
+import type { MeetingPlatformId } from "./meetingPlatforms";
+
 export type Instructor = {
   id: string;
   name: string;
@@ -10,6 +12,9 @@ export type Instructor = {
   detail: string;
   audioSrc: string;
   career: string[];
+  /** Pre-fills a new enrollment's meetingPlatform when an admin assigns this
+   * teacher — informational default only, not read at runtime by student screens. */
+  defaultMeetingPlatform?: MeetingPlatformId;
 };
 
 // NOTE: Photos are placeholder initials-avatars. Swap in real instructor
@@ -42,6 +47,7 @@ export const INSTRUCTORS: Instructor[] = [
       "중고등학생 및 성인 학습자를 대상으로 문법 교정, 에세이 작문, 토론 수업을 진행합니다. 단순 대화에 그치지 않고 문장 단위의 정확한 피드백을 제공해 시험 영어와 실전 영어를 동시에 잡아줍니다.",
     audioSrc: "/audio/intro-2.wav",
     career: ["캐나다 온타리오 교육학 학사", "중고등 영어 전문 6년", "IELTS/토플 라이팅 코칭"],
+    defaultMeetingPlatform: "zoom",
   },
   {
     id: "emily",

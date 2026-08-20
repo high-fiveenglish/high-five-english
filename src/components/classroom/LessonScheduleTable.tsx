@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, CalendarClock } from "lucide-react";
+import { FileText, CalendarClock, Video } from "lucide-react";
 import type { Lesson } from "../../lib/scheduling/types";
 import { LessonStatusBadge } from "./LessonStatusBadge";
 import { combineDateTimeMs, hoursBetween } from "../../lib/scheduling/dateUtils";
@@ -32,7 +32,7 @@ export function LessonScheduleTable({
       <table className="w-full min-w-[720px] border-collapse">
         <thead>
           <tr className="border-b border-slate-100 bg-slate-50/70">
-            {["날짜", "시간", "수업명", "강사", "출결상태", "평가서", "연기"].map((h) => (
+            {["날짜", "시간", "수업명", "강사", "출결상태", "평가서", "입장", "연기"].map((h) => (
               <th
                 key={h}
                 className="whitespace-nowrap px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-slate-400"
@@ -72,6 +72,24 @@ export function LessonScheduleTable({
                       </button>
                     ) : (
                       <span className="text-xs text-slate-400">평가서 작성 중</span>
+                    )
+                  ) : (
+                    <span className="text-xs text-slate-300">—</span>
+                  )}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3">
+                  {lesson.status === "scheduled" ? (
+                    lesson.meetingUrl ? (
+                      <a
+                        href={lesson.meetingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-700"
+                      >
+                        <Video size={13} /> 수업 입장
+                      </a>
+                    ) : (
+                      <span className="text-xs text-slate-400">입장 링크 준비 중</span>
                     )
                   ) : (
                     <span className="text-xs text-slate-300">—</span>

@@ -23,10 +23,11 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     label: "프로그램 설치",
+    href: "/install",
     children: [
-      { label: "ZOOM 설치 안내", href: "/install/zoom" },
-      { label: "텐센트 미팅 설치 안내", href: "/install/tencent" },
-      { label: "Microsoft Teams 설치 안내", href: "/install/teams" },
+      { label: "Zoom 설치 안내", href: "/install", scrollTo: "zoom" },
+      { label: "VooV Meeting 설치 안내", href: "/install", scrollTo: "voov" },
+      { label: "Microsoft Teams 설치 안내", href: "/install", scrollTo: "teams" },
     ],
   },
   {

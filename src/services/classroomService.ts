@@ -28,6 +28,11 @@ import type {
   Result,
 } from "../lib/scheduling/types";
 import type { Instructor } from "../data/instructors";
+import {
+  MEETING_PLATFORMS,
+  type MeetingPlatform,
+  type MeetingPlatformId,
+} from "../data/meetingPlatforms";
 
 let idCounter = 1000;
 const idGen = () => `svc-${++idCounter}`;
@@ -39,6 +44,12 @@ const store = {
   lessons: [...CLASSROOM_SEED.lessons] as Lesson[],
   evaluations: [...CLASSROOM_SEED.evaluations] as DailyEvaluation[],
   rescheduleRequests: [...CLASSROOM_SEED.rescheduleRequests] as RescheduleRequest[],
+  // overlays kept separate from the static catalog / shared instructor data so
+  // neither of those modules needs to be mutated directly.
+  platformEnabled: Object.fromEntries(
+    MEETING_PLATFORMS.map((p) => [p.id, p.enabled]),
+  ) as Record<MeetingPlatformId, boolean>,
+  teacherDefaultPlatform: (DEMO_TEACHER.defaultMeetingPlatform ?? "zoom") as MeetingPlatformId,
 };
 
 export interface MyClassroomSnapshot {
@@ -158,4 +169,47 @@ export async function overrideLessonDate(
   store.enrollment = { ...store.enrollment, endDate: result.value.recomputedEndDate };
 
   return { ok: true, value: result.value.updatedLesson };
+}
+
+// --- meeting platform / join-link management --------------------------------
+
+export type MeetingPlatformRow = Omit<MeetingPlatform, "id"> & {
+  id: MeetingPlatformId;
+  enabled: boolean;
+};
+
+export async function listMeetingPlatforms(): Promise<MeetingPlatformRow[]> {
+  return MEETING_PLATFORMS.map((p) => ({ ...p, enabled: store.platformEnabled[p.id] }));
+}
+
+export async function setPlatformEnabled(id: MeetingPlatformId, enabled: boolean): Promise<void> {
+  store.platformEnabled = { ...store.platformEnabled, [id]: enabled };
+}
+
+export async function updateEnrollmentMeetingPlatform(
+  platformId: MeetingPlatformId,
+): Promise<Enrollment> {
+  store.enrollment = { ...store.enrollment, meetingPlatform: platformId };
+  return store.enrollment;
+}
+
+export async function getTeacherDefaultPlatform(): Promise<MeetingPlatformId> {
+  return store.teacherDefaultPlatform;
+}
+
+export async function updateTeacherDefaultPlatform(platformId: MeetingPlatformId): Promise<void> {
+  store.teacherDefaultPlatform = platformId;
+}
+
+export async function updateLessonMeetingUrl(
+  lessonId: string,
+  meetingUrl: string,
+): Promise<Result<Lesson>> {
+  const lesson = store.lessons.find((l) => l.id === lessonId);
+  if (!lesson) {
+    return { ok: false, error: { code: "LESSON_NOT_RESCHEDULABLE", message: "수업을 찾을 수 없습니다." } };
+  }
+  const updatedLesson = { ...lesson, meetingUrl };
+  store.lessons = store.lessons.map((l) => (l.id === lessonId ? updatedLesson : l));
+  return { ok: true, value: updatedLesson };
 }
