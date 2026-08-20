@@ -59,6 +59,7 @@ const ALL_NAMESPACES = [
   "platforms",
   "textbooks",
   "courses",
+  "legal",
   "classroom",
   "admin",
   "teacher",

@@ -18,6 +18,7 @@ import { ProcessPage } from "./pages/ProcessPage";
 import { ClassroomPage } from "./pages/ClassroomPage";
 import { AdminReschedulePage } from "./pages/AdminReschedulePage";
 import { InstallPage } from "./pages/InstallPage";
+import { LegalPage } from "./pages/LegalPage";
 import { AdminMeetingSettingsPage } from "./pages/AdminMeetingSettingsPage";
 import { AdminAccountsPage } from "./pages/AdminAccountsPage";
 import { TeacherDashboardPage } from "./pages/TeacherDashboardPage";
@@ -59,6 +60,8 @@ function App() {
                 <Route path="install" element={<InstallPage />} />
                 <Route path="notice" element={<PlaceholderPage title={t("nav.notice")} />} />
                 <Route path="counsel" element={<PlaceholderPage title={t("nav.counsel")} />} />
+                <Route path="terms" element={<LegalPage doc="terms" path="/terms" />} />
+                <Route path="privacy" element={<LegalPage doc="privacy" path="/privacy" />} />
               </Route>
 
               {/* Protected pages: never indexed, so no locale prefix — language comes

@@ -128,12 +128,12 @@ export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
         <div className="mt-10 flex flex-col items-center gap-2 border-t border-white/10 pt-6 text-center text-[12px] text-white/35 sm:flex-row sm:justify-between">
           <p>{t("footer.copyright", { year: new Date().getFullYear() })}</p>
           <div className="flex gap-4">
-            <span className="cursor-default" title={t("footer.in_preparation")}>
+            <LocalizedLink to="/terms" className="transition hover:text-white">
               {t("footer.terms")}
-            </span>
-            <span className="cursor-default" title={t("footer.in_preparation")}>
+            </LocalizedLink>
+            <LocalizedLink to="/privacy" className="transition hover:text-white">
               {t("footer.privacy")}
-            </span>
+            </LocalizedLink>
           </div>
         </div>
       </Container>
