@@ -21,7 +21,8 @@ export type PermissionKey =
   | "siteSettings"
   | "notices"
   | "reviews"
-  | "levelTest";
+  | "levelTest"
+  | "pricing";
 
 export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   students: "학생 관리",
@@ -38,6 +39,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   notices: "공지사항 관리",
   reviews: "수강후기 관리",
   levelTest: "레벨테스트 신청 관리",
+  pricing: "수강료 관리",
 };
 
 export const ALL_PERMISSION_KEYS = Object.keys(PERMISSION_LABELS) as PermissionKey[];

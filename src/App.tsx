@@ -25,6 +25,7 @@ import { AdminAccountsPage } from "./pages/AdminAccountsPage";
 import { AdminNoticesPage } from "./pages/AdminNoticesPage";
 import { AdminReviewsPage } from "./pages/AdminReviewsPage";
 import { AdminLevelTestPage } from "./pages/AdminLevelTestPage";
+import { AdminPricingPage } from "./pages/AdminPricingPage";
 import { TeacherDashboardPage } from "./pages/TeacherDashboardPage";
 import { RouteGuard } from "./components/auth/RouteGuard";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
@@ -91,6 +92,7 @@ function App() {
                         { label: t("admin:home.link_notices"), to: "/admin/notices" },
                         { label: t("admin:home.link_reviews"), to: "/admin/reviews" },
                         { label: t("admin:home.link_level_test"), to: "/admin/level-test-requests" },
+                        { label: t("admin:home.link_pricing"), to: "/admin/pricing" },
                       ]}
                     />
                   </RouteGuard>
@@ -119,6 +121,10 @@ function App() {
               <Route
                 path="/admin/level-test-requests"
                 element={<AdminLevelTestPage onOpenLogin={openLogin} />}
+              />
+              <Route
+                path="/admin/pricing"
+                element={<AdminPricingPage onOpenLogin={openLogin} />}
               />
               <Route path="/mypage" element={<PlaceholderPage title={t("topbar.my_info")} />} />
               <Route path="*" element={<PlaceholderPage title={t("errors.not_found_title")} />} />

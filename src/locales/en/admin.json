@@ -49,7 +49,8 @@
       "siteSettings": "Settings",
       "notices": "Notices",
       "reviews": "Reviews",
-      "levelTest": "Level Test Requests"
+      "levelTest": "Level Test Requests",
+      "pricing": "Pricing"
     }
   },
   "reschedule": {
@@ -101,7 +102,8 @@
     "link_accounts": "Accounts & Permissions",
     "link_notices": "Manage Notices",
     "link_reviews": "Manage Reviews",
-    "link_level_test": "View Level Test Requests"
+    "link_level_test": "View Level Test Requests",
+    "link_pricing": "Manage Pricing"
   },
   "notices": {
     "admin_title": "Notices",
@@ -146,5 +148,10 @@
     "kst_label": "KST",
     "min_suffix": " min",
     "status_labels": { "new": "New", "contacted": "Contacted" }
+  },
+  "pricing": {
+    "admin_title": "Pricing",
+    "admin_description": "Manage each market's sale price independently. Editing one currency's price never affects another currency's price, and prices are never auto-converted by exchange rate.",
+    "class_column": "Class"
   }
 }

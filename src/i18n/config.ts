@@ -10,6 +10,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import resourcesToBackend from "i18next-resources-to-backend";
+import type { CurrencyCode } from "../data/currencies";
 
 export interface SupportedLanguageInput {
   code: string;
@@ -20,20 +21,42 @@ export interface SupportedLanguageInput {
    * for a language with no single associated country (e.g. "en") — the modal falls back
    * to the browser's own detected zone via lib/timezone.ts's detectLocalTimeZone(). */
   timeZone?: string;
+  /** Currency the pricing section displays for this language. Omit for a language with
+   * no single associated market (e.g. "en") — callers fall back to the business's own
+   * currency (KRW), same convention as the timeZone fallback above. */
+  currency?: CurrencyCode;
 }
 
 // `as const satisfies` derives a precise "ko"|"en"|"zh"|"vi" union for Lang below, the
 // same extensibility pattern already used for MeetingPlatformId in data/meetingPlatforms.ts —
 // adding a language here automatically widens Lang everywhere it's used.
 export const SUPPORTED_LANGUAGES = [
-  { code: "ko", nativeName: "한국어", flag: "🇰🇷", timeZone: "Asia/Seoul" },
+  { code: "ko", nativeName: "한국어", flag: "🇰🇷", timeZone: "Asia/Seoul", currency: "KRW" },
   { code: "en", nativeName: "English", flag: "🇺🇸" },
-  { code: "zh", nativeName: "中文", flag: "🇨🇳", timeZone: "Asia/Shanghai" },
-  { code: "vi", nativeName: "Tiếng Việt", flag: "🇻🇳", timeZone: "Asia/Ho_Chi_Minh" },
+  { code: "zh", nativeName: "中文", flag: "🇨🇳", timeZone: "Asia/Shanghai", currency: "CNY" },
+  { code: "vi", nativeName: "Tiếng Việt", flag: "🇻🇳", timeZone: "Asia/Ho_Chi_Minh", currency: "VND" },
 ] as const satisfies SupportedLanguageInput[];
 
 export type Lang = (typeof SUPPORTED_LANGUAGES)[number]["code"];
 export type SupportedLanguage = SupportedLanguageInput;
+
+function findLanguageEntry(lang: Lang): SupportedLanguageInput | undefined {
+  return (SUPPORTED_LANGUAGES as readonly SupportedLanguageInput[]).find((l) => l.code === lang);
+}
+
+/** The IANA zone the level-test modal should show class-time slots in for `lang`, or
+ * undefined if this language has no single associated market (caller decides the fallback —
+ * see lib/timezone.ts's detectLocalTimeZone). */
+export function getLanguageTimeZone(lang: Lang): string | undefined {
+  return findLanguageEntry(lang)?.timeZone;
+}
+
+/** The currency the pricing section should display for `lang`, or undefined if this
+ * language has no single associated market (callers fall back to "KRW", the business's
+ * own currency). */
+export function getLanguageCurrency(lang: Lang): CurrencyCode | undefined {
+  return findLanguageEntry(lang)?.currency;
+}
 
 export const DEFAULT_LANG: Lang = "ko";
 export const SUPPORTED_LANG_CODES: Lang[] = SUPPORTED_LANGUAGES.map((l) => l.code);

@@ -12,6 +12,7 @@ import { MEETING_PLATFORMS, type MeetingPlatformId } from "../data/meetingPlatfo
 import { DEFAULT_ENTRY_WINDOW, type EntryWindowSettings } from "../data/siteSettings";
 import { SEED_NOTICES } from "../data/noticesSeed";
 import { SEED_STUDENT_REVIEWS } from "../data/reviewsSeed";
+import { PRICING_SEED, type PricingDuration } from "../data/pricing";
 import type {
   ClosureDate,
   DailyEvaluation,
@@ -50,6 +51,12 @@ export const store = {
   notices: [...SEED_NOTICES] as Notice[],
   studentReviews: [...SEED_STUDENT_REVIEWS] as StudentReview[],
   levelTestRequests: [] as LevelTestRequest[],
+  // Deep-cloned (not just spread) since each row's price25/price50 are themselves nested
+  // objects an admin edit needs to replace without mutating the static seed.
+  pricing: PRICING_SEED.map((d) => ({
+    ...d,
+    rows: d.rows.map((r) => ({ ...r, price25: { ...r.price25 }, price50: { ...r.price50 } })),
+  })) as PricingDuration[],
 };
 
 function cloneLinks(

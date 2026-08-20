@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { CheckCircle2 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { useLanguage } from "../../context/LanguageContext";
-import { SUPPORTED_LANGUAGES, type SupportedLanguageInput } from "../../i18n/config";
+import { getLanguageTimeZone } from "../../i18n/config";
 import { zonedWallTimeToUtcISO, detectLocalTimeZone } from "../../lib/timezone";
 import { MEETING_PLATFORMS, type MeetingPlatformId } from "../../data/meetingPlatforms";
 import { submitLevelTestRequest } from "../../services/levelTestService";
@@ -80,12 +80,7 @@ export function LevelTestModal({ open, onClose }: { open: boolean; onClose: () =
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  const timeZone = useMemo(() => {
-    const configured = (SUPPORTED_LANGUAGES as readonly SupportedLanguageInput[]).find(
-      (l) => l.code === lang,
-    )?.timeZone;
-    return configured ?? detectLocalTimeZone();
-  }, [lang]);
+  const timeZone = useMemo(() => getLanguageTimeZone(lang) ?? detectLocalTimeZone(), [lang]);
 
   const isValid =
     form.name.trim() !== "" &&

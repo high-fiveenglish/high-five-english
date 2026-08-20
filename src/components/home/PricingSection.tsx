@@ -1,9 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Sparkles } from "lucide-react";
 import { Container } from "../ui/Container";
 import { SectionHeading } from "../ui/SectionHeading";
-import { PRICING_DURATIONS, formatWon } from "../../data/pricing";
+import { useLanguage } from "../../context/LanguageContext";
+import { getLanguageCurrency } from "../../i18n/config";
+import { formatPrice } from "../../data/currencies";
+import { listPricing } from "../../services/pricingService";
+import type { PricingDuration } from "../../data/pricing";
+
+const DEFAULT_ACTIVE_DURATION_ID = "3m";
 
 export function PricingSection({
   onOpenLevelTest,
@@ -11,9 +17,17 @@ export function PricingSection({
   onOpenLevelTest: () => void;
 }) {
   const { t } = useTranslation("home");
-  const [activeId, setActiveId] = useState(PRICING_DURATIONS[1].id);
-  const active =
-    PRICING_DURATIONS.find((d) => d.id === activeId) ?? PRICING_DURATIONS[0];
+  const { lang } = useLanguage();
+  const currency = getLanguageCurrency(lang) ?? "KRW";
+  const [durations, setDurations] = useState<PricingDuration[]>([]);
+  const [activeId, setActiveId] = useState(DEFAULT_ACTIVE_DURATION_ID);
+
+  useEffect(() => {
+    listPricing().then(setDurations);
+  }, []);
+
+  const active = durations.find((d) => d.id === activeId) ?? durations[0];
+  if (!active) return null;
 
   return (
     <section id="pricing" className="scroll-mt-20 bg-white py-14 sm:py-20">
@@ -26,7 +40,7 @@ export function PricingSection({
 
         {/* duration tabs */}
         <div className="mx-auto mt-10 flex w-full max-w-md items-center justify-center gap-2 rounded-2xl bg-slate-100 p-1.5">
-          {PRICING_DURATIONS.map((d) => (
+          {durations.map((d) => (
             <button
               key={d.id}
               onClick={() => setActiveId(d.id)}
@@ -82,19 +96,22 @@ export function PricingSection({
                   </tr>
                 </thead>
                 <tbody>
-                  {active.rows.map((row, i) => (
-                    <tr
-                      key={row.frequencyId}
-                      className={i % 2 === 0 ? "bg-white" : "bg-slate-50/70"}
-                    >
-                      <td className="px-6 py-4 text-sm font-medium text-slate-600">
-                        {t(`pricing.frequency.${row.frequencyId}`)}
-                      </td>
-                      <td className="px-6 py-4 text-right text-base font-extrabold text-brand-950">
-                        {formatWon(col.key === "price25" ? row.price25 : row.price50)}
-                      </td>
-                    </tr>
-                  ))}
+                  {active.rows.map((row, i) => {
+                    const price = (col.key === "price25" ? row.price25 : row.price50)[currency];
+                    return (
+                      <tr
+                        key={row.frequencyId}
+                        className={i % 2 === 0 ? "bg-white" : "bg-slate-50/70"}
+                      >
+                        <td className="px-6 py-4 text-sm font-medium text-slate-600">
+                          {t(`pricing.frequency.${row.frequencyId}`)}
+                        </td>
+                        <td className="px-6 py-4 text-right text-base font-extrabold text-brand-950">
+                          {price !== undefined ? formatPrice(price, currency) : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
