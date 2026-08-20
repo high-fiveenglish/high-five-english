@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "title": "课程体系 | HiFive English",
+    "description": "分级定制课程体系与权威教材，系统提升英语实力。"
+  },
+  "hero": {
+    "eyebrow": "课程体系",
+    "heading": "从实用英语到高阶英语，循序渐进不间断",
+    "paragraph": "HiFive English 将12年间积累的200余种教材，按年龄、级别和学习目的重新进行了梳理。从符合学生当前水平和目标的阶段开始学习，自然过渡到下一阶段。"
+  },
+  "roadmap": {
+    "eyebrow": "级别路线图",
+    "title": "按年龄与级别划分的学习阶段"
+  },
+  "representativeBooksLabel": "代表教材",
+  "stages": {
+    "phonics": {
+      "name": "自然拼读 · 英语启蒙",
+      "ageRange": "学龄前 ~ 小学一年级",
+      "goal": "学习字母和发音规则，能听懂并跟读简短句子。",
+      "focus": ["字母/自然拼读", "短句听说", "基础词汇"]
+    },
+    "basic-conversation": {
+      "name": "基础会话 · 开启分级读物",
+      "ageRange": "小学1 ~ 3年级",
+      "goal": "运用日常表达进行简短对话，并开始阅读图画书水平的读物。",
+      "focus": ["日常会话", "图画书阅读", "问答句型"]
+    },
+    "reading-smalltalk": {
+      "name": "阅读强化 · 简短交流",
+      "ageRange": "小学3 ~ 6年级",
+      "goal": "阅读段落篇幅的文章，并能就主题用几句话表达自己的想法。",
+      "focus": ["段落阅读", "主题简短交流", "基础写作"]
+    },
+    "conversation-debate": {
+      "name": "进阶会话 · 辩论",
+      "ageRange": "小学高年级 ~ 初中",
+      "goal": "以准确的语法进行对话，并有理有据地条理清晰地表达自己的观点。",
+      "focus": ["语法对话", "表达观点", "辩论入门"]
+    },
+    "advanced-discussion": {
+      "name": "高阶会话 · 时事讨论 · 商务英语",
+      "ageRange": "高中 ~ 成人",
+      "goal": "就时事和专业话题展开讨论，练习演讲及实际工作场景中使用的英语。",
+      "focus": ["时事讨论", "演讲/演示", "职场英语"]
+    }
+  },
+  "catalogSection": {
+    "eyebrow": "全部教材目录",
+    "title": "会话·语法·原版读物教材总览",
+    "description": "可按文件夹、分类（{{categoryCount}}个）、级别和年龄段，搜索并筛选 Conversation、Grammar、Reading books 三个文件夹中的 {{count}} 种教材。",
+    "disclaimer": "「原版·章节书」分类的级别，是根据文件名标注的AR值或广为人知的Lexile换算得出的CEFR近似值，仅供参考，并非精确分班依据。"
+  },
+  "nativeReadingTrack": {
+    "badge": "进阶轨道",
+    "title": "原版阅读轨道",
+    "desc": "专为阅读进度较快的学生设置的独立学习轨道。以AR（Accelerated Reader）指数为标准，从章节书到文学作品循序渐进地阅读。",
+    "levels": {
+      "advanced": "进阶",
+      "advancedPlus": "高阶"
+    }
+  },
+  "specialty": {
+    "eyebrow": "按目的划分的特色课程",
+    "title": "日常会话之外还需要的能力",
+    "programs": {
+      "business": {
+        "title": "商务英语",
+        "desc": "练习工作邮件、会议、演示等实际工作场景中可直接使用的表达。"
+      },
+      "exam": {
+        "title": "考试备考",
+        "desc": "针对多益、托福、雅思、OPIc等目标考试类型进行实战学习。"
+      },
+      "expression": {
+        "title": "表达与词汇强化",
+        "desc": "按情景学习母语者实际使用的惯用表达和词汇。"
+      },
+      "interview": {
+        "title": "面试与发音",
+        "desc": "按面试场景练习预期问题，并同步进行发音矫正训练。"
+      }
+    }
+  },
+  "closing": {
+    "heading": "教材目录将持续更新扩充",
+    "paragraph": "只要发现更好的资料，我们会持续审核并添加。通过免费级别测试，为您确认准确的起始级别。",
+    "cta": "申请免费级别测试"
+  },
+  "catalog": {
+    "searchPlaceholder": "按教材名称或关键词搜索（例：phonics、辩论、TED）",
+    "allFolders": "全部文件夹",
+    "allCategories": "全部分类",
+    "allLevels": "全部级别",
+    "allAges": "全部年龄段",
+    "countLabel": "显示 {{filtered}} / {{total}} 种",
+    "tableHeaders": ["教材名称", "文件夹", "分类", "级别", "年龄段", "推荐要点"],
+    "emptyState": "没有符合条件的教材。",
+    "footnote": "级别与年龄段是根据各系列教材通常的课程定位得出的实务参考值，实际分班以学生测试结果为准。标注(?)的教材仅凭文件夹名称无法明确确认出版社及内容构成，建议查看实际封面与目录确认。"
+  }
+}

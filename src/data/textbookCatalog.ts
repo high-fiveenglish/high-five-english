@@ -228,6 +228,12 @@ function levelKeysFromText(text: string): CEFRLevel[] {
   return found.length === 0 ? [levelKeyFromText(text)] : found;
 }
 
+// `category` retains its original Korean value — it is not display text,
+// it is the stable lookup key into textbooks.json's `categories` dictionary
+// (e.g. t("textbooks:categories." + category)). `note` is intentionally NOT
+// stored here: notes are looked up by `name` into textbooks.json's `notes`
+// dictionary instead, so the Korean note text from RawEntry is parsed but
+// discarded in buildEntries().
 export type TextbookEntry = {
   name: string;
   folder: Folder;
@@ -236,12 +242,11 @@ export type TextbookEntry = {
   levelKeys: CEFRLevel[];
   chipLevel: CEFRLevel;
   ages: AgeGroup[];
-  note: string;
   unverified: boolean;
 };
 
 function buildEntries(raw: RawEntry[], folder: Folder): TextbookEntry[] {
-  return raw.map(([name, category, levelText, ages, note]) => {
+  return raw.map(([name, category, levelText, ages]) => {
     const levelKeys = levelKeysFromText(levelText);
     return {
       name: name.replace(" (?)", ""),
@@ -251,7 +256,6 @@ function buildEntries(raw: RawEntry[], folder: Folder): TextbookEntry[] {
       levelKeys,
       chipLevel: levelKeys[0],
       ages,
-      note,
       unverified: name.includes("(?)"),
     };
   });

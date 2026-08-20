@@ -1,0 +1,100 @@
+{
+  "eyebrow": "관리자",
+  "meeting_settings": {
+    "title": "화상회의 프로그램 설정",
+    "description": "여기서 지정한 값은 학생의 내 강의실과 프로그램 설치 페이지에 그대로 반영됩니다. 강사가 등록한 고정 링크가 기본으로 쓰이고, 수업별로 등록한 URL이 있으면 그 링크가 우선합니다.",
+    "platform_enabled_title": "프로그램 사용 여부",
+    "student_platform_title": "수강생 프로그램",
+    "student_platform_desc": "이 값이 해당 학생의 내 강의실에 표시됩니다.",
+    "teacher_links_title": "강사별 화상회의 링크 현황",
+    "teacher_links_desc": "강사가 강사 페이지에서 직접 등록할 수 있는 값과 동일합니다 — 여기서도 대신 수정할 수 있습니다.",
+    "lesson_url_title": "수업별 참여 URL 등록 (예외 등록)",
+    "all_students": "전체 학생",
+    "table_headers": {
+      "student": "학생명",
+      "teacher": "강사",
+      "datetime": "수업 일시",
+      "url": "참여 URL"
+    },
+    "no_lessons": "예정된 수업이 없습니다.",
+    "no_link_placeholder": "등록된 링크 없음",
+    "url_placeholder": "https://zoom.us/j/...",
+    "save": "저장"
+  },
+  "accounts": {
+    "title": "계정 및 권한 관리",
+    "description": "General Administrator 계정마다 사용할 수 있는 기능을 여기서 지정합니다. 여기서 부여하지 않은 기능은 화면에서 숨겨질 뿐 아니라, 해당 계정으로 직접 호출해도 서비스 단계에서 차단됩니다.",
+    "id_label": "아이디",
+    "save_permissions": "권한 저장",
+    "saving": "저장 중...",
+    "all_accounts_title": "전체 계정 목록",
+    "table_headers": { "id": "아이디", "name": "이름", "role": "역할" },
+    "roles": {
+      "general_manager": "General Manager",
+      "general_admin": "General Administrator",
+      "teacher": "Teacher",
+      "student": "Student"
+    },
+    "permissions": {
+      "students": "학생 관리",
+      "teachers": "강사 관리",
+      "lessons": "수업 관리",
+      "schedule": "스케줄 관리",
+      "textbooks": "교재 관리",
+      "evaluations": "학습평가서 관리",
+      "attendance": "출결 관리",
+      "holidays": "휴일 관리",
+      "meetingLinks": "화상회의 링크 관리",
+      "payments": "결제 관리",
+      "siteSettings": "사이트 설정"
+    }
+  },
+  "reschedule": {
+    "title": "수업 연기 신청 내역",
+    "manual_change_btn": "수업 일정 수동 변경",
+    "description": "학생이 연기한 수업, 강사 결석·휴강·관리자 취소로 자동 연장된 수업이 모두 여기에 기록됩니다. \"종료일 변경 전 → 후\"에서 이 연기가 수강 종료일에 미친 영향을 확인할 수 있습니다.",
+    "table_headers": {
+      "student": "학생명",
+      "course": "수업명",
+      "original_date": "원래 수업일",
+      "requested_by": "신청 주체 · 사유",
+      "requested_at": "신청일시",
+      "new_date": "변경된 수업일",
+      "status": "현재 상태",
+      "end_date_change": "종료일 변경 전 → 후"
+    },
+    "no_rows": "연기 신청 내역이 없습니다.",
+    "cause_labels": {
+      "rescheduled": "학생 연기 신청",
+      "teacher_absent": "강사 결석",
+      "academy_closed": "학원 휴강",
+      "admin_cancelled": "관리자 취소"
+    },
+    "initiated_by_labels": { "student": "학생", "teacher": "강사", "admin": "관리자" },
+    "reason_label": "사유",
+    "status_applied": "적용됨",
+    "status_reverted": "취소됨"
+  },
+  "override_modal": {
+    "title": "수업 일정 수동 변경",
+    "warning": "이 기능은 정규 연기 절차를 건너뛰는 데이터 교정 도구입니다. 신중히 사용해주세요.",
+    "success": "일정이 변경되었습니다.",
+    "confirm_ok": "확인",
+    "target_lesson_label": "대상 수업",
+    "no_lessons_option": "변경 가능한 예정 수업이 없습니다",
+    "new_date_label": "새 날짜",
+    "new_time_label": "새 시간 (선택)",
+    "reason_label": "변경 사유 (필수)",
+    "reason_placeholder": "예: 학생 요청으로 날짜 재조정",
+    "force_label": "요일 패턴·휴무일 검사 무시하고 강제 적용 (force)",
+    "validation_error": "수업, 새 날짜, 변경 사유는 필수입니다.",
+    "submitting": "처리 중...",
+    "submit": "일정 변경 적용"
+  },
+  "home": {
+    "title": "홈페이지 관리",
+    "link_reschedule": "수업 연기 신청 내역 보기",
+    "link_meeting_settings": "화상회의 프로그램 설정",
+    "link_accounts": "계정 및 권한 관리"
+  }
+}

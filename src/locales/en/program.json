@@ -1,0 +1,100 @@
+{
+  "meta": {
+    "title": "About Our Program | HiFive English",
+    "description": "Discover HiFive English's 1:1 interactive video English program — speak what you learn and get real feedback immediately."
+  },
+  "cta": {
+    "startLevelTest": "Start with a Free Level Test",
+    "applyLevelTest": "Book Your Free Level Test"
+  },
+  "strengthsEyebrow": "3 Core Strengths",
+  "hero": {
+    "eyebrow": "About Video English",
+    "headline": "Turn the English you know into English you can actually use",
+    "sub": "HiFive English's 1:1 video English class gives you 25 minutes to say the sentences you've learned out loud — and get corrected on the spot. It's not about memorizing more grammar; it's about building the instinct to actually speak English."
+  },
+  "output": {
+    "eyebrow": "Core Strength 1",
+    "title": "Why \"1:1\" video English, not just \"video English\"",
+    "lead": "Listening more won't make you fluent. Only time spent actually speaking will.",
+    "body": "For students learning English in an EFL environment like Korea — where there's little chance to use English in daily life — what's missing isn't vocabulary or grammar knowledge. It's time spent actually putting that knowledge into words out loud.",
+    "compare": {
+      "left": {
+        "label": "Group Classes",
+        "points": [
+          "Multiple students share one class",
+          "Each student's speaking time is limited",
+          "Time spent waiting for other students' turns"
+        ]
+      },
+      "right": {
+        "label": "1:1 Video English",
+        "points": [
+          "25 or 50 minutes dedicated to just one student",
+          "Instant answers and instant corrections",
+          "Far more speaking practice and corrections overall"
+        ]
+      }
+    },
+    "highlight": "A 25-minute class = 25 minutes that are entirely yours to speak",
+    "closing": "And it's not a class that just marches through a fixed syllabus. When a student's sentence sounds unnatural, the tutor rephrases it more naturally right then and there, and the student says it again using that new phrasing. Repeating this cycle throughout the class turns expressions you merely \"know\" into expressions you can actually \"use.\""
+  },
+  "ai": {
+    "eyebrow": "Core Strength 2",
+    "title": "What AI English apps can't give you",
+    "lead": "AI can hold a conversation. What it can't do is understand you.",
+    "body": "AI chatbots and English learning apps can seem to hold fairly natural conversations within their set patterns. But they can't pick up on unexpected questions, jokes that go off-script, or the fact that you're just having an off day and the words aren't coming out.",
+    "body2": "A human tutor is different. They talk with you to figure out where you hesitate, why you keep making the same mistakes, and why you seem more nervous than usual today — then adjust the difficulty and style of their questions on the spot.",
+    "compare": {
+      "left": {
+        "label": "AI Learning Apps",
+        "points": [
+          "Only responds within pre-set scenarios",
+          "Flags errors mechanically, the same way every time",
+          "Has no sense of how you're feeling or your condition that day"
+        ]
+      },
+      "right": {
+        "label": "HiFive Tutors",
+        "points": [
+          "Handles unexpected questions and situations naturally",
+          "Adjusts approach based on your personality and how you're doing that day",
+          "Understands you more deeply with every class"
+        ]
+      }
+    },
+    "highlight": "AI can be a conversation partner — but it can't be a teacher who truly understands you."
+  },
+  "strengthsTitle": "The HiFive English Difference",
+  "strengths": [
+    {
+      "badge": "12 Years of Standards",
+      "title": "12 years of refined standards, tuition without the markup",
+      "body": "For 12 years, we've continually refined how we select, train, and evaluate our tutors. Only tutors who meet that bar teach our classes, and we cut out costs that have nothing to do with the quality of the class itself, investing that instead in the classes you actually get. We don't believe expensive means better — but we don't aim for cheap for its own sake either."
+    },
+    {
+      "badge": "Step-by-Step Curriculum",
+      "title": "An unbroken path from practical basics to advanced English",
+      "body": "From toddlers just starting with the alphabet and phonics, to middle and high schoolers looking to go beyond school English, to adults who need English for work and travel right now — we build a solid foundation in practical English first, then design each stage to lead naturally into more advanced, academic English."
+    }
+  ],
+  "feedbackStrength": {
+    "badge": "Launching Late 2026",
+    "title": "Feedback that doesn't end when class does",
+    "body": "A one-line comment like \"Great class today\" doesn't really help parents understand what happened in their child's lesson. That's why we're building a system — targeted for launch in late 2026 — that analyzes the entire class from start to finish and delivers far more specific feedback.",
+    "items": [
+      "Actual speaking time",
+      "Class participation",
+      "Expressions the student struggled with",
+      "Grammar and sentence errors",
+      "Pronunciation and phrasing to improve",
+      "What the student is doing well",
+      "What to focus on next class"
+    ],
+    "closing": "Our goal is simple: even without sitting in on the class, you'll know exactly what your child did today — and what they should practice next."
+  },
+  "closingCta": {
+    "title": "See for yourself — it only takes 25 minutes",
+    "body": "Nothing explains it better than experiencing it yourself. Try a free level test and see what a HiFive English class is really like."
+  }
+}

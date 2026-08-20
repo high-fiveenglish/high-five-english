@@ -2,7 +2,7 @@
 // (the teacher's own id) via requireOwnTeacher/requireRole, so a teacher account can
 // never read or write another teacher's students, lessons, or meeting links.
 import { findStudentName } from "./classroomService";
-import { DEMO_COURSE } from "../data/classroomMock";
+import { getDemoCourse } from "../data/classroomMock";
 import type { MeetingPlatformId } from "../data/meetingPlatforms";
 import { markAttendance } from "../lib/scheduling/engine";
 import type { Enrollment, Lesson } from "../lib/scheduling/types";
@@ -26,7 +26,7 @@ export async function listMyStudents(actor: Actor): Promise<ServiceResult<MyStud
     .map((enrollment) => ({
       enrollment,
       studentName: findStudentName(enrollment.studentId),
-      courseName: DEMO_COURSE.courseName,
+      courseName: getDemoCourse().courseName,
     }));
   return okResult(rows);
 }
@@ -52,7 +52,7 @@ export async function listMyLessons(actor: Actor): Promise<ServiceResult<MyLesso
       return {
         ...lesson,
         studentName: findStudentName(enrollment.studentId),
-        courseName: DEMO_COURSE.courseName,
+        courseName: getDemoCourse().courseName,
         meetingPlatform: enrollment.meetingPlatform,
       };
     });

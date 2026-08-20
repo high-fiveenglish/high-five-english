@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   Ear,
   Lightbulb,
@@ -11,19 +12,9 @@ import {
 } from "lucide-react";
 import { Container } from "../components/ui/Container";
 import { SectionHeading } from "../components/ui/SectionHeading";
-import { FaqAccordion } from "../components/ui/FaqAccordion";
-import {
-  CEO_LETTER_PARAGRAPHS,
-  CEO_LETTER_PULL_QUOTE,
-  CEO_LETTER_PARAGRAPHS_2,
-  CEO_LETTER_QUESTIONS,
-  CEO_LETTER_PARAGRAPHS_3,
-  TRUST_SECTION,
-  PHILOSOPHY_SECTION,
-  OUTPUT_STEPS,
-  PARENT_FAQ,
-  FEEDBACK_SYSTEM,
-} from "../data/aboutContent";
+import { FaqAccordion, type FaqEntry } from "../components/ui/FaqAccordion";
+import { SeoHead } from "../components/seo/SeoHead";
+import { OUTPUT_STEPS } from "../data/aboutContent";
 
 const STEP_ICONS = {
   Ear,
@@ -35,20 +26,51 @@ const STEP_ICONS = {
 } as const;
 
 export function AboutPage() {
+  const { t } = useTranslation("about");
+
+  const ceoParagraphs1 = t("ceo_letter.paragraphs_1", {
+    returnObjects: true,
+  }) as string[];
+  const ceoParagraphs2 = t("ceo_letter.paragraphs_2", {
+    returnObjects: true,
+  }) as string[];
+  const ceoQuestions = t("ceo_letter.questions", {
+    returnObjects: true,
+  }) as string[];
+  const ceoParagraphs3 = t("ceo_letter.paragraphs_3", {
+    returnObjects: true,
+  }) as string[];
+  const trustParagraphs = t("trust_section.paragraphs", {
+    returnObjects: true,
+  }) as string[];
+  const philosophyParagraphs = t("philosophy_section.paragraphs", {
+    returnObjects: true,
+  }) as string[];
+  const philosophyClosingParagraphs = t(
+    "philosophy_section.closing_paragraphs",
+    { returnObjects: true }
+  ) as string[];
+  const parentFaqItems = t("parent_faq.items", {
+    returnObjects: true,
+  }) as FaqEntry[];
+  const feedbackItems = t("feedback_system.items", {
+    returnObjects: true,
+  }) as string[];
+
   return (
     <>
+      <SeoHead titleKey="meta.title" descriptionKey="meta.description" ns="about" path="/about" />
       {/* page header */}
       <section className="bg-gradient-to-b from-brand-50 via-white to-white py-14 sm:py-16">
         <Container className="text-center">
           <span className="inline-block rounded-full bg-brand-600/10 px-3.5 py-1.5 text-xs font-bold text-brand-700">
-            회사소개
+            {t("page_header.eyebrow")}
           </span>
           <h1 className="mt-4 text-[1.75rem] font-extrabold leading-tight text-brand-950 sm:text-3xl">
-            하이파이브 잉글리쉬 이야기
+            {t("page_header.title")}
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-slate-500">
-            대표 우종범이 12년간 화상영어를 운영하며 고민해온 것들과, 하이파이브
-            잉글리쉬가 지금 만들어가고 있는 것들을 그대로 전해드립니다.
+            {t("page_header.subtitle")}
           </p>
         </Container>
       </section>
@@ -58,33 +80,33 @@ export function AboutPage() {
         <Container className="max-w-3xl">
           <div className="mb-8 flex items-center gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-base font-bold text-white">
-              우종범
+              {t("ceo_letter.avatar_initial")}
             </div>
             <div>
               <p className="text-sm font-bold text-brand-950">
-                우종범 대표가 전하는 이야기
+                {t("ceo_letter.author_label")}
               </p>
               <p className="text-xs text-slate-400">
-                하이파이브 잉글리쉬 · 화상영어 교육 12년차
+                {t("ceo_letter.author_sub")}
               </p>
             </div>
           </div>
 
           <div className="space-y-5 text-[15.5px] leading-[1.9] text-slate-600">
-            {CEO_LETTER_PARAGRAPHS.map((p) => (
+            {ceoParagraphs1.map((p) => (
               <p key={p}>{p}</p>
             ))}
 
             <blockquote className="rounded-2xl border-l-4 border-accent-400 bg-accent-50/60 px-5 py-4 text-[15.5px] font-bold leading-relaxed text-brand-950">
-              {CEO_LETTER_PULL_QUOTE}
+              {t("ceo_letter.pull_quote")}
             </blockquote>
 
-            {CEO_LETTER_PARAGRAPHS_2.map((p) => (
+            {ceoParagraphs2.map((p) => (
               <p key={p}>{p}</p>
             ))}
 
             <ul className="space-y-2.5 rounded-2xl bg-brand-50/60 p-5">
-              {CEO_LETTER_QUESTIONS.map((q) => (
+              {ceoQuestions.map((q) => (
                 <li key={q} className="flex items-start gap-2.5 text-[14.5px] text-brand-900">
                   <ChevronRight size={16} className="mt-0.5 shrink-0 text-brand-500" />
                   {q}
@@ -92,15 +114,17 @@ export function AboutPage() {
               ))}
             </ul>
 
-            {CEO_LETTER_PARAGRAPHS_3.map((p) => (
+            {ceoParagraphs3.map((p) => (
               <p key={p}>{p}</p>
             ))}
           </div>
 
           <div className="mt-8 text-right text-sm text-slate-400">
-            하이파이브 잉글리쉬 대표
+            {t("ceo_letter.signoff_label")}
             <br />
-            <span className="text-base font-bold text-brand-950">우종범</span>
+            <span className="text-base font-bold text-brand-950">
+              {t("ceo_letter.signoff_name")}
+            </span>
           </div>
         </Container>
       </section>
@@ -110,10 +134,10 @@ export function AboutPage() {
         <Container className="max-w-3xl">
           <Quote size={26} className="text-brand-300" fill="currentColor" />
           <h2 className="mt-4 text-xl font-bold text-brand-950 sm:text-2xl">
-            {TRUST_SECTION.title}
+            {t("trust_section.title")}
           </h2>
           <div className="mt-4 space-y-4 text-[15px] leading-[1.9] text-slate-600">
-            {TRUST_SECTION.paragraphs.map((p) => (
+            {trustParagraphs.map((p) => (
               <p key={p}>{p}</p>
             ))}
           </div>
@@ -124,10 +148,10 @@ export function AboutPage() {
       <section className="py-16 sm:py-20">
         <Container className="max-w-3xl">
           <h2 className="text-xl font-bold text-brand-950 sm:text-2xl">
-            {PHILOSOPHY_SECTION.title}
+            {t("philosophy_section.title")}
           </h2>
           <div className="mt-4 space-y-4 text-[15px] leading-[1.9] text-slate-600">
-            {PHILOSOPHY_SECTION.paragraphs.map((p) => (
+            {philosophyParagraphs.map((p) => (
               <p key={p}>{p}</p>
             ))}
           </div>
@@ -138,13 +162,13 @@ export function AboutPage() {
             {OUTPUT_STEPS.map((step, i) => {
               const Icon = STEP_ICONS[step.icon];
               return (
-                <div key={step.label} className="flex items-center">
+                <div key={step.key} className="flex items-center">
                   <div className="flex flex-col items-center gap-2">
                     <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600/10 text-brand-600">
                       <Icon size={24} />
                     </div>
                     <span className="text-xs font-bold text-brand-950">
-                      {step.label}
+                      {t(`output_steps.${step.key}`)}
                     </span>
                   </div>
                   {i < OUTPUT_STEPS.length - 1 && (
@@ -161,7 +185,7 @@ export function AboutPage() {
 
         <Container className="mt-10 max-w-3xl">
           <div className="space-y-4 text-[15px] leading-[1.9] text-slate-600">
-            {PHILOSOPHY_SECTION.closingParagraphs.map((p) => (
+            {philosophyClosingParagraphs.map((p) => (
               <p key={p}>{p}</p>
             ))}
           </div>
@@ -172,12 +196,12 @@ export function AboutPage() {
       <section className="bg-brand-50/60 py-16 sm:py-20">
         <Container className="max-w-3xl">
           <SectionHeading
-            eyebrow="학부모님이 궁금해하시는 것들"
-            title="옆에서 지켜보지 않아도 궁금한 것들"
+            eyebrow={t("parent_faq.eyebrow")}
+            title={t("parent_faq.title")}
             align="left"
           />
           <div className="mt-8">
-            <FaqAccordion items={PARENT_FAQ} />
+            <FaqAccordion items={parentFaqItems} />
           </div>
         </Container>
       </section>
@@ -187,20 +211,20 @@ export function AboutPage() {
         <Container className="max-w-3xl">
           <div className="rounded-3xl border-2 border-dashed border-brand-200 bg-white p-7 sm:p-9">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-600/10 px-3 py-1.5 text-xs font-bold text-brand-700">
-              <Clock size={13} /> {FEEDBACK_SYSTEM.eta}
+              <Clock size={13} /> {t("feedback_system.eta")}
             </span>
             <h2 className="mt-4 text-xl font-bold text-brand-950 sm:text-2xl">
-              {FEEDBACK_SYSTEM.title}
+              {t("feedback_system.title")}
             </h2>
             <p className="mt-4 text-[15px] leading-[1.9] text-slate-600">
-              {FEEDBACK_SYSTEM.intro}
+              {t("feedback_system.intro")}
             </p>
             <p className="mt-3 text-[15px] leading-[1.9] text-slate-600">
-              {FEEDBACK_SYSTEM.body}
+              {t("feedback_system.body")}
             </p>
 
             <ul className="mt-5 grid gap-2.5 sm:grid-cols-2">
-              {FEEDBACK_SYSTEM.items.map((item) => (
+              {feedbackItems.map((item) => (
                 <li
                   key={item}
                   className="flex items-start gap-2 rounded-xl bg-slate-50 px-4 py-3 text-[13.5px] text-slate-600"
@@ -212,7 +236,7 @@ export function AboutPage() {
             </ul>
 
             <p className="mt-6 text-[15px] leading-[1.9] text-slate-600">
-              {FEEDBACK_SYSTEM.closing}
+              {t("feedback_system.closing")}
             </p>
           </div>
         </Container>

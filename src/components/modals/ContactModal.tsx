@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Copy, Check, MessageCircle } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { CONTACT } from "../../data/contact";
 
 function CopyRow({ label, value }: { label: string; value: string }) {
+  const { t } = useTranslation("auth");
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -28,11 +30,11 @@ function CopyRow({ label, value }: { label: string; value: string }) {
       >
         {copied ? (
           <>
-            <Check size={13} /> 복사됨
+            <Check size={13} /> {t("contact.copied")}
           </>
         ) : (
           <>
-            <Copy size={13} /> 복사
+            <Copy size={13} /> {t("contact.copy")}
           </>
         )}
       </button>
@@ -47,20 +49,21 @@ export function ContactModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("auth");
   return (
-    <Modal open={open} onClose={onClose} title="카카오톡 · 위챗 상담">
+    <Modal open={open} onClose={onClose} title={t("contact.title")}>
       <div className="flex items-center gap-2 rounded-xl bg-kakao/20 px-4 py-3 text-sm text-brand-950">
         <MessageCircle size={16} className="shrink-0 text-kakao-text" />
-        카카오톡 또는 위챗 앱에서 아래 ID를 검색해 친구 추가 후 상담해 주세요.
+        {t("contact.intro")}
       </div>
 
       <div className="mt-4 space-y-3">
-        <CopyRow label="카카오톡 ID" value={CONTACT.kakaoId} />
-        <CopyRow label="WeChat ID" value={CONTACT.wechatId} />
+        <CopyRow label={t("contact.kakao_label")} value={CONTACT.kakaoId} />
+        <CopyRow label={t("contact.wechat_label")} value={CONTACT.wechatId} />
       </div>
 
       <p className="mt-4 text-center text-xs text-slate-400">
-        평일 09:00 – 18:00 사이 문의 주시면 빠르게 답변드립니다.
+        {t("contact.hours_notice")}
       </p>
     </Modal>
   );

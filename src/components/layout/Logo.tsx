@@ -1,12 +1,15 @@
-import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { BrandMark } from "./BrandMark";
+import { LocalizedLink } from "../i18n/LocalizedLink";
 
 export function Logo({ compact = false }: { compact?: boolean }) {
+  const { t } = useTranslation("common");
+
   return (
-    <Link
+    <LocalizedLink
       to="/"
       className="group flex items-center gap-2.5"
-      aria-label="하이파이브 잉글리쉬 홈"
+      aria-label={t("aria.home_logo")}
     >
       <span className="transition-transform group-hover:scale-105">
         <BrandMark size={compact ? 32 : 38} />
@@ -17,14 +20,14 @@ export function Logo({ compact = false }: { compact?: boolean }) {
             compact ? "text-lg" : "text-xl sm:text-2xl"
           }`}
         >
-          하이파이브 잉글리쉬
+          {t("footer.brand_name")}
         </span>
         {!compact && (
           <span className="text-[11px] font-medium tracking-wide text-slate-400">
-            1:1 화상영어
+            {t("footer.brand_tagline")}
           </span>
         )}
       </span>
-    </Link>
+    </LocalizedLink>
   );
 }

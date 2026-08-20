@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link2, Save } from "lucide-react";
 import { Container } from "../components/ui/Container";
 import { SectionHeading } from "../components/ui/SectionHeading";
@@ -58,6 +59,7 @@ function TeacherLinkRow({
   platforms: MeetingPlatformRow[];
   onSaved: () => void;
 }) {
+  const { t } = useTranslation("admin");
   const [values, setValues] = useState<Partial<Record<MeetingPlatformId, string>>>(row.links);
   const [savingId, setSavingId] = useState<MeetingPlatformId | null>(null);
 
@@ -79,7 +81,7 @@ function TeacherLinkRow({
               type="url"
               value={values[p.id] ?? ""}
               onChange={(e) => setValues((v) => ({ ...v, [p.id]: e.target.value }))}
-              placeholder="등록된 링크 없음"
+              placeholder={t("meeting_settings.no_link_placeholder")}
               className={`${selectClass} w-full`}
             />
             <button
@@ -87,7 +89,7 @@ function TeacherLinkRow({
               disabled={savingId === p.id}
               className="flex shrink-0 items-center gap-1 rounded-lg bg-brand-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-brand-700 disabled:opacity-50"
             >
-              <Save size={13} /> 저장
+              <Save size={13} /> {t("meeting_settings.save")}
             </button>
           </div>
         ))}
@@ -105,6 +107,7 @@ function LessonUrlRow({
   lesson: AdminLessonRow;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation("admin");
   const [url, setUrl] = useState(lesson.meetingUrl ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -129,7 +132,7 @@ function LessonUrlRow({
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://zoom.us/j/..."
+            placeholder={t("meeting_settings.url_placeholder")}
             className={`${selectClass} w-full min-w-[220px]`}
           />
           <button
@@ -137,7 +140,7 @@ function LessonUrlRow({
             disabled={saving || !url.trim()}
             className="flex shrink-0 items-center gap-1 rounded-lg bg-brand-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-brand-700 disabled:opacity-50"
           >
-            <Save size={13} /> 저장
+            <Save size={13} /> {t("meeting_settings.save")}
           </button>
         </div>
       </td>
@@ -147,6 +150,7 @@ function LessonUrlRow({
 
 function AdminMeetingSettingsContent() {
   const { actor } = useAuth();
+  const { t } = useTranslation("admin");
   const [platforms, setPlatforms] = useState<MeetingPlatformRow[]>([]);
   const [enrollments, setEnrollments] = useState<EnrollmentRow[]>([]);
   const [teacherLinks, setTeacherLinks] = useState<TeacherLinksRow[]>([]);
@@ -183,15 +187,14 @@ function AdminMeetingSettingsContent() {
   return (
     <section className="bg-slate-50/60 py-12 sm:py-16">
       <Container className="max-w-5xl">
-        <SectionHeading eyebrow="관리자" title="화상회의 프로그램 설정" align="left" />
+        <SectionHeading eyebrow={t("eyebrow")} title={t("meeting_settings.title")} align="left" />
         <p className="mt-4 max-w-2xl text-[13px] leading-relaxed text-slate-500">
-          여기서 지정한 값은 학생의 내 강의실과 프로그램 설치 페이지에 그대로 반영됩니다. 강사가
-          등록한 고정 링크가 기본으로 쓰이고, 수업별로 등록한 URL이 있으면 그 링크가 우선합니다.
+          {t("meeting_settings.description")}
         </p>
 
         <div className="mt-8 grid gap-5 lg:grid-cols-2">
           <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_8px_24px_rgba(20,44,88,0.06)]">
-            <h3 className="text-sm font-bold text-brand-950">프로그램 사용 여부</h3>
+            <h3 className="text-sm font-bold text-brand-950">{t("meeting_settings.platform_enabled_title")}</h3>
             <ul className="mt-4 space-y-3">
               {platforms.map((p) => (
                 <li key={p.id} className="flex items-center justify-between gap-3">
@@ -215,8 +218,8 @@ function AdminMeetingSettingsContent() {
           </div>
 
           <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_8px_24px_rgba(20,44,88,0.06)]">
-            <h3 className="text-sm font-bold text-brand-950">수강생 프로그램</h3>
-            <p className="mt-1 text-xs text-slate-400">이 값이 해당 학생의 내 강의실에 표시됩니다.</p>
+            <h3 className="text-sm font-bold text-brand-950">{t("meeting_settings.student_platform_title")}</h3>
+            <p className="mt-1 text-xs text-slate-400">{t("meeting_settings.student_platform_desc")}</p>
             <div className="mt-3 space-y-2">
               {enrollments.map((e) => (
                 <div key={e.enrollmentId} className="flex items-center justify-between gap-3">
@@ -238,9 +241,9 @@ function AdminMeetingSettingsContent() {
         </div>
 
         <div className="mt-8">
-          <h3 className="mb-3 text-sm font-bold text-brand-950">강사별 화상회의 링크 현황</h3>
+          <h3 className="mb-3 text-sm font-bold text-brand-950">{t("meeting_settings.teacher_links_title")}</h3>
           <p className="mb-3 text-xs text-slate-400">
-            강사가 강사 페이지에서 직접 등록할 수 있는 값과 동일합니다 — 여기서도 대신 수정할 수 있습니다.
+            {t("meeting_settings.teacher_links_desc")}
           </p>
           <div className="grid gap-4 sm:grid-cols-3">
             {teacherLinks.map((row) => (
@@ -252,14 +255,14 @@ function AdminMeetingSettingsContent() {
         <div className="mt-8">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <h3 className="flex items-center gap-1.5 text-sm font-bold text-brand-950">
-              <Link2 size={15} /> 수업별 참여 URL 등록 (예외 등록)
+              <Link2 size={15} /> {t("meeting_settings.lesson_url_title")}
             </h3>
             <select
               value={selectedStudentId}
               onChange={(e) => setSelectedStudentId(e.target.value)}
               className={selectClass}
             >
-              <option value="">전체 학생</option>
+              <option value="">{t("meeting_settings.all_students")}</option>
               {enrollments.map((e) => (
                 <option key={e.studentId} value={e.studentId}>
                   {e.studentName}
@@ -271,7 +274,7 @@ function AdminMeetingSettingsContent() {
             <table className="w-full min-w-[720px] border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/70">
-                  {["학생명", "강사", "수업 일시", "참여 URL"].map((h) => (
+                  {Object.values(t("meeting_settings.table_headers", { returnObjects: true }) as Record<string, string>).map((h) => (
                     <th
                       key={h}
                       className="whitespace-nowrap px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-slate-400"
@@ -285,7 +288,7 @@ function AdminMeetingSettingsContent() {
                 {lessons.length === 0 && (
                   <tr>
                     <td colSpan={4} className="px-4 py-10 text-center text-sm text-slate-400">
-                      예정된 수업이 없습니다.
+                      {t("meeting_settings.no_lessons")}
                     </td>
                   </tr>
                 )}

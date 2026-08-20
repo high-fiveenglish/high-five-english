@@ -41,6 +41,9 @@ export const store = {
   // src/data/accounts.ts, same "overlay, don't mutate the static catalog" pattern already
   // used for platformEnabled above.
   adminPermissionOverrides: {} as Record<string, PermissionKey[]>,
+  // Same overlay pattern for each account's chosen UI language, keyed by accountId —
+  // overlays Account.preferredLanguage rather than mutating the static ACCOUNTS array.
+  preferredLanguageOverrides: {} as Record<string, string>,
 };
 
 function cloneLinks(

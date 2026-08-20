@@ -1,0 +1,100 @@
+{
+  "eyebrow": "Admin",
+  "meeting_settings": {
+    "title": "Video Meeting Settings",
+    "description": "Values set here are reflected directly on the student's My Classroom and the app-setup page. A teacher's registered fixed link is used by default; a per-lesson URL, if registered, takes priority over it.",
+    "platform_enabled_title": "Enabled Platforms",
+    "student_platform_title": "Student Platform",
+    "student_platform_desc": "This value is shown on the student's My Classroom.",
+    "teacher_links_title": "Teacher Meeting Links",
+    "teacher_links_desc": "Same values a teacher can register themselves on the Teacher Page — you can edit them here too.",
+    "lesson_url_title": "Per-Lesson Join URL (Exception Override)",
+    "all_students": "All Students",
+    "table_headers": {
+      "student": "Student",
+      "teacher": "Teacher",
+      "datetime": "Class Date/Time",
+      "url": "Join URL"
+    },
+    "no_lessons": "No upcoming classes.",
+    "no_link_placeholder": "No link registered",
+    "url_placeholder": "https://zoom.us/j/...",
+    "save": "Save"
+  },
+  "accounts": {
+    "title": "Accounts & Permissions",
+    "description": "Set what each General Administrator account can do. Anything not granted here is not only hidden from the UI but also blocked at the service layer, even if called directly.",
+    "id_label": "ID",
+    "save_permissions": "Save Permissions",
+    "saving": "Saving...",
+    "all_accounts_title": "All Accounts",
+    "table_headers": { "id": "ID", "name": "Name", "role": "Role" },
+    "roles": {
+      "general_manager": "General Manager",
+      "general_admin": "General Administrator",
+      "teacher": "Teacher",
+      "student": "Student"
+    },
+    "permissions": {
+      "students": "Students",
+      "teachers": "Teachers",
+      "lessons": "Lessons",
+      "schedule": "Class Schedule",
+      "textbooks": "Textbooks",
+      "evaluations": "Learning Evaluations",
+      "attendance": "Attendance",
+      "holidays": "Holidays",
+      "meetingLinks": "Meeting Links",
+      "payments": "Payments",
+      "siteSettings": "Settings"
+    }
+  },
+  "reschedule": {
+    "title": "Reschedule Requests",
+    "manual_change_btn": "Manually Change Schedule",
+    "description": "Every student-initiated reschedule, and every auto-extension caused by teacher absence, academy closure, or admin cancellation, is logged here. \"End Date Before → After\" shows how each change affected the enrollment's end date.",
+    "table_headers": {
+      "student": "Student",
+      "course": "Course",
+      "original_date": "Original Date",
+      "requested_by": "Requested By · Reason",
+      "requested_at": "Requested At",
+      "new_date": "New Date",
+      "status": "Status",
+      "end_date_change": "End Date Before → After"
+    },
+    "no_rows": "No reschedule requests.",
+    "cause_labels": {
+      "rescheduled": "Student Reschedule",
+      "teacher_absent": "Teacher Absent",
+      "academy_closed": "Academy Closed",
+      "admin_cancelled": "Admin Cancelled"
+    },
+    "initiated_by_labels": { "student": "Student", "teacher": "Teacher", "admin": "Admin" },
+    "reason_label": "Reason",
+    "status_applied": "Applied",
+    "status_reverted": "Reverted"
+  },
+  "override_modal": {
+    "title": "Manually Change Class Schedule",
+    "warning": "This tool bypasses the normal reschedule process for data correction. Use it carefully.",
+    "success": "The schedule has been updated.",
+    "confirm_ok": "OK",
+    "target_lesson_label": "Target Class",
+    "no_lessons_option": "No upcoming classes available to change",
+    "new_date_label": "New Date",
+    "new_time_label": "New Time (optional)",
+    "reason_label": "Reason for Change (required)",
+    "reason_placeholder": "e.g. Rescheduled at student's request",
+    "force_label": "Force apply, ignoring weekly-day pattern and holiday checks (force)",
+    "validation_error": "Class, new date, and reason for change are required.",
+    "submitting": "Processing...",
+    "submit": "Apply Change"
+  },
+  "home": {
+    "title": "Site Management",
+    "link_reschedule": "View Reschedule Requests",
+    "link_meeting_settings": "Video Meeting Settings",
+    "link_accounts": "Accounts & Permissions"
+  }
+}

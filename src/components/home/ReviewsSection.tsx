@@ -1,16 +1,19 @@
+import { useTranslation } from "react-i18next";
 import { Star, Quote } from "lucide-react";
 import { Container } from "../ui/Container";
 import { SectionHeading } from "../ui/SectionHeading";
 import { REVIEWS } from "../../data/reviews";
 
 export function ReviewsSection() {
+  const { t } = useTranslation("home");
+
   return (
     <section id="reviews" className="scroll-mt-28 bg-white py-20 sm:py-24">
       <Container>
         <SectionHeading
-          eyebrow="고객센터 · 수강후기"
-          title="광고 대신, 후기로 증명합니다"
-          description="하이파이브 잉글리쉬는 광고비 대신 실제 수업을 경험한 학부모님과 수강생들의 후기로 성장해 왔습니다."
+          eyebrow={t("reviews.eyebrow")}
+          title={t("reviews.title")}
+          description={t("reviews.description")}
         />
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -34,15 +37,19 @@ export function ReviewsSection() {
                 ))}
               </div>
               <p className="mt-3 flex-1 text-[13.5px] leading-relaxed text-slate-600">
-                {r.content}
+                {t(`reviews.items.${r.id}.content`)}
               </p>
               <div className="mt-5 flex items-center justify-between border-t border-slate-50 pt-4">
                 <div>
-                  <p className="text-sm font-bold text-brand-950">{r.author}</p>
-                  <p className="text-xs text-slate-400">{r.role}</p>
+                  <p className="text-sm font-bold text-brand-950">
+                    {t(`reviews.items.${r.id}.author`)}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {t(`reviews.items.${r.id}.role`)}
+                  </p>
                 </div>
                 <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-400">
-                  {r.period}
+                  {t(`reviews.items.${r.id}.period`)}
                 </span>
               </div>
             </div>

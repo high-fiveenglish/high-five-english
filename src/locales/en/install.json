@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "title": "App Setup Guide | HiFive English",
+    "description": "Setup guides for Zoom, VooV Meeting, and Microsoft Teams — everything you need for class."
+  },
+  "hero": {
+    "eyebrow": "App Setup",
+    "title": "Please install the program you need for your online class.",
+    "description": "Check which program is used for your class, then install it on your PC or mobile device."
+  },
+  "banner": {
+    "label": "My class program:",
+    "button": "See {{platform}} setup instructions"
+  },
+  "faq_section": {
+    "eyebrow": "FAQ",
+    "title": "Frequently Asked Questions"
+  },
+  "faq": [
+    {
+      "q": "Do I really need to install the program?",
+      "a": "Yes, we recommend installing it in advance for a smooth class experience. In some cases you can join directly from your browser, but screen sharing and audio quality are more stable with the app installed. Please install it before your first class and make sure your camera and microphone permissions are allowed."
+    },
+    {
+      "q": "Can I take classes on my phone?",
+      "a": "Yes, both smartphones and tablets work. On Android, install the program from Google Play; on iPhone/iPad, install it from the App Store. You can then join your class the same way."
+    },
+    {
+      "q": "I'm not sure which program my class uses.",
+      "a": "After logging in, you can check the program assigned to your class right at the top of this page. You can also check it on the class summary card in My Classroom."
+    },
+    {
+      "q": "Where can I find my class link?",
+      "a": "You can find it in My Classroom's class schedule, using the [Enter Class] button next to each upcoming class. Your class manager will share the fixed class link with you in advance, and the button becomes active once enrollment is complete."
+    },
+    {
+      "q": "The program won't launch.",
+      "a": "First, please check that you have the latest version installed. If it still won't launch, restart your device and try again. If the problem continues, please contact us through our KakaoTalk channel or a 1:1 consultation."
+    },
+    {
+      "q": "My camera and microphone aren't working.",
+      "a": "Please check that the program has been given camera and microphone access in your browser or device settings. If it still doesn't work after allowing access, check that the correct devices are selected in the program's audio/video settings."
+    },
+    {
+      "q": "Can I test the program before class?",
+      "a": "Yes, after installing, you can use the program's built-in test feature (for example, Zoom's 'Join a Test Meeting') to check your camera, microphone, and speakers in advance. We recommend testing it once before your first class."
+    }
+  ],
+  "platform_card": {
+    "official_site": "Official site:",
+    "download_pc": "Download for PC",
+    "download_android": "Download for Android",
+    "download_ios": "Download for iPhone/iPad",
+    "install_steps_title": "Installation Steps",
+    "join_steps_title": "How to Join Class"
+  }
+}

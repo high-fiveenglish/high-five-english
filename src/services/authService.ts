@@ -10,6 +10,8 @@ import { store } from "./store";
 export interface LoginResult {
   actor: Actor;
   displayName: string;
+  /** Undefined only for an account that has never had a language recorded at all. */
+  preferredLanguage: string | undefined;
 }
 
 export async function login(id: string, password: string): Promise<ServiceResult<LoginResult>> {
@@ -24,5 +26,13 @@ export async function login(id: string, password: string): Promise<ServiceResult
     linkedId: account.linkedId,
     permissions: grantedPermissions,
   };
-  return okResult({ actor, displayName: account.name });
+  const preferredLanguage = store.preferredLanguageOverrides[account.id] ?? account.preferredLanguage;
+  return okResult({ actor, displayName: account.name, preferredLanguage });
+}
+
+/** Persists a language choice against the logged-in account — independent per account,
+ * so one user's change never affects any other user's stored preference. */
+export async function updatePreferredLanguage(actor: Actor, lang: string): Promise<ServiceResult<void>> {
+  store.preferredLanguageOverrides = { ...store.preferredLanguageOverrides, [actor.accountId]: lang };
+  return okResult(undefined);
 }

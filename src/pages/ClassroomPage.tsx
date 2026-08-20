@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Container } from "../components/ui/Container";
 import { SectionHeading } from "../components/ui/SectionHeading";
 import { RouteGuard } from "../components/auth/RouteGuard";
@@ -15,6 +16,7 @@ import type { Lesson } from "../lib/scheduling/types";
 
 function ClassroomContent() {
   const { actor } = useAuth();
+  const { t } = useTranslation("classroom");
   const [snapshot, setSnapshot] = useState<MyClassroomSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -30,7 +32,7 @@ function ClassroomContent() {
       if (res.ok) {
         setSnapshot(res.value);
       } else {
-        setLoadError(res.error.message);
+        setLoadError(t(`service_errors.${res.error.code}`, { ns: "common", defaultValue: t("service_errors.unknown", { ns: "common" }) }));
       }
     });
   };
@@ -43,14 +45,14 @@ function ClassroomContent() {
   if (loading || (!snapshot && !loadError)) {
     return (
       <Container className="flex min-h-[50vh] items-center justify-center py-24">
-        <p className="text-sm text-slate-400">불러오는 중입니다...</p>
+        <p className="text-sm text-slate-400">{t("page.loading")}</p>
       </Container>
     );
   }
   if (loadError || !snapshot) {
     return (
       <Container className="flex min-h-[50vh] items-center justify-center py-24">
-        <p className="text-sm text-slate-400">{loadError ?? "수강 정보를 찾을 수 없습니다."}</p>
+        <p className="text-sm text-slate-400">{loadError ?? t("page.not_found")}</p>
       </Container>
     );
   }
@@ -61,7 +63,7 @@ function ClassroomContent() {
   return (
     <section className="bg-brand-50/40 py-12 sm:py-16">
       <Container className="max-w-5xl">
-        <SectionHeading eyebrow="마이페이지" title="내 강의실" align="left" />
+        <SectionHeading eyebrow={t("page.eyebrow")} title={t("page.title")} align="left" />
 
         <div className="mt-8 grid gap-5 lg:grid-cols-[1.4fr_1fr]">
           <EnrollmentSummaryCard
@@ -90,7 +92,7 @@ function ClassroomContent() {
         </div>
 
         <div className="mt-10">
-          <h3 className="mb-4 text-sm font-bold text-brand-950">수강 스케줄표</h3>
+          <h3 className="mb-4 text-sm font-bold text-brand-950">{t("page.schedule_table_title")}</h3>
           <LessonScheduleTable
             lessons={lessons}
             teacherName={teacher.name}

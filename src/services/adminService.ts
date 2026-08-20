@@ -4,7 +4,7 @@
 // enforce once a backend exists.
 import { ACCOUNTS, type Account } from "../data/accounts";
 import { findStudentName } from "./classroomService";
-import { DEMO_COURSE } from "../data/classroomMock";
+import { getDemoCourse } from "../data/classroomMock";
 import { INSTRUCTORS } from "../data/instructors";
 import type { MeetingPlatformId } from "../data/meetingPlatforms";
 import { computeBlockedDates, overrideLessonDateInPlace } from "../lib/scheduling/engine";
@@ -71,7 +71,7 @@ export async function listRescheduleRequests(actor: Actor): Promise<ServiceResul
 
   const rows = [...store.rescheduleRequests]
     .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))
-    .map((r) => ({ ...r, studentName: findStudentName(r.studentId), courseName: DEMO_COURSE.courseName }));
+    .map((r) => ({ ...r, studentName: findStudentName(r.studentId), courseName: getDemoCourse().courseName }));
   return okResult(rows);
 }
 
@@ -100,7 +100,7 @@ export async function listSchedulableLessons(
       ...lesson,
       studentName: findStudentName(enrollment.studentId),
       teacherName: INSTRUCTORS.find((i) => i.id === enrollment.teacherId)?.name ?? enrollment.teacherId,
-      courseName: DEMO_COURSE.courseName,
+      courseName: getDemoCourse().courseName,
     }));
   return okResult(rows);
 }

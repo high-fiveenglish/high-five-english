@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { Routes, Route } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { AuthProvider } from "./context/AuthContext";
+import { LanguageProvider } from "./context/LanguageContext";
 import { Header } from "./components/layout/Header";
 import { Footer } from "./components/layout/Footer";
 import { FloatingSideButtons } from "./components/layout/FloatingSideButtons";
 import { ScrollToHash } from "./components/layout/ScrollToHash";
+import { LangLayout, RootRedirect } from "./components/i18n/LangLayout";
 import { LevelTestModal } from "./components/modals/LevelTestModal";
 import { ContactModal } from "./components/modals/ContactModal";
 import { HomePage } from "./pages/HomePage";
@@ -27,82 +30,89 @@ function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const openLevelTest = () => setLevelTestOpen(true);
   const openLogin = () => setLoginOpen(true);
+  const { t } = useTranslation(["common", "admin"]);
 
   return (
     <AuthProvider>
-      <ScrollToHash />
-      <div className="flex min-h-screen flex-col">
-        <Header
-          loginOpen={loginOpen}
-          onOpenLogin={openLogin}
-          onCloseLogin={() => setLoginOpen(false)}
-        />
+      <LanguageProvider>
+        <ScrollToHash />
+        <div className="flex min-h-screen flex-col">
+          <Header
+            loginOpen={loginOpen}
+            onOpenLogin={openLogin}
+            onCloseLogin={() => setLoginOpen(false)}
+          />
 
-        <main className="flex-1">
-          <Routes>
-            <Route path="/" element={<HomePage onOpenLevelTest={openLevelTest} />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/program" element={<ProgramPage onOpenLevelTest={openLevelTest} />} />
-            <Route
-              path="/curriculum"
-              element={<CurriculumPage onOpenLevelTest={openLevelTest} />}
-            />
-            <Route
-              path="/process"
-              element={<ProcessPage onOpenLevelTest={openLevelTest} />}
-            />
-            <Route
-              path="/classroom"
-              element={<ClassroomPage onOpenLogin={openLogin} />}
-            />
-            <Route
-              path="/teacher"
-              element={<TeacherDashboardPage onOpenLogin={openLogin} />}
-            />
-            <Route path="/notice" element={<PlaceholderPage title="공지사항" />} />
-            <Route path="/counsel" element={<PlaceholderPage title="1:1 상담" />} />
-            <Route
-              path="/admin"
-              element={
-                <RouteGuard allow={["general_manager", "general_admin"]} onOpenLogin={openLogin}>
-                  <PlaceholderPage
-                    title="홈페이지 관리"
-                    links={[
-                      { label: "수업 연기 신청 내역 보기", to: "/admin/reschedule-requests" },
-                      { label: "화상회의 프로그램 설정", to: "/admin/meeting-settings" },
-                      { label: "계정 및 권한 관리", to: "/admin/accounts" },
-                    ]}
-                  />
-                </RouteGuard>
-              }
-            />
-            <Route
-              path="/admin/reschedule-requests"
-              element={<AdminReschedulePage onOpenLogin={openLogin} />}
-            />
-            <Route
-              path="/admin/meeting-settings"
-              element={<AdminMeetingSettingsPage onOpenLogin={openLogin} />}
-            />
-            <Route
-              path="/admin/accounts"
-              element={<AdminAccountsPage onOpenLogin={openLogin} />}
-            />
-            <Route path="/mypage" element={<PlaceholderPage title="정보변경" />} />
-            <Route path="/install" element={<InstallPage />} />
-            <Route path="*" element={<PlaceholderPage title="페이지를 찾을 수 없습니다" />} />
-          </Routes>
-        </main>
+          <main className="flex-1">
+            <Routes>
+              {/* Public/marketing pages: locale-prefixed for SEO (see src/i18n/paths.ts). */}
+              <Route path="/" element={<RootRedirect />} />
+              <Route path="/:lang" element={<LangLayout />}>
+                <Route index element={<HomePage onOpenLevelTest={openLevelTest} />} />
+                <Route path="about" element={<AboutPage />} />
+                <Route path="program" element={<ProgramPage onOpenLevelTest={openLevelTest} />} />
+                <Route
+                  path="curriculum"
+                  element={<CurriculumPage onOpenLevelTest={openLevelTest} />}
+                />
+                <Route path="process" element={<ProcessPage onOpenLevelTest={openLevelTest} />} />
+                <Route path="install" element={<InstallPage />} />
+                <Route path="notice" element={<PlaceholderPage title={t("nav.notice")} />} />
+                <Route path="counsel" element={<PlaceholderPage title={t("nav.counsel")} />} />
+              </Route>
 
-        <Footer onOpenContact={() => setContactOpen(true)} />
-        <FloatingSideButtons
-          onOpenLevelTest={openLevelTest}
-          onOpenContact={() => setContactOpen(true)}
-        />
-      </div>
+              {/* Protected pages: never indexed, so no locale prefix — language comes
+                  from the logged-in account's own preference (LanguageContext). */}
+              <Route
+                path="/classroom"
+                element={<ClassroomPage onOpenLogin={openLogin} />}
+              />
+              <Route
+                path="/teacher"
+                element={<TeacherDashboardPage onOpenLogin={openLogin} />}
+              />
+              <Route
+                path="/admin"
+                element={
+                  <RouteGuard allow={["general_manager", "general_admin"]} onOpenLogin={openLogin}>
+                    <PlaceholderPage
+                      title={t("admin:home.title")}
+                      links={[
+                        { label: t("admin:home.link_reschedule"), to: "/admin/reschedule-requests" },
+                        { label: t("admin:home.link_meeting_settings"), to: "/admin/meeting-settings" },
+                        { label: t("admin:home.link_accounts"), to: "/admin/accounts" },
+                      ]}
+                    />
+                  </RouteGuard>
+                }
+              />
+              <Route
+                path="/admin/reschedule-requests"
+                element={<AdminReschedulePage onOpenLogin={openLogin} />}
+              />
+              <Route
+                path="/admin/meeting-settings"
+                element={<AdminMeetingSettingsPage onOpenLogin={openLogin} />}
+              />
+              <Route
+                path="/admin/accounts"
+                element={<AdminAccountsPage onOpenLogin={openLogin} />}
+              />
+              <Route path="/mypage" element={<PlaceholderPage title={t("topbar.my_info")} />} />
+              <Route path="*" element={<PlaceholderPage title={t("errors.not_found_title")} />} />
+            </Routes>
+          </main>
 
-      <LevelTestModal open={levelTestOpen} onClose={() => setLevelTestOpen(false)} />
-      <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
+          <Footer onOpenContact={() => setContactOpen(true)} />
+          <FloatingSideButtons
+            onOpenLevelTest={openLevelTest}
+            onOpenContact={() => setContactOpen(true)}
+          />
+        </div>
+
+        <LevelTestModal open={levelTestOpen} onClose={() => setLevelTestOpen(false)} />
+        <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
+      </LanguageProvider>
     </AuthProvider>
   );
 }

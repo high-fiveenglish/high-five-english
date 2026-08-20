@@ -1,0 +1,22 @@
+{
+  "eyebrow": "강사 페이지",
+  "greeting": "{{name}} 강사님 안녕하세요",
+  "meeting_links_title": "내 화상회의 링크",
+  "meeting_links_desc": "한 번 등록하면 이 플랫폼을 사용하는 내 담당 학생 전원의 수업에 자동으로 연결됩니다.",
+  "link_placeholder": "{{platform}} 참여 링크",
+  "save": "저장",
+  "my_students_title": "담당 학생 ({{count}}명)",
+  "no_students": "담당 학생이 없습니다.",
+  "remaining_lessons": "잔여 {{count}}회",
+  "upcoming_lessons_title": "예정된 수업",
+  "table_headers": {
+    "date": "날짜",
+    "time": "시간",
+    "student": "학생",
+    "attendance": "출결상태",
+    "enter": "입장"
+  },
+  "no_lessons": "예정된 수업이 없습니다.",
+  "enter_class": "수업 입장",
+  "link_pending": "입장 링크 준비 중"
+}

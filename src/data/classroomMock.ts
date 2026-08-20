@@ -4,6 +4,7 @@
 // genuinely exercises the same logic that will run for real once a backend exists. See
 // src/services/*.ts for the mutable in-memory stores this seeds, and
 // src/lib/scheduling/ for the engine itself.
+import i18n from "../i18n/config";
 import { INSTRUCTORS } from "./instructors";
 import type { MeetingPlatformId } from "./meetingPlatforms";
 import {
@@ -49,11 +50,26 @@ export type LevelTestResult = {
 
 // --- shared display data reused across every enrollment (course/textbook/level-test
 // content isn't the focus of this feature, so one shared record keeps the seed simple) ---
-export const DEMO_COURSE: ClassroomCourse = {
-  id: "course-1",
-  productName: "1:1 화상영어 정규수업",
-  courseName: "본격 회화 · 디베이트",
-};
+const DEMO_COURSE_ID = "course-1";
+
+// productName/courseName are catalog content (like a textbook title), not a per-user
+// record, so they're translated via locales/{lang}/courses.json — getDemoCourse() reads
+// the currently active language at call time rather than baking in Korean once at
+// module load. Callers (classroomService/adminService/teacherService) call this instead
+// of importing a static object.
+export function getDemoCourse(): ClassroomCourse {
+  return {
+    id: DEMO_COURSE_ID,
+    productName: i18n.t(`${DEMO_COURSE_ID}.productName`, {
+      ns: "courses",
+      defaultValue: "1:1 화상영어 정규수업",
+    }),
+    courseName: i18n.t(`${DEMO_COURSE_ID}.courseName`, {
+      ns: "courses",
+      defaultValue: "본격 회화 · 디베이트",
+    }),
+  };
+}
 
 export const DEMO_TEXTBOOK: ClassroomTextbook = {
   id: "book-1",
@@ -187,7 +203,7 @@ function draftFor(bp: EnrollmentBlueprint): Enrollment {
   return {
     id: bp.enrollmentId,
     studentId: bp.studentId,
-    courseId: DEMO_COURSE.id,
+    courseId: DEMO_COURSE_ID,
     teacherId: bp.teacherId,
     textbookId: DEMO_TEXTBOOK.id,
     startDate: bp.startDate,

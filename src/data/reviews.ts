@@ -1,65 +1,13 @@
-export type Review = {
+export type ReviewMeta = {
   id: string;
-  author: string;
-  role: string;
   rating: number;
-  period: string;
-  content: string;
 };
 
-export const REVIEWS: Review[] = [
-  {
-    id: "r1",
-    author: "김O은 학부모",
-    role: "초3 자녀 수강",
-    rating: 5,
-    period: "수강 8개월차",
-    content:
-      "처음엔 화상으로 낯을 많이 가렸는데, 선생님이 늘 밝게 맞아주셔서 지금은 수업시간을 제일 기다려요. 학습평가서로 매번 어떤 표현을 어려워했는지 알 수 있어서 집에서 복습시키기도 훨씬 수월해졌어요.",
-  },
-  {
-    id: "r2",
-    author: "박O준",
-    role: "중2 수강생",
-    rating: 5,
-    period: "수강 1년 2개월차",
-    content:
-      "학교 시험 영어만 하다가 화상영어를 시작했는데, 이제는 원어민 선생님이랑 제 생각을 영어로 바로바로 말할 수 있어요. 문법 틀린 부분을 그때그때 고쳐주셔서 확실히 늘고 있다는 게 느껴져요.",
-  },
-  {
-    id: "r3",
-    author: "이O영 학부모",
-    role: "초5 자녀 수강",
-    rating: 5,
-    period: "수강 6개월차",
-    content:
-      "여러 화상영어를 비교해봤는데 강사 배정과 관리가 가장 꼼꼼했어요. 상담할 때마다 아이 상황을 정확히 파악하고 계셔서 믿음이 갑니다. 매월 레벨평가로 성장 과정을 눈으로 확인할 수 있는 것도 큰 장점이에요.",
-  },
-  {
-    id: "r4",
-    author: "최O아",
-    role: "성인 직장인 수강",
-    rating: 5,
-    period: "수강 4개월차",
-    content:
-      "출장이 잦아서 비즈니스 영어가 필요했는데, 제 업무 상황에 맞춰 표현을 알려주셔서 실제로 많이 활용하고 있어요. 예약도 자유롭고 선생님도 좋아서 만족하며 다니고 있습니다.",
-  },
-  {
-    id: "r5",
-    author: "정O호 학부모",
-    role: "초6 자녀 수강",
-    rating: 5,
-    period: "수강 1년 6개월차",
-    content:
-      "형식적인 '참 잘했어요'가 아니라 오늘 뭘 배우고 뭘 어려워했는지 구체적으로 피드백을 주셔서 좋아요. 광고 없이 입소문으로 컸다는 말이 이해가 될 만큼 꾸준히 관리해주십니다.",
-  },
-  {
-    id: "r6",
-    author: "한O수",
-    role: "고1 수강생",
-    rating: 4,
-    period: "수강 3개월차",
-    content:
-      "처음엔 매일 영어로 말하는 게 부담스러웠는데, 반복훈련 덕분에 이제는 문장을 만드는 속도가 확실히 빨라졌어요. 강사님 스케줄이 가끔 마감이라 아쉬울 때는 있지만 전반적으로 매우 만족해요.",
-  },
+export const REVIEWS: ReviewMeta[] = [
+  { id: "r1", rating: 5 },
+  { id: "r2", rating: 5 },
+  { id: "r3", rating: 5 },
+  { id: "r4", rating: 5 },
+  { id: "r5", rating: 5 },
+  { id: "r6", rating: 4 },
 ];

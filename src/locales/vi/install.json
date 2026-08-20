@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "title": "Hướng dẫn cài đặt ứng dụng | HiFive English",
+    "description": "Hướng dẫn cài đặt Zoom, VooV Meeting, Microsoft Teams — mọi thứ bạn cần cho buổi học."
+  },
+  "hero": {
+    "eyebrow": "Cài đặt phần mềm",
+    "title": "Vui lòng cài đặt phần mềm cần thiết cho buổi học trực tuyến.",
+    "description": "Sau khi xác nhận phần mềm được sử dụng cho buổi học, vui lòng cài đặt trên máy tính hoặc thiết bị di động của bạn."
+  },
+  "banner": {
+    "label": "Phần mềm học của tôi:",
+    "button": "Xem hướng dẫn cài đặt {{platform}}"
+  },
+  "faq_section": {
+    "eyebrow": "Câu hỏi thường gặp",
+    "title": "Các câu hỏi thường gặp"
+  },
+  "faq": [
+    {
+      "q": "Tôi có bắt buộc phải cài đặt phần mềm không?",
+      "a": "Có, chúng tôi khuyến khích cài đặt trước để buổi học diễn ra suôn sẻ. Trong một số trường hợp bạn có thể tham gia trực tiếp qua trình duyệt, nhưng chia sẻ màn hình và chất lượng âm thanh sẽ ổn định hơn khi đã cài đặt ứng dụng. Hãy cài đặt trước buổi học đầu tiên và kiểm tra quyền truy cập camera, micro."
+    },
+    {
+      "q": "Tôi có thể học bằng điện thoại không?",
+      "a": "Có, bạn có thể học trên cả điện thoại thông minh và máy tính bảng. Với Android, hãy cài đặt phần mềm từ Google Play; với iPhone/iPad, hãy cài đặt từ App Store. Sau đó bạn có thể tham gia buổi học theo cách tương tự."
+    },
+    {
+      "q": "Tôi không biết buổi học của mình dùng phần mềm nào.",
+      "a": "Sau khi đăng nhập, bạn có thể xem ngay phần mềm được chỉ định cho buổi học của mình ở đầu trang này. Bạn cũng có thể kiểm tra thông tin này trên thẻ tóm tắt buổi học trong Lớp học của tôi."
+    },
+    {
+      "q": "Tôi có thể tìm liên kết vào lớp học ở đâu?",
+      "a": "Bạn có thể tìm thấy liên kết này trong lịch học tại mục Lớp học của tôi, thông qua nút [Vào lớp học] bên cạnh mỗi buổi học sắp tới. Quản lý lớp học sẽ cung cấp trước liên kết cố định của buổi học, và nút này sẽ được kích hoạt sau khi hoàn tất đăng ký."
+    },
+    {
+      "q": "Phần mềm không khởi động được.",
+      "a": "Trước tiên, vui lòng kiểm tra xem phần mềm đã được cập nhật lên phiên bản mới nhất chưa. Nếu vẫn không khởi động được, hãy khởi động lại thiết bị và thử lại. Nếu vấn đề vẫn tiếp diễn, vui lòng liên hệ với chúng tôi qua kênh KakaoTalk hoặc tư vấn 1:1."
+    },
+    {
+      "q": "Camera và micro không hoạt động.",
+      "a": "Vui lòng kiểm tra xem phần mềm đã được cấp quyền truy cập camera và micro trong cài đặt trình duyệt hoặc thiết bị hay chưa. Nếu vẫn không hoạt động sau khi cấp quyền, hãy kiểm tra xem đúng thiết bị đã được chọn trong phần cài đặt âm thanh/video của phần mềm chưa."
+    },
+    {
+      "q": "Tôi có thể kiểm tra phần mềm trước buổi học không?",
+      "a": "Có, sau khi cài đặt, bạn có thể sử dụng tính năng kiểm tra có sẵn trong phần mềm (ví dụ: tính năng 'Tham gia cuộc họp thử' của Zoom) để kiểm tra trước camera, micro và loa. Chúng tôi khuyến khích bạn kiểm tra một lần trước buổi học đầu tiên."
+    }
+  ],
+  "platform_card": {
+    "official_site": "Trang chính thức:",
+    "download_pc": "Tải cho PC",
+    "download_android": "Tải cho Android",
+    "download_ios": "Tải cho iPhone/iPad",
+    "install_steps_title": "Cách cài đặt",
+    "join_steps_title": "Cách tham gia buổi học"
+  }
+}

@@ -1,5 +1,5 @@
-import { Link } from "react-router-dom";
 import type { ReactNode } from "react";
+import { LocalizedLink } from "../i18n/LocalizedLink";
 
 export function NavItemLink({
   href,
@@ -15,13 +15,13 @@ export function NavItemLink({
   onClick?: () => void;
 }) {
   return (
-    <Link
+    <LocalizedLink
       to={href}
       state={scrollTo ? { scrollTo } : undefined}
       className={className}
       onClick={onClick}
     >
       {children}
-    </Link>
+    </LocalizedLink>
   );
 }

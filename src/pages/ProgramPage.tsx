@@ -1,15 +1,17 @@
 import { Clock, Sparkles } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Container } from "../components/ui/Container";
 import { SectionHeading } from "../components/ui/SectionHeading";
 import { CompareBlock } from "../components/program/CompareBlock";
+import { SeoHead } from "../components/seo/SeoHead";
 import {
-  HERO,
-  OUTPUT_SECTION,
-  AI_SECTION,
-  STRENGTHS_TITLE,
-  STRENGTHS,
-  FEEDBACK_STRENGTH,
-  CLOSING_CTA,
+  getHero,
+  getOutputSection,
+  getAiSection,
+  getStrengthsTitle,
+  getStrengths,
+  getFeedbackStrength,
+  getClosingCta,
 } from "../data/programContent";
 
 export function ProgramPage({
@@ -17,8 +19,18 @@ export function ProgramPage({
 }: {
   onOpenLevelTest: () => void;
 }) {
+  const { t } = useTranslation("program");
+  const HERO = getHero(t);
+  const OUTPUT_SECTION = getOutputSection(t);
+  const AI_SECTION = getAiSection(t);
+  const STRENGTHS_TITLE = getStrengthsTitle(t);
+  const STRENGTHS = getStrengths(t);
+  const FEEDBACK_STRENGTH = getFeedbackStrength(t);
+  const CLOSING_CTA = getClosingCta(t);
+
   return (
     <>
+      <SeoHead titleKey="meta.title" descriptionKey="meta.description" ns="program" path="/program" />
       {/* hero */}
       <section className="bg-gradient-to-b from-brand-50 via-white to-white py-16 sm:py-20">
         <Container className="max-w-3xl text-center">
@@ -35,7 +47,7 @@ export function ProgramPage({
             onClick={onOpenLevelTest}
             className="mt-8 rounded-xl bg-accent-500 px-7 py-3.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(248,114,26,0.3)] transition hover:-translate-y-0.5 hover:bg-accent-600"
           >
-            무료 레벨테스트로 시작하기
+            {t("cta.startLevelTest")}
           </button>
         </Container>
       </section>
@@ -90,7 +102,7 @@ export function ProgramPage({
       {/* strengths */}
       <section className="py-16 sm:py-20">
         <Container className="max-w-3xl">
-          <SectionHeading eyebrow="핵심 강점 3" title={STRENGTHS_TITLE} align="left" />
+          <SectionHeading eyebrow={t("strengthsEyebrow")} title={STRENGTHS_TITLE} align="left" />
 
           <div className="mt-8 space-y-5">
             {STRENGTHS.map((s) => (
@@ -150,7 +162,7 @@ export function ProgramPage({
             onClick={onOpenLevelTest}
             className="mt-7 rounded-xl bg-accent-500 px-8 py-3.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(248,114,26,0.35)] transition hover:-translate-y-0.5 hover:bg-accent-600"
           >
-            무료 레벨테스트 신청하기
+            {t("cta.applyLevelTest")}
           </button>
         </Container>
       </section>

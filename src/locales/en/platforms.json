@@ -1,0 +1,47 @@
+{
+  "zoom": {
+    "description": "The most widely used video-conferencing program. It's the default choice for most regular classes.",
+    "install_steps": [
+      "Go to zoom.us/download and download the 'Zoom Workplace desktop app.'",
+      "Run the downloaded installer to complete installation.",
+      "You can join a class without creating an account (signing in is optional).",
+      "Before class, check the join link or meeting ID your teacher has shared with you."
+    ],
+    "join_steps": [
+      "5 minutes before class starts, click the join link your teacher sent you.",
+      "The Zoom app will open automatically; if it's not installed yet, follow the prompt to install it first.",
+      "When asked for camera and microphone access, select 'Allow.'",
+      "Select 'Join with Computer Audio' and you're ready for class."
+    ]
+  },
+  "voov": {
+    "description": "A video-conferencing program that connects reliably in China and other regions with limited access. It's the international version of Tencent Meeting.",
+    "install_steps": [
+      "Go to voovmeeting.com/download-center.html and download the version for your device.",
+      "Run the downloaded installer to complete installation.",
+      "Open the app (you can also 'Join as Guest' without signing up).",
+      "Before class, check the meeting ID or join link your teacher has shared with you."
+    ],
+    "join_steps": [
+      "5 minutes before class starts, click the join link your teacher sent you, or tap 'Join' in the app.",
+      "Enter the meeting ID provided (this fills in automatically if you use the link).",
+      "When asked for camera and microphone access, select 'Allow.'",
+      "Enter your name and join — you're ready for class."
+    ]
+  },
+  "teams": {
+    "description": "A video-conferencing program used as needed, for example by institutional or corporate members.",
+    "install_steps": [
+      "Go to microsoft.com/microsoft-teams/download-app and download the app.",
+      "Run the downloaded installer to complete installation.",
+      "Sign in with a Microsoft account, or select 'Continue as guest' when joining via a link.",
+      "Before class, check the Teams meeting link your teacher has shared with you."
+    ],
+    "join_steps": [
+      "5 minutes before class starts, click the Teams meeting link your teacher sent you.",
+      "Choose either 'Open Teams app' or 'Continue on this browser.'",
+      "When asked for camera and microphone access, select 'Allow.'",
+      "Click 'Join now' and you're ready for class."
+    ]
+  }
+}

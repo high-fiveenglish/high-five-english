@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 
 export function Modal({
@@ -14,6 +15,7 @@ export function Modal({
   children: ReactNode;
   maxWidth?: string;
 }) {
+  const { t } = useTranslation("common");
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -47,7 +49,7 @@ export function Modal({
           <h3 className="text-lg font-bold text-brand-950">{title}</h3>
           <button
             onClick={onClose}
-            aria-label="닫기"
+            aria-label={t("aria.modal_close")}
             className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
           >
             <X size={20} />

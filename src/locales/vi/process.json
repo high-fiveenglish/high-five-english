@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "title": "Quy trình đăng ký | HiFive English",
+    "description": "Từ bài kiểm tra trình độ miễn phí đến buổi học đầu tiên — quy trình đăng ký học tại HiFive English."
+  },
+  "hero": {
+    "eyebrow": "Quy Trình Đăng Ký",
+    "headingLine1": "Không hề phức tạp.",
+    "headingLine2": "Hãy trải nghiệm miễn phí trước tiên.",
+    "paragraph": "Kiểm tra trình độ, học thử và tư vấn đều hoàn toàn miễn phí. Đăng ký không có nghĩa là phải thanh toán ngay. Bạn có thể tìm hiểu kỹ rồi thoải mái quyết định."
+  },
+  "reassurance": ["Đăng ký miễn phí", "Kiểm tra trình độ miễn phí", "Học thử miễn phí", "Quyết định sau tư vấn"],
+  "levelTestCta": "Đăng Ký Kiểm Tra Trình Độ Miễn Phí",
+  "steps": {
+    "1": {
+      "title": "Đăng Ký Miễn Phí",
+      "desc": "Trước tiên, hãy tạo tài khoản miễn phí để đăng ký kiểm tra trình độ. Bước này hoàn toàn không mất phí."
+    },
+    "2": {
+      "title": "Đăng Ký Kiểm Tra Trình Độ",
+      "desc": "Chỉ cần nhập ngày giờ mong muốn, mục tiêu học tập và khóa học bạn quan tâm là hoàn tất đăng ký. Trong vòng 1-2 ngày, quản lý học tập sẽ liên hệ trực tiếp để xác nhận lịch học, đồng thời tư vấn định hướng học tập phù hợp với bạn.",
+      "bullets": ["Giờ học", "Số buổi học", "Giáo trình", "Hình thức học", "Khóa học đề xuất"],
+      "note": "Đây không chỉ đơn thuần là đặt lịch kiểm tra — ngay từ đầu, chúng tôi sẽ cùng bạn tìm ra định hướng học tập phù hợp nhất."
+    },
+    "3": {
+      "title": "Kiểm Tra & Học Thử Miễn Phí",
+      "desc": "Vào thời gian đã đặt lịch, bạn sẽ tham gia buổi kiểm tra trình độ kết hợp học thử cùng giáo viên sẽ trực tiếp giảng dạy. Đây không hẳn là một bài kiểm tra, mà là cơ hội để trải nghiệm lớp học thực tế và xem trình độ cũng như phong cách giảng dạy có phù hợp với mình hay không."
+    },
+    "4": {
+      "title": "Xem Kết Quả",
+      "desc": "Trong vòng 1 ngày sau khi kiểm tra trình độ, bạn có thể xem kết quả trên trang cá nhân (My Page). Đây không chỉ là điểm số đơn thuần, mà còn bao gồm hướng dẫn về trình độ hiện tại và những phần nên cải thiện thêm."
+    },
+    "5": {
+      "title": "Tư Vấn Đăng Ký",
+      "desc": "Sau khi xem kết quả, bạn sẽ trao đổi với quản lý học tập để cùng quyết định khóa học phù hợp với mình. Ở bước này, chúng tôi hoàn toàn không ép buộc đăng ký — bạn có thể tìm hiểu kỹ rồi thoải mái quyết định.",
+      "bullets": ["Khóa học đề xuất", "Giờ học", "Số buổi học", "Giáo trình", "Hình thức học"]
+    },
+    "6": {
+      "title": "Thanh Toán Học Phí",
+      "desc": "Sau khi giờ học và khóa học được xác nhận cuối cùng, bạn thanh toán học phí trước khi buổi học bắt đầu. Sau khi thanh toán hoàn tất, các buổi học chính thức sẽ bắt đầu theo lịch đã định."
+    },
+    "7": {
+      "title": "Kiểm Tra Lịch Học",
+      "desc": "Bạn có thể kiểm tra ngày giờ học, giáo viên phụ trách và khóa học trên trang cá nhân (My Page). Hãy kiểm tra và chuẩn bị môi trường học tập trước khi buổi học bắt đầu.",
+      "bullets": ["Ngày học", "Giờ học", "Giáo viên phụ trách", "Khóa học"]
+    },
+    "8": {
+      "title": "Bắt Đầu Học Chính Thức",
+      "desc": "Buổi học sẽ bắt đầu đúng theo ngày giờ đã định. Để buổi học diễn ra suôn sẻ, vui lòng đăng nhập và chờ trước ít nhất 5 phút. Giờ đây, việc học thực sự bắt đầu, không còn là kiểm tra nữa."
+    }
+  },
+  "closing": {
+    "heading": "Hãy bắt đầu bằng việc kiểm tra trình độ tiếng Anh của bạn.",
+    "paragraph": "Đăng ký kiểm tra trình độ miễn phí không có nghĩa là bạn phải thanh toán ngay. Hãy trải nghiệm trước, tư vấn kỹ càng rồi thoải mái đưa ra quyết định."
+  }
+}

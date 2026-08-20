@@ -1,0 +1,47 @@
+{
+  "zoom": {
+    "description": "Phần mềm họp trực tuyến được sử dụng phổ biến nhất. Đây là phần mềm mặc định cho hầu hết các lớp học chính khóa.",
+    "install_steps": [
+      "Truy cập zoom.us/download và tải 'Ứng dụng Zoom Workplace cho máy tính.'",
+      "Chạy tệp cài đặt đã tải xuống để hoàn tất cài đặt.",
+      "Bạn có thể tham gia buổi học mà không cần đăng ký tài khoản (đăng nhập là tùy chọn).",
+      "Trước buổi học, hãy kiểm tra liên kết tham gia hoặc ID cuộc họp mà giáo viên đã cung cấp."
+    ],
+    "join_steps": [
+      "5 phút trước khi buổi học bắt đầu, nhấp vào liên kết tham gia mà giáo viên đã gửi.",
+      "Ứng dụng Zoom sẽ tự động mở; nếu chưa cài đặt, hãy làm theo hướng dẫn để cài đặt trước.",
+      "Khi có yêu cầu quyền truy cập camera và micro, hãy chọn 'Cho phép.'",
+      "Chọn 'Tham gia bằng âm thanh máy tính' là bạn đã sẵn sàng vào lớp."
+    ]
+  },
+  "voov": {
+    "description": "Phần mềm họp trực tuyến kết nối ổn định tại Trung Quốc và một số khu vực khác. Đây là phiên bản quốc tế của Tencent Meeting.",
+    "install_steps": [
+      "Truy cập voovmeeting.com/download-center.html và tải phiên bản phù hợp với thiết bị của bạn.",
+      "Chạy tệp cài đặt đã tải xuống để hoàn tất cài đặt.",
+      "Mở ứng dụng (bạn cũng có thể chọn 'Tham gia với tư cách khách' mà không cần đăng ký).",
+      "Trước buổi học, hãy kiểm tra ID cuộc họp hoặc liên kết tham gia mà giáo viên đã cung cấp."
+    ],
+    "join_steps": [
+      "5 phút trước khi buổi học bắt đầu, nhấp vào liên kết tham gia mà giáo viên đã gửi, hoặc nhấn 'Tham gia (Join)' trong ứng dụng.",
+      "Nhập ID cuộc họp được cung cấp (sẽ tự động điền nếu bạn vào bằng liên kết).",
+      "Khi có yêu cầu quyền truy cập camera và micro, hãy chọn 'Cho phép.'",
+      "Nhập tên của bạn và vào phòng họp là bạn đã sẵn sàng vào lớp."
+    ]
+  },
+  "teams": {
+    "description": "Phần mềm họp trực tuyến được sử dụng khi cần thiết, ví dụ như đối với thành viên thuộc tổ chức hoặc doanh nghiệp.",
+    "install_steps": [
+      "Truy cập microsoft.com/microsoft-teams/download-app và tải xuống.",
+      "Chạy tệp cài đặt đã tải xuống để hoàn tất cài đặt.",
+      "Đăng nhập bằng tài khoản Microsoft, hoặc chọn 'Tiếp tục với tư cách khách' khi tham gia qua liên kết.",
+      "Trước buổi học, hãy kiểm tra liên kết cuộc họp Teams mà giáo viên đã cung cấp."
+    ],
+    "join_steps": [
+      "5 phút trước khi buổi học bắt đầu, nhấp vào liên kết cuộc họp Teams mà giáo viên đã gửi.",
+      "Chọn 'Mở ứng dụng Teams' hoặc 'Tiếp tục trên trình duyệt.'",
+      "Khi có yêu cầu quyền truy cập camera và micro, hãy chọn 'Cho phép.'",
+      "Nhấp 'Tham gia ngay' là bạn đã sẵn sàng vào lớp."
+    ]
+  }
+}

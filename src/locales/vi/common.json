@@ -1,0 +1,98 @@
+{
+  "nav": {
+    "about": "Giới thiệu",
+    "program": "Giới thiệu tiếng Anh trực tuyến",
+    "install": "Cài đặt ứng dụng",
+    "install_zoom": "Hướng dẫn cài đặt Zoom",
+    "install_voov": "Hướng dẫn cài đặt VooV Meeting",
+    "install_teams": "Hướng dẫn cài đặt Microsoft Teams",
+    "curriculum": "Chương trình học",
+    "enrollment_guide": "Hướng dẫn đăng ký",
+    "pricing": "Học phí",
+    "process": "Quy trình đăng ký",
+    "instructors": "Giáo viên",
+    "learning_system": "Hệ thống học tập",
+    "my_classroom": "Lớp học của tôi",
+    "evaluations": "Đánh giá học tập",
+    "monthly_level_test": "Kiểm tra trình độ hàng tháng",
+    "customer_center": "Hỗ trợ khách hàng",
+    "notice": "Thông báo",
+    "reviews": "Đánh giá học viên",
+    "counsel": "Tư vấn 1:1"
+  },
+  "topbar": {
+    "home": "Trang chủ",
+    "login": "Đăng nhập",
+    "find_account": "Tìm ID/Mật khẩu",
+    "welcome": "Chào mừng, <b>{{name}}</b>",
+    "my_classroom": "Lớp học của tôi",
+    "teacher_page": "Trang giáo viên",
+    "admin_manage": "Quản lý trang web",
+    "my_info": "Chỉnh sửa thông tin",
+    "logout": "Đăng xuất"
+  },
+  "footer": {
+    "brand_name": "HiFive English",
+    "brand_tagline": "Tiếng Anh trực tuyến 1:1",
+    "brand_sub": "HIGH FIVE ENGLISH",
+    "company_info": "Thông tin công ty",
+    "biz_name_label": "Tên công ty",
+    "ceo_label": "Đại diện",
+    "biz_reg_no_label": "Số đăng ký kinh doanh",
+    "address_label": "Địa chỉ",
+    "customer_center": "Hỗ trợ khách hàng",
+    "kakao": "KakaoTalk",
+    "wechat": "WeChat",
+    "weekday_hours": "Thứ 2–Thứ 6, 09:00–18:00 (Nghỉ cuối tuần & ngày lễ)",
+    "counsel_cta": "Đăng ký tư vấn 1:1",
+    "bank_transfer_title": "Thông tin chuyển khoản",
+    "account_holder": "Chủ tài khoản",
+    "copyright": "© {{year}} HiFive English. All rights reserved.",
+    "terms": "Điều khoản dịch vụ",
+    "privacy": "Chính sách bảo mật",
+    "in_preparation": "Sắp ra mắt"
+  },
+  "language_selector": {
+    "aria_label": "Chọn ngôn ngữ"
+  },
+  "aria": {
+    "open_menu": "Mở menu",
+    "close_menu": "Đóng menu",
+    "home_logo": "Trang chủ HiFive English",
+    "modal_close": "Đóng"
+  },
+  "floating": {
+    "kakao_line1": "KakaoTalk",
+    "kakao_line2": "Tư vấn",
+    "kakao_aria": "Tư vấn qua KakaoTalk · WeChat",
+    "leveltest_line1": "Kiểm tra",
+    "leveltest_line2": "trình độ",
+    "leveltest_aria": "Đăng ký kiểm tra trình độ miễn phí",
+    "scroll_top_aria": "Lên đầu trang"
+  },
+  "service_errors": {
+    "ENROLLMENT_NOT_ACTIVE": "Khóa học này không ở trạng thái đang học nên không thể xử lý.",
+    "LESSON_NOT_RESCHEDULABLE": "Buổi học này đã được xử lý nên không thể dời lịch.",
+    "WITHIN_CUTOFF_HOURS": "Chỉ có thể dời lịch trước khi buổi học bắt đầu 4 tiếng.",
+    "REMAINING_LESSONS_EXHAUSTED": "Không còn buổi học nào.",
+    "NO_AVAILABLE_DATE_FOUND": "Không tìm thấy ngày học tiếp theo khả dụng.",
+    "INVALID_WEEKLY_DAYS": "Cài đặt ngày học hàng tuần không hợp lệ.",
+    "UNAUTHENTICATED": "Vui lòng đăng nhập trước.",
+    "FORBIDDEN_ROLE": "Bạn không có quyền thực hiện thao tác này.",
+    "FORBIDDEN_PERMISSION": "Bạn không có quyền sử dụng chức năng này.",
+    "FORBIDDEN_OWNERSHIP": "Bạn chỉ có thể xử lý dữ liệu của chính mình.",
+    "INVALID_CREDENTIALS": "ID hoặc mật khẩu không chính xác.",
+    "NOT_FOUND": "Không tìm thấy thông tin được yêu cầu.",
+    "unknown": "Đã xảy ra lỗi trong quá trình xử lý."
+  },
+  "errors": {
+    "login_required_title": "Cần đăng nhập",
+    "login_required_desc": "Vui lòng đăng nhập để xem trang này.",
+    "login_cta": "Đăng nhập",
+    "forbidden_title": "Không có quyền truy cập",
+    "forbidden_desc": "Tài khoản hiện tại không có quyền xem trang này. Vui lòng liên hệ quản trị viên nếu bạn cần quyền truy cập.",
+    "not_found_title": "Không tìm thấy trang",
+    "in_preparation_title": "Trang này hiện đang được chuẩn bị. Chúng tôi sẽ sớm cập nhật nội dung chi tiết.",
+    "back_to_home": "Về trang chủ"
+  }
+}

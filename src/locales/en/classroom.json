@@ -1,0 +1,112 @@
+{
+  "weekdays_short": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  "enrollment_status": {
+    "active": "Active",
+    "completed": "Completed",
+    "expired": "Expired",
+    "paused": "Paused"
+  },
+  "lesson_status": {
+    "scheduled": "Scheduled",
+    "completed": "Attended",
+    "absent": "Absent",
+    "rescheduled": "Rescheduled",
+    "teacher_absent": "Teacher Absent",
+    "academy_closed": "Academy Closed",
+    "admin_cancelled": "Cancelled by Admin"
+  },
+  "summary_card": {
+    "enrollment_period": "Enrollment Period",
+    "lesson_count": "Lessons",
+    "lesson_count_value": "{{total}} total · {{remaining}} remaining",
+    "lesson_duration": "Lesson Length",
+    "lesson_duration_value": "{{min}} min",
+    "class_schedule": "Class Days & Time",
+    "class_schedule_value": "Every {{days}} at {{time}}",
+    "level_test_result": "Level Test Result",
+    "current_status": "Current Status",
+    "teacher_label": "Your Teacher",
+    "meeting_platform_label": "Class Platform",
+    "install_guide_cta": "View Setup Guide",
+    "weekly_count": "{{count}}x / week",
+    "remaining_count": "{{count}} left",
+    "low_remaining_notice": "You're running low on lessons. Request a 1:1 consultation if you'd like to discuss your next course."
+  },
+  "schedule_table": {
+    "headers": {
+      "date": "Date",
+      "time": "Time",
+      "lesson_name": "Lesson",
+      "teacher": "Teacher",
+      "attendance": "Attendance",
+      "evaluation": "Evaluation",
+      "enter": "Enter",
+      "reschedule": "Reschedule"
+    },
+    "view_evaluation": "View Evaluation",
+    "evaluation_in_progress": "Evaluation in progress",
+    "enter_class": "Enter Class",
+    "link_pending": "Link not ready yet",
+    "reschedule_cta": "Reschedule",
+    "reschedule_closed": "Reschedule closed",
+    "reschedule_closed_tooltip": "Rescheduling is only available until 4 hours before the class starts"
+  },
+  "calendar": {
+    "title": "Class Calendar",
+    "prev_month": "Previous month",
+    "next_month": "Next month",
+    "month_label": "{{monthName}} {{year}}",
+    "teacher_prefix": "Teacher",
+    "view_evaluation": "View Evaluation",
+    "evaluation_in_progress": "Evaluation in progress",
+    "holiday_title": "Holiday / No Class",
+    "teacher_unavailable": "No class — teacher unavailable.",
+    "no_lesson": "No class scheduled.",
+    "select_date_prompt": "Select a date to see details."
+  },
+  "enter_button": {
+    "class_ended": "Class Ended",
+    "link_pending": "Link not ready yet",
+    "link_pending_tooltip": "Your teacher hasn't registered a join link yet",
+    "enter_class": "Enter {{platform}} Class",
+    "enter_before_tooltip": "You can enter starting {{minutes}} minutes before class",
+    "enter_now": "Enter {{platform}} Class Now"
+  },
+  "textbook_card": {
+    "title": "Textbook",
+    "view_online": "View Online",
+    "download": "Download",
+    "view_online_notice": "Online preview coming soon.",
+    "download_notice": "Download file isn't available yet."
+  },
+  "reschedule_modal": {
+    "title": "Reschedule Class",
+    "confirm_question": "Reschedule this class?",
+    "description": "Rescheduling won't count against your remaining lessons — you'll automatically get the next available date matching your class days.",
+    "cancel": "Cancel",
+    "confirm": "Reschedule",
+    "submitting": "Processing...",
+    "success_title": "Your class has been rescheduled.",
+    "new_date_label": "New class date",
+    "confirm_ok": "OK"
+  },
+  "evaluation_modal": {
+    "title": "Daily Evaluation",
+    "loading": "Loading evaluation...",
+    "lesson_content": "Today's Lesson",
+    "strengths": "Strengths",
+    "improvements": "Areas to Improve",
+    "pronunciation": "Pronunciation",
+    "grammar": "Grammar",
+    "vocabulary": "Vocabulary",
+    "speaking": "Speaking",
+    "teacher_comment": "Teacher's Overall Comment"
+  },
+  "page": {
+    "eyebrow": "My Page",
+    "title": "My Classroom",
+    "loading": "Loading...",
+    "not_found": "Enrollment information not found.",
+    "schedule_table_title": "Class Schedule"
+  }
+}

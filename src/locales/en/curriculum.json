@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "title": "Curriculum | HiFive English",
+    "description": "A leveled curriculum and proven textbooks that build real English ability, step by step."
+  },
+  "hero": {
+    "eyebrow": "Curriculum",
+    "heading": "A Seamless Path from Practical English to Advanced Fluency",
+    "paragraph": "HiFive English has reorganized the 200+ textbooks we've gathered over 12 years by age, level, and purpose. Start at the stage that matches your current ability and goals, and move naturally on to the next."
+  },
+  "roadmap": {
+    "eyebrow": "Level Roadmap",
+    "title": "Learning Stages by Age and Level"
+  },
+  "representativeBooksLabel": "Featured Textbooks",
+  "stages": {
+    "phonics": {
+      "name": "Phonics · First English",
+      "ageRange": "Preschool – Grade 1",
+      "goal": "Learn the alphabet and sound rules, and listen to and repeat short sentences.",
+      "focus": ["Alphabet/Phonics", "Listening & Speaking Short Sentences", "Basic Vocabulary"]
+    },
+    "basic-conversation": {
+      "name": "Basic Conversation · Starting Readers",
+      "ageRange": "Grades 1–3",
+      "goal": "Exchange short conversations using everyday expressions and begin picture-book-level reading.",
+      "focus": ["Everyday Conversation", "Picture Book Reading", "Question & Answer Patterns"]
+    },
+    "reading-smalltalk": {
+      "name": "Reading Development · Small Talk",
+      "ageRange": "Grades 3–6",
+      "goal": "Read paragraph-length texts and share your own opinion on a topic in a few sentences.",
+      "focus": ["Paragraph Reading", "Topic-Based Small Talk", "Basic Writing"]
+    },
+    "conversation-debate": {
+      "name": "Advanced Conversation · Debate",
+      "ageRange": "Upper Elementary – Middle School",
+      "goal": "Hold conversations with accurate grammar and logically express your opinions with supporting reasons.",
+      "focus": ["Grammar-Based Conversation", "Expressing Opinions", "Intro to Debate"]
+    },
+    "advanced-discussion": {
+      "name": "Advanced Conversation · Current-Affairs Discussion · Business",
+      "ageRange": "High School – Adult",
+      "goal": "Discuss current events and specialized topics, and practice the English used in presentations and professional settings.",
+      "focus": ["Current-Affairs Discussion", "Presentations", "Professional English"]
+    }
+  },
+  "catalogSection": {
+    "eyebrow": "Full Textbook Catalog",
+    "title": "Complete List of Conversation, Grammar & Reading Books",
+    "description": "Search and filter {{count}} textbooks from the Conversation, Grammar, and Reading Books folders by folder, category ({{categoryCount}}), level, and age group.",
+    "disclaimer": "Levels for the Chapter Books & Original Novels category are converted to CEFR from AR values (as labeled in the source files) or commonly known Lexile approximations. They are for reference only, not precise placement."
+  },
+  "nativeReadingTrack": {
+    "badge": "Advanced Track",
+    "title": "Original Reading Track",
+    "desc": "A separate track for students progressing quickly in reading. Based on AR (Accelerated Reader) scores, students read their way up from chapter books to literary works in stages.",
+    "levels": {
+      "advanced": "Advanced",
+      "advancedPlus": "Upper Advanced"
+    }
+  },
+  "specialty": {
+    "eyebrow": "Specialized Programs by Purpose",
+    "title": "Beyond General Conversation",
+    "programs": {
+      "business": {
+        "title": "Business English",
+        "desc": "Practice expressions used directly in work situations such as emails, meetings, and presentations."
+      },
+      "exam": {
+        "title": "Exam Preparation",
+        "desc": "Focused, practical study tailored to target exam formats such as TOEIC, TOEFL, IELTS, and OPIc."
+      },
+      "expression": {
+        "title": "Expressions & Vocabulary Building",
+        "desc": "Learn idioms and vocabulary that native speakers actually use, organized by situation."
+      },
+      "interview": {
+        "title": "Interview & Pronunciation",
+        "desc": "Practice anticipated interview questions by scenario along with pronunciation coaching."
+      }
+    }
+  },
+  "closing": {
+    "heading": "This Textbook List Keeps Growing",
+    "paragraph": "We continue reviewing and adding better materials whenever we find them. Find your exact starting level with a free level test.",
+    "cta": "Apply for a Free Level Test"
+  },
+  "catalog": {
+    "searchPlaceholder": "Search by textbook name or keyword (e.g. phonics, debate, TED)",
+    "allFolders": "All Folders",
+    "allCategories": "All Categories",
+    "allLevels": "All Levels",
+    "allAges": "All Ages",
+    "countLabel": "Showing {{filtered}} / {{total}}",
+    "tableHeaders": ["Title", "Folder", "Category", "Level", "Age Group", "Highlights"],
+    "emptyState": "No textbooks match your criteria.",
+    "footnote": "Levels and age groups are practical reference points based on each series' typical curriculum placement; actual placement is based primarily on the student's test results. Titles marked (?) could not be definitively confirmed for publisher or contents from the folder name alone, so checking the actual cover and table of contents is recommended."
+  }
+}

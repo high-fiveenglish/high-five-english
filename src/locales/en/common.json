@@ -1,0 +1,98 @@
+{
+  "nav": {
+    "about": "About Us",
+    "program": "About Video English",
+    "install": "App Setup",
+    "install_zoom": "Zoom Setup Guide",
+    "install_voov": "VooV Meeting Setup Guide",
+    "install_teams": "Microsoft Teams Setup Guide",
+    "curriculum": "Curriculum",
+    "enrollment_guide": "Enrollment Info",
+    "pricing": "Pricing",
+    "process": "Enrollment Process",
+    "instructors": "Our Teachers",
+    "learning_system": "Learning System",
+    "my_classroom": "My Classroom",
+    "evaluations": "Learning Evaluations",
+    "monthly_level_test": "Monthly Level Test",
+    "customer_center": "Support",
+    "notice": "Notices",
+    "reviews": "Reviews",
+    "counsel": "1:1 Consultation"
+  },
+  "topbar": {
+    "home": "Home",
+    "login": "Log In",
+    "find_account": "Find ID/Password",
+    "welcome": "Welcome, <b>{{name}}</b>",
+    "my_classroom": "My Classroom",
+    "teacher_page": "Teacher Page",
+    "admin_manage": "Site Management",
+    "my_info": "Edit Profile",
+    "logout": "Log Out"
+  },
+  "footer": {
+    "brand_name": "HiFive English",
+    "brand_tagline": "1:1 Video English",
+    "brand_sub": "HIGH FIVE ENGLISH",
+    "company_info": "Company Info",
+    "biz_name_label": "Company Name",
+    "ceo_label": "CEO",
+    "biz_reg_no_label": "Business Registration No.",
+    "address_label": "Address",
+    "customer_center": "Support",
+    "kakao": "KakaoTalk",
+    "wechat": "WeChat",
+    "weekday_hours": "Weekdays 09:00–18:00 (Closed weekends & holidays)",
+    "counsel_cta": "Get a 1:1 Consultation",
+    "bank_transfer_title": "Bank Transfer Info",
+    "account_holder": "Account Holder",
+    "copyright": "© {{year}} HiFive English. All rights reserved.",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "in_preparation": "Coming soon"
+  },
+  "language_selector": {
+    "aria_label": "Select language"
+  },
+  "aria": {
+    "open_menu": "Open menu",
+    "close_menu": "Close menu",
+    "home_logo": "HiFive English home",
+    "modal_close": "Close"
+  },
+  "floating": {
+    "kakao_line1": "KakaoTalk",
+    "kakao_line2": "Chat",
+    "kakao_aria": "KakaoTalk / WeChat Chat",
+    "leveltest_line1": "Level Test",
+    "leveltest_line2": "Apply",
+    "leveltest_aria": "Apply for Free Level Test",
+    "scroll_top_aria": "Scroll to top"
+  },
+  "service_errors": {
+    "ENROLLMENT_NOT_ACTIVE": "This enrollment isn't active, so this action can't be completed.",
+    "LESSON_NOT_RESCHEDULABLE": "This class has already been processed and can't be rescheduled.",
+    "WITHIN_CUTOFF_HOURS": "Rescheduling is only available until 4 hours before the class starts.",
+    "REMAINING_LESSONS_EXHAUSTED": "There are no remaining lessons on this enrollment.",
+    "NO_AVAILABLE_DATE_FOUND": "Couldn't find an available next class date.",
+    "INVALID_WEEKLY_DAYS": "The class weekday settings are invalid.",
+    "UNAUTHENTICATED": "Please log in first.",
+    "FORBIDDEN_ROLE": "You don't have permission to do this.",
+    "FORBIDDEN_PERMISSION": "You don't have permission for this feature.",
+    "FORBIDDEN_OWNERSHIP": "You can only manage your own data.",
+    "INVALID_CREDENTIALS": "The ID or password you entered is incorrect.",
+    "NOT_FOUND": "The requested information could not be found.",
+    "unknown": "Something went wrong. Please try again."
+  },
+  "errors": {
+    "login_required_title": "Login Required",
+    "login_required_desc": "Please log in to view this page.",
+    "login_cta": "Log In",
+    "forbidden_title": "Access Denied",
+    "forbidden_desc": "Your account doesn't have permission to view this page. Contact an administrator if you need access.",
+    "not_found_title": "Page Not Found",
+    "in_preparation_title": "This page is currently being prepared. We'll have more details soon.",
+    "back_to_home": "Back to Home"
+  }
+}

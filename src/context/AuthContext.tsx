@@ -12,8 +12,14 @@ type AuthContextValue = {
   /** The single object every permission check (service-layer AND RouteGuard) is built
    * from — null while logged out. */
   actor: Actor | null;
-  /** Resolves with the logged-in role on success, or an error message on failure. */
-  login: (id: string, password: string) => Promise<{ ok: true; role: Role } | { ok: false; message: string }>;
+  /** This account's stored UI language, read at login time. LanguageContext is the
+   * source of truth for the ACTIVE language app-wide; this is only the seed value each
+   * account brings with it on login (see LanguageContext for how it's applied/updated). */
+  preferredLanguage: string | null;
+  /** Resolves with the logged-in role on success, or an error code on failure — callers
+   * translate the code themselves (see auth.json's login.* keys) rather than displaying
+   * the raw mock-service message, which is only ever in Korean. */
+  login: (id: string, password: string) => Promise<{ ok: true; role: Role } | { ok: false; code: string }>;
   logout: () => void;
 };
 
@@ -22,18 +28,21 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [actor, setActor] = useState<Actor | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [preferredLanguage, setPreferredLanguage] = useState<string | null>(null);
 
   const login = async (id: string, password: string) => {
     const result = await loginRequest(id, password);
-    if (!result.ok) return { ok: false as const, message: result.error.message };
+    if (!result.ok) return { ok: false as const, code: result.error.code };
     setActor(result.value.actor);
     setUserName(result.value.displayName);
+    setPreferredLanguage(result.value.preferredLanguage ?? null);
     return { ok: true as const, role: result.value.actor.role };
   };
 
   const logout = () => {
     setActor(null);
     setUserName(null);
+    setPreferredLanguage(null);
   };
 
   return (
@@ -45,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userId: actor?.linkedId ?? null,
         permissions: actor?.permissions ?? [],
         actor,
+        preferredLanguage,
         login,
         logout,
       }}

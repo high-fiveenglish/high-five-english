@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { AlertCircle } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { useAuth } from "../../context/AuthContext";
@@ -23,6 +24,7 @@ export function LoginModal({
 }) {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation("auth");
   const [id, setId] = useState("");
   const [pw, setPw] = useState("");
   const [remember, setRemember] = useState(false);
@@ -44,7 +46,7 @@ export function LoginModal({
     const result = await login(id.trim(), pw);
     setSubmitting(false);
     if (!result.ok) {
-      setError(result.message);
+      setError(t("login.invalid_credentials"));
       return;
     }
     handleClose();
@@ -52,30 +54,30 @@ export function LoginModal({
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="로그인">
+    <Modal open={open} onClose={handleClose} title={t("login.title")}>
       <form onSubmit={handleSubmit} className="space-y-3.5">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-slate-600">
-            아이디
+            {t("login.id_label")}
           </label>
           <input
             type="text"
             value={id}
             onChange={(e) => setId(e.target.value)}
-            placeholder="아이디를 입력하세요"
+            placeholder={t("login.id_placeholder")}
             className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             autoComplete="username"
           />
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium text-slate-600">
-            비밀번호
+            {t("login.password_label")}
           </label>
           <input
             type="password"
             value={pw}
             onChange={(e) => setPw(e.target.value)}
-            placeholder="비밀번호를 입력하세요"
+            placeholder={t("login.password_placeholder")}
             className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             autoComplete="current-password"
           />
@@ -96,14 +98,14 @@ export function LoginModal({
               onChange={(e) => setRemember(e.target.checked)}
               className="h-4 w-4 rounded border-slate-300 accent-brand-600"
             />
-            로그인 상태 유지
+            {t("login.remember_me")}
           </label>
           <button
             type="button"
             onClick={onSwitchToFind}
             className="font-medium text-brand-600 hover:underline"
           >
-            아이디/비밀번호 찾기
+            {t("login.find_account")}
           </button>
         </div>
         <button
@@ -111,11 +113,10 @@ export function LoginModal({
           disabled={submitting}
           className="mt-2 w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
         >
-          {submitting ? "확인 중..." : "로그인"}
+          {submitting ? t("login.submitting") : t("login.submit")}
         </button>
         <p className="pt-1 text-center text-xs text-slate-400">
-          데모 계정 예시 — 학생: demo-student / student123, 강사: james / teacher123,
-          관리자: admin1 / admin123, 매니저: manager / manager123
+          {t("login.demo_hint")}
         </p>
       </form>
     </Modal>

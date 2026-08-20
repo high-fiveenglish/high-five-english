@@ -2,7 +2,7 @@
 // checks it via src/lib/auth/permissions.ts BEFORE touching data — this is what stands
 // in for "checked at the API level" until a real backend exists (see store.ts).
 import {
-  DEMO_COURSE,
+  getDemoCourse,
   DEMO_LEVEL_TEST_RESULT,
   DEMO_TEXTBOOK,
   STUDENTS,
@@ -34,11 +34,8 @@ export interface MeetingPlatformRow {
   name: string;
   shortName: string;
   brandColor: string;
-  description: string;
   officialSiteUrl: string;
   downloadLinks: { pc: string; android: string; ios: string };
-  installSteps: string[];
-  joinSteps: string[];
   enabled: boolean;
 }
 
@@ -91,7 +88,7 @@ export async function getMyClassroom(actor: Actor): Promise<ServiceResult<MyClas
 
   return okResult({
     enrollment,
-    course: DEMO_COURSE,
+    course: getDemoCourse(),
     teacher,
     textbook: DEMO_TEXTBOOK,
     levelTestResult: DEMO_LEVEL_TEST_RESULT,

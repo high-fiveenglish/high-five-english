@@ -1,0 +1,112 @@
+{
+  "weekdays_short": ["周日", "周一", "周二", "周三", "周四", "周五", "周六"],
+  "enrollment_status": {
+    "active": "学习中",
+    "completed": "已完成",
+    "expired": "已过期",
+    "paused": "已暂停"
+  },
+  "lesson_status": {
+    "scheduled": "预定",
+    "completed": "出席",
+    "absent": "缺席",
+    "rescheduled": "已调课",
+    "teacher_absent": "教师缺席",
+    "academy_closed": "停课",
+    "admin_cancelled": "管理员取消"
+  },
+  "summary_card": {
+    "enrollment_period": "学习期间",
+    "lesson_count": "课程次数",
+    "lesson_count_value": "共{{total}}次 · 剩余{{remaining}}次",
+    "lesson_duration": "上课时长",
+    "lesson_duration_value": "{{min}}分钟",
+    "class_schedule": "上课时间",
+    "class_schedule_value": "每周{{days}} {{time}}",
+    "level_test_result": "水平测试结果",
+    "current_status": "当前学习状态",
+    "teacher_label": "负责教师",
+    "meeting_platform_label": "上课软件",
+    "install_guide_cta": "查看安装指南",
+    "weekly_count": "每周{{count}}次",
+    "remaining_count": "剩余{{count}}次",
+    "low_remaining_notice": "您的剩余课程不多了，如需咨询下一阶段课程，请申请1:1咨询。"
+  },
+  "schedule_table": {
+    "headers": {
+      "date": "日期",
+      "time": "时间",
+      "lesson_name": "课程名称",
+      "teacher": "教师",
+      "attendance": "出勤状态",
+      "evaluation": "学习评价",
+      "enter": "进入课堂",
+      "reschedule": "调课"
+    },
+    "view_evaluation": "查看评价",
+    "evaluation_in_progress": "评价撰写中",
+    "enter_class": "进入课堂",
+    "link_pending": "链接准备中",
+    "reschedule_cta": "申请调课",
+    "reschedule_closed": "调课申请已截止",
+    "reschedule_closed_tooltip": "仅可在课程开始前4小时之前申请调课"
+  },
+  "calendar": {
+    "title": "课程日历",
+    "prev_month": "上个月",
+    "next_month": "下个月",
+    "month_label": "{{year}}年{{month}}月",
+    "teacher_prefix": "教师",
+    "view_evaluation": "查看学习评价",
+    "evaluation_in_progress": "评价撰写中",
+    "holiday_title": "Holiday / No Class",
+    "teacher_unavailable": "因教师个人原因停课。",
+    "no_lesson": "没有预定的课程。",
+    "select_date_prompt": "选择日期以查看详细信息。"
+  },
+  "enter_button": {
+    "class_ended": "课程已结束",
+    "link_pending": "链接准备中",
+    "link_pending_tooltip": "负责教师尚未注册参课链接",
+    "enter_class": "进入{{platform}}课堂",
+    "enter_before_tooltip": "可在课程开始前{{minutes}}分钟进入课堂",
+    "enter_now": "立即进入{{platform}}课堂"
+  },
+  "textbook_card": {
+    "title": "教材信息",
+    "view_online": "在线查看",
+    "download": "下载",
+    "view_online_notice": "在线查看功能即将推出。",
+    "download_notice": "教材下载文件尚未准备好。"
+  },
+  "reschedule_modal": {
+    "title": "调课",
+    "confirm_question": "确定要调整此课程吗？",
+    "description": "调课不会扣除课程次数，系统将根据您的上课日期规律自动安排下一个可用日期。",
+    "cancel": "取消",
+    "confirm": "确认调课",
+    "submitting": "处理中...",
+    "success_title": "课程已调整。",
+    "new_date_label": "新课程日期",
+    "confirm_ok": "确认"
+  },
+  "evaluation_modal": {
+    "title": "每日学习评价",
+    "loading": "正在加载评价...",
+    "lesson_content": "今日课程内容",
+    "strengths": "优点",
+    "improvements": "待改进之处",
+    "pronunciation": "发音",
+    "grammar": "语法",
+    "vocabulary": "词汇",
+    "speaking": "口语",
+    "teacher_comment": "教师综合评语"
+  },
+  "page": {
+    "eyebrow": "我的页面",
+    "title": "我的教室",
+    "loading": "加载中...",
+    "not_found": "未找到学习信息。",
+    "schedule_table_title": "课程安排表"
+  }
+}

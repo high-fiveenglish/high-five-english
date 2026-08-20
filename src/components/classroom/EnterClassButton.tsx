@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Video } from "lucide-react";
 import type { Lesson } from "../../lib/scheduling/types";
 import type { MeetingPlatformId } from "../../data/meetingPlatforms";
@@ -25,6 +26,7 @@ export function EnterClassButton({
   entryWindow?: EntryWindowSettings;
   size?: "lg" | "sm";
 }) {
+  const { t } = useTranslation("classroom");
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNowMs(Date.now()), 30_000);
@@ -45,7 +47,7 @@ export function EnterClassButton({
         disabled
         className={`flex items-center justify-center gap-2 rounded-xl bg-slate-100 font-bold text-slate-400 ${sizeClasses}`}
       >
-        <Video size={16} /> 수업 종료
+        <Video size={16} /> {t("enter_button.class_ended")}
       </button>
     );
   }
@@ -54,10 +56,10 @@ export function EnterClassButton({
     return (
       <button
         disabled
-        title="담당 강사가 아직 참여 링크를 등록하지 않았습니다"
+        title={t("enter_button.link_pending_tooltip")}
         className={`flex items-center justify-center gap-2 rounded-xl bg-slate-100 font-bold text-slate-400 ${sizeClasses}`}
       >
-        <Video size={16} /> 입장 링크 준비 중
+        <Video size={16} /> {t("enter_button.link_pending")}
       </button>
     );
   }
@@ -66,10 +68,10 @@ export function EnterClassButton({
     return (
       <button
         disabled
-        title={`수업 시작 ${entryWindow.earlyEntryMinutes}분 전부터 입장할 수 있습니다`}
+        title={t("enter_button.enter_before_tooltip", { minutes: entryWindow.earlyEntryMinutes })}
         className={`flex items-center justify-center gap-2 rounded-xl border-2 border-slate-200 font-bold text-slate-400 ${sizeClasses}`}
       >
-        <Video size={16} /> {platformInfo.shortName} 수업 입장
+        <Video size={16} /> {t("enter_button.enter_class", { platform: platformInfo.shortName })}
       </button>
     );
   }
@@ -81,7 +83,7 @@ export function EnterClassButton({
       rel="noopener noreferrer"
       className={`flex items-center justify-center gap-2 rounded-xl bg-accent-500 font-bold text-white shadow-sm transition hover:bg-accent-600 ${sizeClasses}`}
     >
-      <Video size={16} /> 지금 {platformInfo.shortName} 수업 입장하기
+      <Video size={16} /> {t("enter_button.enter_now", { platform: platformInfo.shortName })}
     </a>
   );
 }

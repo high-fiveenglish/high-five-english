@@ -1,0 +1,98 @@
+{
+  "nav": {
+    "about": "公司介绍",
+    "program": "视频英语介绍",
+    "install": "程序安装",
+    "install_zoom": "Zoom 安装指南",
+    "install_voov": "腾讯会议(VooV Meeting)安装指南",
+    "install_teams": "Microsoft Teams 安装指南",
+    "curriculum": "课程体系",
+    "enrollment_guide": "报名指南",
+    "pricing": "课程费用",
+    "process": "报名流程",
+    "instructors": "教师介绍",
+    "learning_system": "学习系统",
+    "my_classroom": "我的教室",
+    "evaluations": "学习评价",
+    "monthly_level_test": "每月水平测试",
+    "customer_center": "客户中心",
+    "notice": "公告",
+    "reviews": "学员评价",
+    "counsel": "1:1 咨询"
+  },
+  "topbar": {
+    "home": "首页",
+    "login": "登录",
+    "find_account": "查找账号/密码",
+    "welcome": "欢迎，<b>{{name}}</b>",
+    "my_classroom": "我的教室",
+    "teacher_page": "教师页面",
+    "admin_manage": "网站管理",
+    "my_info": "修改信息",
+    "logout": "退出登录"
+  },
+  "footer": {
+    "brand_name": "HiFive English",
+    "brand_tagline": "1对1视频英语",
+    "brand_sub": "HIGH FIVE ENGLISH",
+    "company_info": "公司信息",
+    "biz_name_label": "公司名称",
+    "ceo_label": "代表",
+    "biz_reg_no_label": "营业执照号",
+    "address_label": "地址",
+    "customer_center": "客户中心",
+    "kakao": "KakaoTalk",
+    "wechat": "微信",
+    "weekday_hours": "工作日 09:00–18:00（周末及法定节假日休息）",
+    "counsel_cta": "申请1:1咨询",
+    "bank_transfer_title": "银行转账账户信息",
+    "account_holder": "账户持有人",
+    "copyright": "© {{year}} HiFive English. All rights reserved.",
+    "terms": "服务条款",
+    "privacy": "隐私政策",
+    "in_preparation": "即将推出"
+  },
+  "language_selector": {
+    "aria_label": "选择语言"
+  },
+  "aria": {
+    "open_menu": "打开菜单",
+    "close_menu": "关闭菜单",
+    "home_logo": "HiFive English 首页",
+    "modal_close": "关闭"
+  },
+  "floating": {
+    "kakao_line1": "KakaoTalk",
+    "kakao_line2": "咨询",
+    "kakao_aria": "KakaoTalk · 微信咨询",
+    "leveltest_line1": "水平测试",
+    "leveltest_line2": "申请",
+    "leveltest_aria": "申请免费水平测试",
+    "scroll_top_aria": "回到顶部"
+  },
+  "service_errors": {
+    "ENROLLMENT_NOT_ACTIVE": "该课程状态不是学习中，无法处理。",
+    "LESSON_NOT_RESCHEDULABLE": "该课程已处理，无法调课。",
+    "WITHIN_CUTOFF_HOURS": "仅可在课程开始前4小时之前申请调课。",
+    "REMAINING_LESSONS_EXHAUSTED": "没有剩余课程次数。",
+    "NO_AVAILABLE_DATE_FOUND": "未找到可用的下一个课程日期。",
+    "INVALID_WEEKLY_DAYS": "上课日期设置不正确。",
+    "UNAUTHENTICATED": "需要先登录。",
+    "FORBIDDEN_ROLE": "没有执行此操作的权限。",
+    "FORBIDDEN_PERMISSION": "没有此功能的权限。",
+    "FORBIDDEN_OWNERSHIP": "只能处理本人的数据。",
+    "INVALID_CREDENTIALS": "账号或密码不正确。",
+    "NOT_FOUND": "未找到请求的信息。",
+    "unknown": "处理过程中发生错误。"
+  },
+  "errors": {
+    "login_required_title": "需要登录",
+    "login_required_desc": "请先登录后查看此页面。",
+    "login_cta": "登录",
+    "forbidden_title": "没有访问权限",
+    "forbidden_desc": "当前账号没有查看此页面的权限。如有需要，请向管理员申请权限。",
+    "not_found_title": "找不到页面",
+    "in_preparation_title": "该页面正在准备中，我们将尽快为您呈现详细内容。",
+    "back_to_home": "返回首页"
+  }
+}

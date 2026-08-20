@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { BookOpen, Download, ExternalLink } from "lucide-react";
 import type { ClassroomTextbook } from "../../data/classroomMock";
 
 export function TextbookInfoCard({ textbook }: { textbook: ClassroomTextbook }) {
+  const { t } = useTranslation("classroom");
   const [notice, setNotice] = useState<string | null>(null);
 
   const showNotice = (message: string) => {
@@ -12,7 +14,7 @@ export function TextbookInfoCard({ textbook }: { textbook: ClassroomTextbook }) 
 
   return (
     <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_8px_24px_rgba(20,44,88,0.06)]">
-      <h3 className="text-sm font-bold text-brand-950">교재 정보</h3>
+      <h3 className="text-sm font-bold text-brand-950">{t("textbook_card.title")}</h3>
 
       <div className="mt-4 flex items-center gap-4">
         <div
@@ -31,16 +33,16 @@ export function TextbookInfoCard({ textbook }: { textbook: ClassroomTextbook }) 
 
       <div className="mt-4 flex gap-2">
         <button
-          onClick={() => showNotice("온라인 보기 준비 중입니다.")}
+          onClick={() => showNotice(t("textbook_card.view_online_notice"))}
           className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 py-2 text-xs font-bold text-slate-600 transition hover:border-brand-300"
         >
-          <ExternalLink size={13} /> 온라인 보기
+          <ExternalLink size={13} /> {t("textbook_card.view_online")}
         </button>
         <button
-          onClick={() => showNotice("교재 다운로드 파일이 아직 준비되지 않았습니다.")}
+          onClick={() => showNotice(t("textbook_card.download_notice"))}
           className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand-50 py-2 text-xs font-bold text-brand-700 transition hover:bg-brand-100"
         >
-          <Download size={13} /> 다운로드
+          <Download size={13} /> {t("textbook_card.download")}
         </button>
       </div>
 

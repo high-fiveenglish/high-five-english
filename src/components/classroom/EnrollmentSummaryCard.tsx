@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Calendar, Clock, Repeat, User, Sparkles, Video } from "lucide-react";
 import type { Enrollment, Lesson } from "../../lib/scheduling/types";
 import type { ClassroomCourse, LevelTestResult } from "../../data/classroomMock";
@@ -6,15 +6,7 @@ import type { Instructor } from "../../data/instructors";
 import { getMeetingPlatform } from "../../data/meetingPlatforms";
 import type { TeacherMeetingLinks } from "../../services/store";
 import { EnterClassButton } from "./EnterClassButton";
-
-const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
-
-const ENROLLMENT_STATUS_LABELS: Record<Enrollment["status"], string> = {
-  active: "수강중",
-  completed: "수강완료",
-  expired: "만료",
-  paused: "일시중지",
-};
+import { LocalizedLink } from "../i18n/LocalizedLink";
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
@@ -50,10 +42,12 @@ export function EnrollmentSummaryCard({
   teacherMeetingLinks: TeacherMeetingLinks;
   onOpenTeacher: () => void;
 }) {
+  const { t } = useTranslation("classroom");
+  const weekdayLabels = t("weekdays_short", { returnObjects: true }) as string[];
   const weeklyDaysLabel = enrollment.weeklyDays
     .slice()
     .sort((a, b) => a - b)
-    .map((d) => WEEKDAY_LABELS[d])
+    .map((d) => weekdayLabels[d])
     .join(", ");
   const platform = getMeetingPlatform(enrollment.meetingPlatform);
   const nextLesson = findNextScheduledLesson(lessons);
@@ -66,7 +60,7 @@ export function EnrollmentSummaryCard({
           <h2 className="mt-1 text-lg font-extrabold text-brand-950">{course.courseName}</h2>
         </div>
         <span className="rounded-full bg-brand-600/10 px-3 py-1.5 text-xs font-bold text-brand-700">
-          {ENROLLMENT_STATUS_LABELS[enrollment.status]}
+          {t(`enrollment_status.${enrollment.status}`)}
         </span>
       </div>
 
@@ -77,12 +71,18 @@ export function EnrollmentSummaryCard({
       )}
 
       <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3">
-        <Field label="수강 기간" value={`${enrollment.startDate} ~ ${enrollment.endDate}`} />
-        <Field label="수업 횟수" value={`총 ${enrollment.totalLessons}회 · 잔여 ${enrollment.remainingLessons}회`} />
-        <Field label="수업 시간" value={`${enrollment.lessonDurationMin}분`} />
-        <Field label="수업 요일 및 시간" value={`매주 ${weeklyDaysLabel} ${enrollment.classTime}`} />
-        <Field label="레벨테스트 결과" value={levelTestResult.level} />
-        <Field label="현재 수강 상태" value={ENROLLMENT_STATUS_LABELS[enrollment.status]} />
+        <Field label={t("summary_card.enrollment_period")} value={`${enrollment.startDate} ~ ${enrollment.endDate}`} />
+        <Field
+          label={t("summary_card.lesson_count")}
+          value={t("summary_card.lesson_count_value", { total: enrollment.totalLessons, remaining: enrollment.remainingLessons })}
+        />
+        <Field label={t("summary_card.lesson_duration")} value={t("summary_card.lesson_duration_value", { min: enrollment.lessonDurationMin })} />
+        <Field
+          label={t("summary_card.class_schedule")}
+          value={t("summary_card.class_schedule_value", { days: weeklyDaysLabel, time: enrollment.classTime })}
+        />
+        <Field label={t("summary_card.level_test_result")} value={levelTestResult.level} />
+        <Field label={t("summary_card.current_status")} value={t(`enrollment_status.${enrollment.status}`)} />
       </dl>
 
       <p className="mt-1 text-[13px] leading-relaxed text-slate-500">{levelTestResult.summary}</p>
@@ -97,7 +97,7 @@ export function EnrollmentSummaryCard({
           {teacher.name[0]}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-slate-400">담당 강사</p>
+          <p className="text-xs text-slate-400">{t("summary_card.teacher_label")}</p>
           <p className="truncate text-sm font-bold text-brand-950">
             {teacher.flag} {teacher.name} ({teacher.nameEn})
           </p>
@@ -114,23 +114,23 @@ export function EnrollmentSummaryCard({
             <Video size={15} />
           </div>
           <p className="text-sm text-slate-500">
-            수업 프로그램{" "}
+            {t("summary_card.meeting_platform_label")}{" "}
             <span className="font-bold text-brand-950">{platform.shortName}</span>
           </p>
         </div>
-        <Link
+        <LocalizedLink
           to="/install"
           state={{ scrollTo: platform.id }}
           className="rounded-lg bg-brand-600 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-brand-700"
         >
-          설치 안내 보기
-        </Link>
+          {t("summary_card.install_guide_cta")}
+        </LocalizedLink>
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-2 text-center">
         <div className="rounded-xl bg-brand-50/60 p-3">
           <Calendar size={16} className="mx-auto text-brand-600" />
-          <p className="mt-1 text-[11px] font-medium text-slate-500">주 {enrollment.weeklyDays.length}회</p>
+          <p className="mt-1 text-[11px] font-medium text-slate-500">{t("summary_card.weekly_count", { count: enrollment.weeklyDays.length })}</p>
         </div>
         <div className="rounded-xl bg-brand-50/60 p-3">
           <Clock size={16} className="mx-auto text-brand-600" />
@@ -139,7 +139,7 @@ export function EnrollmentSummaryCard({
         <div className="rounded-xl bg-brand-50/60 p-3">
           <Repeat size={16} className="mx-auto text-brand-600" />
           <p className="mt-1 text-[11px] font-medium text-slate-500">
-            {enrollment.remainingLessons}회 남음
+            {t("summary_card.remaining_count", { count: enrollment.remainingLessons })}
           </p>
         </div>
       </div>
@@ -148,7 +148,7 @@ export function EnrollmentSummaryCard({
         <div className="mt-4 flex items-center gap-2 rounded-xl bg-accent-50 px-4 py-3">
           <Sparkles size={14} className="shrink-0 text-accent-500" />
           <p className="text-[12.5px] font-medium text-accent-700">
-            잔여 수업이 얼마 남지 않았습니다. 다음 과정 상담이 필요하시면 1:1 상담을 신청해주세요.
+            {t("summary_card.low_remaining_notice")}
           </p>
         </div>
       )}

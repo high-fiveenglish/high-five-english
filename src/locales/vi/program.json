@@ -1,0 +1,100 @@
+{
+  "meta": {
+    "title": "Giới thiệu chương trình | HiFive English",
+    "description": "Khám phá chương trình tiếng Anh trực tuyến 1:1 tương tác của HiFive English — nói ngay những gì đã học và nhận phản hồi tức thì."
+  },
+  "cta": {
+    "startLevelTest": "Bắt đầu với bài kiểm tra trình độ miễn phí",
+    "applyLevelTest": "Đăng ký kiểm tra trình độ miễn phí"
+  },
+  "strengthsEyebrow": "3 thế mạnh cốt lõi",
+  "hero": {
+    "eyebrow": "Giới thiệu tiếng Anh qua video",
+    "headline": "Biến vốn tiếng Anh đã biết thành tiếng Anh thực sự nói được",
+    "sub": "Lớp tiếng Anh qua video 1:1 của HiFive English là 25 phút để bạn trực tiếp nói ra những câu đã học và được sửa ngay tại chỗ. Đây không phải là lớp học thuộc thêm vài quy tắc ngữ pháp, mà là lớp học giúp cơ thể bạn ghi nhớ cảm giác thực sự nói tiếng Anh."
+  },
+  "output": {
+    "eyebrow": "Thế mạnh cốt lõi 1",
+    "title": "Vì sao là tiếng Anh video \"1:1\" chứ không chỉ là \"tiếng Anh qua video\"",
+    "lead": "Nghe nhiều không giúp bạn giỏi lên. Chỉ có thời gian thực sự nói ra mới giúp bạn tiến bộ.",
+    "body": "Với học sinh học tiếng Anh trong môi trường EFL như Hàn Quốc — nơi hầu như không có cơ hội dùng tiếng Anh trong đời sống hằng ngày — điều thiếu nhất không phải là từ vựng hay ngữ pháp, mà là thời gian thực sự \"nói ra thành lời\" những kiến thức đó.",
+    "compare": {
+      "left": {
+        "label": "Lớp học nhóm",
+        "points": [
+          "Nhiều học sinh học chung một lớp",
+          "Thời gian nói của mỗi người rất ngắn",
+          "Phải chờ đến lượt của các bạn khác"
+        ]
+      },
+      "right": {
+        "label": "Tiếng Anh video 1:1",
+        "points": [
+          "25 hoặc 50 phút chỉ dành riêng cho một học sinh",
+          "Trả lời ngay và được sửa lỗi ngay tại chỗ",
+          "Lượng nói và số lần được sửa lỗi nhiều hơn hẳn"
+        ]
+      }
+    },
+    "highlight": "Lớp học 25 phút = trọn vẹn 25 phút là thời gian của riêng bạn để nói",
+    "closing": "Hơn nữa, đây không phải là lớp học chỉ chạy theo tiến độ có sẵn. Khi câu học sinh nói ra chưa tự nhiên, giáo viên sẽ sửa lại thành cách diễn đạt tự nhiên hơn ngay tại chỗ, và học sinh sẽ nói lại câu đó một lần nữa. Quá trình này lặp lại nhiều lần trong buổi học, giúp những biểu đạt đã học chuyển từ \"biết\" thành \"dùng được\"."
+  },
+  "ai": {
+    "eyebrow": "Thế mạnh cốt lõi 2",
+    "title": "Điều mà ứng dụng học tiếng Anh bằng AI không thể mang lại",
+    "lead": "AI cũng có thể trò chuyện, nhưng AI không thể thực sự hiểu \"bạn\".",
+    "body": "Chatbot AI hay ứng dụng học tiếng Anh có vẻ trò chuyện khá tự nhiên trong những khuôn mẫu định sẵn. Nhưng chúng không thể nắm bắt được những câu hỏi bất ngờ, những câu đùa nằm ngoài ngữ cảnh, hay việc hôm nay bạn đang không có hứng để nói.",
+    "body2": "Giáo viên là con người thì khác. Giáo viên trò chuyện cùng bạn để nhận ra bạn đang lúng túng ở đâu, vì sao bạn hay mắc lỗi đó, vì sao hôm nay bạn có vẻ căng thẳng hơn thường lệ, rồi điều chỉnh ngay độ khó và cách đặt câu hỏi cho phù hợp.",
+    "compare": {
+      "left": {
+        "label": "Ứng dụng học bằng AI",
+        "points": [
+          "Chỉ phản hồi trong những kịch bản có sẵn",
+          "Chỉ ra lỗi một cách máy móc, theo cùng một cách",
+          "Không biết được tâm trạng hay tình trạng của học sinh hôm đó"
+        ]
+      },
+      "right": {
+        "label": "Giáo viên HiFive",
+        "points": [
+          "Trò chuyện tự nhiên ngay cả với câu hỏi và tình huống bất ngờ",
+          "Điều chỉnh cách dạy theo tính cách và tình trạng của học sinh hôm đó",
+          "Hiểu học sinh sâu sắc hơn qua từng buổi học"
+        ]
+      }
+    },
+    "highlight": "AI có thể là bạn trò chuyện, nhưng không thể trở thành người thầy thực sự hiểu bạn."
+  },
+  "strengthsTitle": "Sự khác biệt của riêng HiFive English",
+  "strengths": [
+    {
+      "badge": "Tiêu chuẩn được mài giũa qua 12 năm",
+      "title": "Tiêu chuẩn được mài giũa suốt 12 năm, học phí không có phần thừa",
+      "body": "Suốt 12 năm, chúng tôi không ngừng hoàn thiện tiêu chuẩn tuyển chọn, đào tạo và đánh giá giáo viên. Chỉ những giáo viên vượt qua tiêu chuẩn đó mới được đứng lớp, và những chi phí không liên quan đến bản chất của việc dạy học được cắt giảm tối đa để dồn vào chất lượng buổi học thực tế. Đắt không có nghĩa là tốt, nhưng chúng tôi cũng không đặt mục tiêu là rẻ."
+    },
+    {
+      "badge": "Lộ trình học theo từng cấp độ",
+      "title": "Từ giao tiếp thực hành cơ bản đến tiếng Anh nâng cao, liền mạch không đứt quãng",
+      "body": "Từ trẻ nhỏ mới bắt đầu học bảng chữ cái và phonics, học sinh trung học muốn vượt qua tiếng Anh ở trường, cho đến người lớn cần tiếng Anh dùng ngay trong công việc và du lịch — chúng tôi xây nền tảng tiếng Anh thực hành thật vững trước, rồi từ đó thiết kế lộ trình dẫn dắt lên tiếng Anh học thuật nâng cao."
+    }
+  ],
+  "feedbackStrength": {
+    "badge": "Dự kiến ra mắt cuối năm 2026",
+    "title": "Feedback không kết thúc khi buổi học kết thúc",
+    "body": "Một câu nhận xét ngắn gọn như \"Hôm nay con học tốt\" khó giúp phụ huynh thực sự hiểu buổi học của con mình. Vì vậy, chúng tôi đang xây dựng một hệ thống phân tích toàn bộ quá trình từ đầu đến cuối buổi học để đưa ra nội dung cụ thể hơn nhiều, dự kiến ra mắt vào cuối năm 2026.",
+    "items": [
+      "Lượng thời gian học sinh thực sự nói",
+      "Mức độ tham gia trong buổi học",
+      "Những cách diễn đạt học sinh gặp khó khăn",
+      "Lỗi ngữ pháp và câu",
+      "Điểm cần cải thiện về phát âm, cách diễn đạt",
+      "Những phần học sinh đang làm tốt",
+      "Điều cần bổ sung ở buổi học tiếp theo"
+    ],
+    "closing": "Mục tiêu của chúng tôi là dù không ngồi cạnh theo dõi, phụ huynh vẫn có thể biết hôm nay con đã học gì và cần luyện tập thêm điều gì."
+  },
+  "closingCta": {
+    "title": "Ngay bây giờ, chỉ cần 25 phút để tự mình kiểm chứng",
+    "body": "Không gì thuyết phục bằng việc tự mình trải nghiệm. Hãy thử bài kiểm tra trình độ miễn phí để trải nghiệm trước lớp học của HiFive English."
+  }
+}

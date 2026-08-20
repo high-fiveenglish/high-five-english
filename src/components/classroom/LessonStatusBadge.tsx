@@ -1,14 +1,5 @@
+import { useTranslation } from "react-i18next";
 import type { LessonStatus } from "../../lib/scheduling/types";
-
-export const LESSON_STATUS_LABELS: Record<LessonStatus, string> = {
-  scheduled: "예정",
-  completed: "출석",
-  absent: "결석",
-  rescheduled: "연기",
-  teacher_absent: "강사결석",
-  academy_closed: "휴강",
-  admin_cancelled: "관리자취소",
-};
 
 const LESSON_STATUS_CLASSES: Record<LessonStatus, string> = {
   scheduled: "bg-brand-50 text-brand-700",
@@ -33,11 +24,12 @@ export const LESSON_STATUS_DOT_CLASSES: Record<LessonStatus, string> = {
 };
 
 export function LessonStatusBadge({ status }: { status: LessonStatus }) {
+  const { t } = useTranslation("classroom");
   return (
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11.5px] font-bold ${LESSON_STATUS_CLASSES[status]}`}
     >
-      {LESSON_STATUS_LABELS[status]}
+      {t(`lesson_status.${status}`)}
     </span>
   );
 }

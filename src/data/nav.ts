@@ -1,12 +1,15 @@
+// `labelKey` looks up the display label from the "common" i18next namespace
+// (src/locales/{lang}/common.json → nav.*) instead of hardcoding Korean text — see
+// src/components/layout/{MainNav,MobileMenu,Footer}.tsx for where it's rendered via t().
 export type NavChild = {
-  label: string;
+  labelKey: string;
   href: string;
   scrollTo?: string;
   description?: string;
 };
 
 export type NavItem = {
-  label: string;
+  labelKey: string;
   href?: string;
   scrollTo?: string;
   children?: NavChild[];
@@ -14,54 +17,54 @@ export type NavItem = {
 
 export const NAV_ITEMS: NavItem[] = [
   {
-    label: "회사소개",
+    labelKey: "nav.about",
     href: "/about",
   },
   {
-    label: "화상영어 소개",
+    labelKey: "nav.program",
     href: "/program",
   },
   {
-    label: "프로그램 설치",
+    labelKey: "nav.install",
     href: "/install",
     children: [
-      { label: "Zoom 설치 안내", href: "/install", scrollTo: "zoom" },
-      { label: "VooV Meeting 설치 안내", href: "/install", scrollTo: "voov" },
-      { label: "Microsoft Teams 설치 안내", href: "/install", scrollTo: "teams" },
+      { labelKey: "nav.install_zoom", href: "/install", scrollTo: "zoom" },
+      { labelKey: "nav.install_voov", href: "/install", scrollTo: "voov" },
+      { labelKey: "nav.install_teams", href: "/install", scrollTo: "teams" },
     ],
   },
   {
-    label: "커리큘럼",
+    labelKey: "nav.curriculum",
     href: "/curriculum",
   },
   {
-    label: "수강안내",
+    labelKey: "nav.enrollment_guide",
     children: [
-      { label: "수강료 안내", href: "/", scrollTo: "pricing" },
-      { label: "수강절차", href: "/process" },
+      { labelKey: "nav.pricing", href: "/", scrollTo: "pricing" },
+      { labelKey: "nav.process", href: "/process" },
     ],
   },
   {
-    label: "강사소개",
+    labelKey: "nav.instructors",
     href: "/",
     scrollTo: "instructors",
   },
   {
-    label: "학습시스템",
+    labelKey: "nav.learning_system",
     href: "/",
     scrollTo: "learning-system",
     children: [
-      { label: "내 강의실", href: "/classroom" },
-      { label: "학습평가서", href: "/classroom" },
-      { label: "매월 레벨평가", href: "/", scrollTo: "learning-system" },
+      { labelKey: "nav.my_classroom", href: "/classroom" },
+      { labelKey: "nav.evaluations", href: "/classroom" },
+      { labelKey: "nav.monthly_level_test", href: "/", scrollTo: "learning-system" },
     ],
   },
   {
-    label: "고객센터",
+    labelKey: "nav.customer_center",
     children: [
-      { label: "공지사항", href: "/notice" },
-      { label: "수강후기", href: "/", scrollTo: "reviews" },
-      { label: "1:1 상담", href: "/counsel" },
+      { labelKey: "nav.notice", href: "/notice" },
+      { labelKey: "nav.reviews", href: "/", scrollTo: "reviews" },
+      { labelKey: "nav.counsel", href: "/counsel" },
     ],
   },
 ];

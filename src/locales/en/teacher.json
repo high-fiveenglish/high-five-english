@@ -1,0 +1,22 @@
+{
+  "eyebrow": "Teacher Page",
+  "greeting": "Hello, {{name}}",
+  "meeting_links_title": "My Meeting Links",
+  "meeting_links_desc": "Register these once and they'll automatically be used for every class with a student on that platform.",
+  "link_placeholder": "{{platform}} join link",
+  "save": "Save",
+  "my_students_title": "My Students ({{count}})",
+  "no_students": "You have no students yet.",
+  "remaining_lessons": "{{count}} remaining",
+  "upcoming_lessons_title": "Upcoming Classes",
+  "table_headers": {
+    "date": "Date",
+    "time": "Time",
+    "student": "Student",
+    "attendance": "Attendance",
+    "enter": "Enter"
+  },
+  "no_lessons": "No upcoming classes.",
+  "enter_class": "Enter Class",
+  "link_pending": "Link not ready yet"
+}

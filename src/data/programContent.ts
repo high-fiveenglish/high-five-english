@@ -1,95 +1,65 @@
-export const HERO = {
-  eyebrow: "화상영어 소개",
-  headline: "알고 있는 영어를, 실제로 쓸 수 있는 영어로",
-  sub: "하이파이브 잉글리쉬의 1:1 화상영어는 배운 문장을 그 자리에서 직접 말하고, 바로 교정받는 25분입니다. 문법을 몇 개 더 외우는 수업이 아니라, 영어로 말하는 감각을 몸에 새기는 수업입니다.",
-};
+import type { TFunction } from "i18next";
 
-export const OUTPUT_SECTION = {
-  eyebrow: "핵심 장점 1",
-  title: "왜 '화상영어'가 아니라 '1:1 화상영어'인가",
-  lead: "많이 듣는다고 늘지 않습니다. 직접 말해본 시간이 쌓여야 늘어납니다.",
-  body: `EFL 환경, 그러니까 일상에서 영어를 쓸 일이 거의 없는 한국에서 영어를 배우는 학생들에게 가장 부족한 건 단어나 문법 지식이 아니라, 그 지식을 직접 '입 밖으로 꺼내본 시간'입니다.`,
-  compare: {
-    left: {
-      label: "그룹 수업",
-      points: [
-        "한 반에 여러 학생이 함께 수업",
-        "한 사람에게 돌아오는 발화 시간은 짧음",
-        "다른 학생의 순서를 기다리는 시간 존재",
-      ],
-    },
-    right: {
-      label: "1:1 화상영어",
-      points: [
-        "25분 또는 50분, 오직 한 학생만을 위한 시간",
-        "질문에 바로 답하고, 바로 교정받음",
-        "발화량과 교정 횟수가 절대적으로 많음",
-      ],
-    },
-  },
-  highlight: "25분 수업 = 25분 모두, 온전히 내가 말하는 시간",
-  closing: `게다가 정해진 진도만 따라가는 수업이 아닙니다. 학생이 만든 문장이 어색하면 강사가 그 자리에서 더 자연스러운 표현으로 바꿔주고, 학생은 그 표현으로 다시 한번 말해봅니다. 이 과정이 수업 안에서 여러 번 반복되면서, 배운 표현이 '아는 표현'에서 '쓸 수 있는 표현'으로 바뀝니다.`,
-};
+type ComparePoint = { label: string; points: string[] };
+type CompareData = { left: ComparePoint; right: ComparePoint };
 
-export const AI_SECTION = {
-  eyebrow: "핵심 장점 2",
-  title: "AI 영어 학습앱이 채워주지 못하는 것",
-  lead: "AI도 대화는 해줍니다. 하지만 '나'를 이해하지는 못합니다.",
-  body: `AI 챗봇이나 영어 학습 앱은 정해진 패턴 안에서 꽤 자연스럽게 대화하는 것처럼 보입니다. 하지만 예상하지 못한 질문, 맥락을 벗어난 농담, 오늘따라 유독 말이 안 나오는 컨디션까지 읽어내지는 못합니다.`,
-  body2: `사람 강사는 다릅니다. 학생이 머뭇거리는 지점, 자주 틀리는 이유, 오늘따라 유독 긴장한 이유까지 함께 대화하며 파악하고, 그에 맞춰 질문의 난이도와 방식을 바로바로 조정합니다.`,
-  compare: {
-    left: {
-      label: "AI 학습앱",
-      points: [
-        "정해진 시나리오 안에서만 반응",
-        "오류를 기계적으로, 같은 방식으로 지적",
-        "학생의 컨디션이나 감정은 알지 못함",
-      ],
-    },
-    right: {
-      label: "하이파이브 강사",
-      points: [
-        "예상 밖의 질문과 상황에도 자연스럽게 대화",
-        "학생의 성향과 그날 컨디션을 보며 방식 조정",
-        "매 수업이 쌓여 학생을 더 깊이 이해하게 됨",
-      ],
-    },
-  },
-  highlight: "AI는 대화 상대가 되어줄 수는 있어도, 나를 이해하는 선생님이 되어주지는 못합니다.",
-};
+export function getHero(t: TFunction) {
+  return {
+    eyebrow: t("hero.eyebrow"),
+    headline: t("hero.headline"),
+    sub: t("hero.sub"),
+  };
+}
 
-export const STRENGTHS_TITLE = "하이파이브 잉글리쉬만의 방식";
+export function getOutputSection(t: TFunction) {
+  return {
+    eyebrow: t("output.eyebrow"),
+    title: t("output.title"),
+    lead: t("output.lead"),
+    body: t("output.body"),
+    compare: t("output.compare", { returnObjects: true }) as CompareData,
+    highlight: t("output.highlight"),
+    closing: t("output.closing"),
+  };
+}
 
-export const STRENGTHS = [
-  {
-    badge: "12년의 기준",
-    title: "12년간 다듬어온 기준, 거품을 뺀 수강료",
-    body: "12년 동안 강사를 선발하고 교육하고 평가하는 기준을 계속 다듬어왔습니다. 그 기준을 통과한 강사들이 수업을 맡고, 수업의 본질과 상관없는 비용은 최대한 걷어내 실제 수업 품질에 투자합니다. 비싸다고 좋은 수업이 아니듯, 저렴하기만 한 수업도 목표로 하지 않습니다.",
-  },
-  {
-    badge: "단계별 커리큘럼",
-    title: "기초 실용회화부터 고급영어까지, 끊기지 않는 단계",
-    body: "알파벳과 파닉스를 시작하는 유아부터, 학교 영어를 넘어서고 싶은 중고등학생, 업무와 여행에서 바로 쓰는 영어가 필요한 성인까지 — 실용영어를 먼저 단단히 다진 뒤, 그 위에 학문적인 고급 영어로 이어지도록 단계를 설계합니다.",
-  },
-];
+export function getAiSection(t: TFunction) {
+  return {
+    eyebrow: t("ai.eyebrow"),
+    title: t("ai.title"),
+    lead: t("ai.lead"),
+    body: t("ai.body"),
+    body2: t("ai.body2"),
+    compare: t("ai.compare", { returnObjects: true }) as CompareData,
+    highlight: t("ai.highlight"),
+  };
+}
 
-export const FEEDBACK_STRENGTH = {
-  badge: "2026년 말 도입 예정",
-  title: "수업이 끝나도 끝나지 않는 Feedback",
-  body: `'오늘 수업 잘했습니다' 같은 한 줄 평가로는 부모님이 아이의 수업을 제대로 이해하기 어렵습니다. 그래서 수업이 시작해서 끝날 때까지의 과정을 분석해 훨씬 구체적인 내용을 전달하는 시스템을 2026년 말 도입을 목표로 준비하고 있습니다.`,
-  items: [
-    "학생의 실제 발화량",
-    "수업 참여도",
-    "학생이 어려워한 표현",
-    "문법 및 문장 오류",
-    "발음·표현 개선점",
-    "잘하고 있는 부분",
-    "다음 수업 보완점",
-  ],
-  closing: `옆에서 지켜보지 않아도, 오늘 우리 아이가 무엇을 했고 무엇을 더 연습해야 하는지 알 수 있게 만드는 것이 목표입니다.`,
-};
+export function getStrengthsTitle(t: TFunction) {
+  return t("strengthsTitle") as string;
+}
 
-export const CLOSING_CTA = {
-  title: "지금, 25분이면 확인할 수 있습니다",
-  body: "말로 설명하는 것보다, 직접 겪어보는 게 가장 빠릅니다. 무료 레벨테스트로 하이파이브 잉글리쉬의 수업을 먼저 경험해보세요.",
-};
+export function getStrengths(t: TFunction) {
+  return t("strengths", { returnObjects: true }) as Array<{
+    badge: string;
+    title: string;
+    body: string;
+  }>;
+}
+
+export function getFeedbackStrength(t: TFunction) {
+  return {
+    badge: t("feedbackStrength.badge"),
+    title: t("feedbackStrength.title"),
+    body: t("feedbackStrength.body"),
+    items: t("feedbackStrength.items", { returnObjects: true }) as string[],
+    closing: t("feedbackStrength.closing"),
+  };
+}
+
+export function getClosingCta(t: TFunction) {
+  return {
+    title: t("closingCta.title"),
+    body: t("closingCta.body"),
+  };
+}

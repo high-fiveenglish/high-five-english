@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Sparkles } from "lucide-react";
 import { Container } from "../ui/Container";
 import { SectionHeading } from "../ui/SectionHeading";
@@ -9,6 +10,7 @@ export function PricingSection({
 }: {
   onOpenLevelTest: () => void;
 }) {
+  const { t } = useTranslation("home");
   const [activeId, setActiveId] = useState(PRICING_DURATIONS[1].id);
   const active =
     PRICING_DURATIONS.find((d) => d.id === activeId) ?? PRICING_DURATIONS[0];
@@ -17,9 +19,9 @@ export function PricingSection({
     <section id="pricing" className="scroll-mt-28 bg-white py-20 sm:py-24">
       <Container>
         <SectionHeading
-          eyebrow="수강안내 · 수강료"
-          title="화상영어 가격표"
-          description="1:1 전담 강사 배정을 기본으로 하며, 학습평가서와 레벨평가는 모든 반에 공통 제공됩니다. 수강 기간이 길수록 회당 수강료가 저렴해집니다."
+          eyebrow={t("pricing.eyebrow")}
+          title={t("pricing.title")}
+          description={t("pricing.description")}
         />
 
         {/* duration tabs */}
@@ -34,8 +36,8 @@ export function PricingSection({
                   : "text-slate-500 hover:text-brand-600"
               }`}
             >
-              {d.label}
-              {d.badge && (
+              {t(`pricing.durations.${d.id}.label`)}
+              {d.hasBadge && (
                 <span
                   className={`ml-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold ${
                     activeId === d.id
@@ -43,7 +45,7 @@ export function PricingSection({
                       : "bg-slate-200 text-slate-500"
                   }`}
                 >
-                  {d.badge}
+                  {t(`pricing.durations.${d.id}.badge`)}
                 </span>
               )}
             </button>
@@ -54,8 +56,8 @@ export function PricingSection({
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
           {(
             [
-              { key: "price25" as const, title: "25분 수업" },
-              { key: "price50" as const, title: "50분 수업" },
+              { key: "price25" as const, title: t("pricing.col_25min") },
+              { key: "price50" as const, title: t("pricing.col_50min") },
             ]
           ).map((col) => (
             <div
@@ -65,28 +67,28 @@ export function PricingSection({
               <div className="flex items-center justify-between bg-brand-950 px-6 py-4">
                 <h3 className="text-sm font-bold text-white">{col.title}</h3>
                 <span className="text-xs font-medium text-white/50">
-                  {active.label} 기준
+                  {t("pricing.based_on", { label: t(`pricing.durations.${active.id}.label`) })}
                 </span>
               </div>
               <table className="w-full">
                 <thead>
                   <tr className="bg-accent-50">
                     <th className="px-6 py-3 text-left text-xs font-bold text-accent-700">
-                      수업 구분
+                      {t("pricing.table_header_type")}
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-bold text-accent-700">
-                      수강료
+                      {t("pricing.table_header_fee")}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {active.rows.map((row, i) => (
                     <tr
-                      key={row.frequency}
+                      key={row.frequencyId}
                       className={i % 2 === 0 ? "bg-white" : "bg-slate-50/70"}
                     >
                       <td className="px-6 py-4 text-sm font-medium text-slate-600">
-                        {row.frequency}
+                        {t(`pricing.frequency.${row.frequencyId}`)}
                       </td>
                       <td className="px-6 py-4 text-right text-base font-extrabold text-brand-950">
                         {formatWon(col.key === "price25" ? row.price25 : row.price50)}
@@ -104,11 +106,10 @@ export function PricingSection({
             onClick={onOpenLevelTest}
             className="inline-flex items-center gap-2 rounded-xl bg-accent-500 px-8 py-3.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(248,114,26,0.3)] transition hover:-translate-y-0.5 hover:bg-accent-600"
           >
-            <Sparkles size={16} /> 무료 레벨테스트로 시작하기
+            <Sparkles size={16} /> {t("pricing.cta")}
           </button>
           <p className="text-center text-xs text-slate-400">
-            * 상기 수강료는 1:1 개인 수업 기준이며, 프로모션 및 형제 할인 등은
-            1:1 상담을 통해 안내드립니다.
+            {t("pricing.disclaimer")}
           </p>
         </div>
       </Container>

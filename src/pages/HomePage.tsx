@@ -1,3 +1,4 @@
+import { SeoHead } from "../components/seo/SeoHead";
 import { Hero } from "../components/home/Hero";
 import { AboutTeaserSection } from "../components/home/AboutTeaserSection";
 import { InstructorsSection } from "../components/home/InstructorsSection";
@@ -14,6 +15,7 @@ export function HomePage({
 }) {
   return (
     <>
+      <SeoHead titleKey="meta.title" descriptionKey="meta.description" ns="home" path="/" />
       <Hero onOpenLevelTest={onOpenLevelTest} />
       <AboutTeaserSection />
       <InstructorsSection />

@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "title": "Enrollment Process | HiFive English",
+    "description": "From a free level test to your first class — here's how to get started with HiFive English."
+  },
+  "hero": {
+    "eyebrow": "Enrollment Process",
+    "headingLine1": "It's simple.",
+    "headingLine2": "Try it first — completely free.",
+    "paragraph": "The level test, trial class, and consultation are all completely free. Signing up doesn't mean you have to pay right away — take your time, check everything out, and decide whenever you're ready."
+  },
+  "reassurance": ["Free sign-up", "Free level test", "Free trial class", "Decide after consultation"],
+  "levelTestCta": "Sign Up for a Free Level Test",
+  "steps": {
+    "1": {
+      "title": "Free Sign-Up",
+      "desc": "Create a free account first to apply for your level test. There's no cost involved at all."
+    },
+    "2": {
+      "title": "Apply for a Level Test",
+      "desc": "Just enter your preferred date and time, learning goals, and desired course to complete your application. Within 1-2 days, a learning manager will contact you directly to confirm your schedule and discuss the right class direction for you.",
+      "bullets": ["Class time", "Number of sessions", "Materials", "Class style", "Recommended course"],
+      "note": "This isn't just about booking a test slot — from the very start, we work together to find the class direction that's right for you."
+    },
+    "3": {
+      "title": "Free Level Test & Trial Class",
+      "desc": "At your scheduled time, you'll have a combined level test and trial class with the same tutor you'd actually learn with. Think of it less as an exam and more as a chance to experience a real class and see if your level and the teaching style are the right fit."
+    },
+    "4": {
+      "title": "Check Your Results",
+      "desc": "Within a day of your level test, you can check your results on your My Page. It's not just a score — you'll also get guidance on your current level and what to focus on going forward."
+    },
+    "5": {
+      "title": "Enrollment Consultation",
+      "desc": "After reviewing your results, you'll consult with a learning manager to decide on the course that's right for you. There's no pressure to enroll at this stage — take your time and decide whenever you feel ready.",
+      "bullets": ["Recommended course", "Class time", "Number of sessions", "Materials", "Class style"]
+    },
+    "6": {
+      "title": "Tuition Payment",
+      "desc": "Once your class time and course are finalized, tuition is paid before classes begin. As soon as payment is complete, your regular classes will start according to the confirmed schedule."
+    },
+    "7": {
+      "title": "Check Your Schedule",
+      "desc": "You can check your class days and times, assigned tutor, and course details on your My Page. Take a moment beforehand to check your class setup and get ready.",
+      "bullets": ["Class days", "Class time", "Assigned tutor", "Course"]
+    },
+    "8": {
+      "title": "Regular Classes Begin",
+      "desc": "Classes start at the scheduled date and time. For a smooth start, please log in and wait at least 5 minutes before class begins. Now the real learning starts — no more testing."
+    }
+  },
+  "closing": {
+    "heading": "Start by finding out your English level.",
+    "paragraph": "Signing up for a free level test doesn't mean you need to pay right away. Try it out first, get all the information you need through a consultation, and decide whenever you're comfortable."
+  }
+}

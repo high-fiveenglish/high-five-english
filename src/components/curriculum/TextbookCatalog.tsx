@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   TEXTBOOK_CATALOG,
   CATALOG_CATEGORIES,
   LEVEL_ORDER,
-  LEVEL_LABELS,
-  LEVEL_DESCRIPTIONS,
   LEVEL_COLORS,
   AGE_GROUPS,
   FOLDERS,
@@ -18,17 +17,22 @@ const selectClass =
   "rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
 
 export function TextbookCatalog() {
+  const { t } = useTranslation(["curriculum", "textbooks"]);
   const [query, setQuery] = useState("");
   const [folder, setFolder] = useState<Folder | "">("");
   const [category, setCategory] = useState("");
   const [level, setLevel] = useState<CEFRLevel | "">("");
   const [age, setAge] = useState<AgeGroup | "">("");
 
+  const tableHeaders = t("catalog.tableHeaders", { returnObjects: true }) as string[];
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return TEXTBOOK_CATALOG.filter((b) => {
       if (q) {
-        const haystack = `${b.name} ${b.category} ${b.levelText} ${b.note} ${b.ages.join(" ")} ${b.folder}`.toLowerCase();
+        const categoryLabel = t(`textbooks:categories.${b.category}`);
+        const noteText = t(`textbooks:notes.${b.name}`, { defaultValue: "" });
+        const haystack = `${b.name} ${b.category} ${categoryLabel} ${b.levelText} ${noteText} ${b.ages.join(" ")} ${b.folder}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       if (folder && b.folder !== folder) return false;
@@ -37,7 +41,7 @@ export function TextbookCatalog() {
       if (age && !b.ages.includes(age)) return false;
       return true;
     });
-  }, [query, folder, category, level, age]);
+  }, [query, folder, category, level, age, t]);
 
   return (
     <div>
@@ -48,7 +52,7 @@ export function TextbookCatalog() {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="교재명 또는 키워드 검색 (예: phonics, 디베이트, TED)"
+            placeholder={t("catalog.searchPlaceholder")}
             className={`${selectClass} w-full pl-9`}
           />
         </div>
@@ -57,7 +61,7 @@ export function TextbookCatalog() {
           onChange={(e) => setFolder(e.target.value as Folder | "")}
           className={selectClass}
         >
-          <option value="">폴더 전체</option>
+          <option value="">{t("catalog.allFolders")}</option>
           {FOLDERS.map((f) => (
             <option key={f} value={f}>
               {f}
@@ -69,10 +73,10 @@ export function TextbookCatalog() {
           onChange={(e) => setCategory(e.target.value)}
           className={selectClass}
         >
-          <option value="">카테고리 전체</option>
+          <option value="">{t("catalog.allCategories")}</option>
           {CATALOG_CATEGORIES.map((c) => (
             <option key={c} value={c}>
-              {c}
+              {t(`textbooks:categories.${c}`)}
             </option>
           ))}
         </select>
@@ -81,10 +85,10 @@ export function TextbookCatalog() {
           onChange={(e) => setLevel(e.target.value as CEFRLevel | "")}
           className={selectClass}
         >
-          <option value="">레벨 전체</option>
+          <option value="">{t("catalog.allLevels")}</option>
           {LEVEL_ORDER.map((l) => (
             <option key={l} value={l}>
-              {LEVEL_LABELS[l]}
+              {t(`textbooks:level_labels.${l}`)}
             </option>
           ))}
         </select>
@@ -93,10 +97,10 @@ export function TextbookCatalog() {
           onChange={(e) => setAge(e.target.value as AgeGroup | "")}
           className={selectClass}
         >
-          <option value="">연령대 전체</option>
+          <option value="">{t("catalog.allAges")}</option>
           {AGE_GROUPS.map((a) => (
             <option key={a} value={a}>
-              {a}
+              {t(`textbooks:age_groups.${a}`)}
             </option>
           ))}
         </select>
@@ -104,7 +108,7 @@ export function TextbookCatalog() {
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
         <span className="font-mono text-xs text-slate-400">
-          {filtered.length} / {TEXTBOOK_CATALOG.length}권 표시 중
+          {t("catalog.countLabel", { filtered: filtered.length, total: TEXTBOOK_CATALOG.length })}
         </span>
         <span className="hidden text-slate-200 sm:inline">|</span>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -114,7 +118,7 @@ export function TextbookCatalog() {
                 className="h-2 w-2 shrink-0 rounded-full"
                 style={{ backgroundColor: LEVEL_COLORS[l] }}
               />
-              {LEVEL_LABELS[l]} {LEVEL_DESCRIPTIONS[l]}
+              {t(`textbooks:level_labels.${l}`)} {t(`textbooks:level_descriptions.${l}`)}
             </span>
           ))}
         </div>
@@ -124,7 +128,7 @@ export function TextbookCatalog() {
         <table className="w-full min-w-[860px] border-collapse">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/70">
-              {["교재명", "폴더", "카테고리", "레벨", "연령대", "추천 포인트"].map((h) => (
+              {tableHeaders.map((h) => (
                 <th
                   key={h}
                   className="whitespace-nowrap px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-slate-400"
@@ -138,7 +142,7 @@ export function TextbookCatalog() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-400">
-                  조건에 맞는 교재가 없습니다.
+                  {t("catalog.emptyState")}
                 </td>
               </tr>
             )}
@@ -157,7 +161,7 @@ export function TextbookCatalog() {
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
                   <span className="rounded-md bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
-                    {b.category}
+                    {t(`textbooks:categories.${b.category}`)}
                   </span>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
@@ -170,10 +174,10 @@ export function TextbookCatalog() {
                   </span>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 font-mono text-[12px] text-slate-500">
-                  {b.ages.join(", ")}
+                  {b.ages.map((a) => t(`textbooks:age_groups.${a}`)).join(", ")}
                 </td>
                 <td className="max-w-[260px] px-4 py-3 text-[12.5px] leading-relaxed text-slate-500">
-                  {b.note}
+                  {t(`textbooks:notes.${b.name}`, { defaultValue: "" })}
                 </td>
               </tr>
             ))}
@@ -182,8 +186,7 @@ export function TextbookCatalog() {
       </div>
 
       <p className="mt-3 text-[11.5px] leading-relaxed text-slate-400">
-        레벨·연령대는 시리즈의 통상적인 커리큘럼 위치를 바탕으로 한 실무 참고값이며, 실제 배치는 학생 테스트 결과를 우선합니다.
-        (?) 표시 교재는 폴더명만으로 출판사·구성이 명확히 확인되지 않아 실제 표지·목차 확인을 권장합니다.
+        {t("catalog.footnote")}
       </p>
     </div>
   );

@@ -1,0 +1,112 @@
+{
+  "weekdays_short": ["일", "월", "화", "수", "목", "금", "토"],
+  "enrollment_status": {
+    "active": "수강중",
+    "completed": "수강완료",
+    "expired": "만료",
+    "paused": "일시중지"
+  },
+  "lesson_status": {
+    "scheduled": "예정",
+    "completed": "출석",
+    "absent": "결석",
+    "rescheduled": "연기",
+    "teacher_absent": "강사결석",
+    "academy_closed": "휴강",
+    "admin_cancelled": "관리자취소"
+  },
+  "summary_card": {
+    "enrollment_period": "수강 기간",
+    "lesson_count": "수업 횟수",
+    "lesson_count_value": "총 {{total}}회 · 잔여 {{remaining}}회",
+    "lesson_duration": "수업 시간",
+    "lesson_duration_value": "{{min}}분",
+    "class_schedule": "수업 요일 및 시간",
+    "class_schedule_value": "매주 {{days}} {{time}}",
+    "level_test_result": "레벨테스트 결과",
+    "current_status": "현재 수강 상태",
+    "teacher_label": "담당 강사",
+    "meeting_platform_label": "수업 프로그램",
+    "install_guide_cta": "설치 안내 보기",
+    "weekly_count": "주 {{count}}회",
+    "remaining_count": "{{count}}회 남음",
+    "low_remaining_notice": "잔여 수업이 얼마 남지 않았습니다. 다음 과정 상담이 필요하시면 1:1 상담을 신청해주세요."
+  },
+  "schedule_table": {
+    "headers": {
+      "date": "날짜",
+      "time": "시간",
+      "lesson_name": "수업명",
+      "teacher": "강사",
+      "attendance": "출결상태",
+      "evaluation": "평가서",
+      "enter": "입장",
+      "reschedule": "연기"
+    },
+    "view_evaluation": "평가서 보기",
+    "evaluation_in_progress": "평가서 작성 중",
+    "enter_class": "수업 입장",
+    "link_pending": "입장 링크 준비 중",
+    "reschedule_cta": "수업 연기",
+    "reschedule_closed": "연기 신청 마감",
+    "reschedule_closed_tooltip": "수업 시작 4시간 전까지만 연기 신청이 가능합니다"
+  },
+  "calendar": {
+    "title": "수업 일정 캘린더",
+    "prev_month": "이전 달",
+    "next_month": "다음 달",
+    "month_label": "{{year}}년 {{month}}월",
+    "teacher_prefix": "강사",
+    "view_evaluation": "학습평가서 보기",
+    "evaluation_in_progress": "평가서 작성 중",
+    "holiday_title": "Holiday / No Class",
+    "teacher_unavailable": "강사 사정으로 휴강입니다.",
+    "no_lesson": "예정된 수업이 없습니다.",
+    "select_date_prompt": "날짜를 선택하면 상세정보를 볼 수 있습니다."
+  },
+  "enter_button": {
+    "class_ended": "수업 종료",
+    "link_pending": "입장 링크 준비 중",
+    "link_pending_tooltip": "담당 강사가 아직 참여 링크를 등록하지 않았습니다",
+    "enter_class": "{{platform}} 수업 입장",
+    "enter_before_tooltip": "수업 시작 {{minutes}}분 전부터 입장할 수 있습니다",
+    "enter_now": "지금 {{platform}} 수업 입장하기"
+  },
+  "textbook_card": {
+    "title": "교재 정보",
+    "view_online": "온라인 보기",
+    "download": "다운로드",
+    "view_online_notice": "온라인 보기 준비 중입니다.",
+    "download_notice": "교재 다운로드 파일이 아직 준비되지 않았습니다."
+  },
+  "reschedule_modal": {
+    "title": "수업 연기",
+    "confirm_question": "수업을 연기하시겠습니까?",
+    "description": "연기하면 수업 횟수는 차감되지 않고, 요일 패턴에 맞는 다음 가능한 날짜로 자동 배정됩니다.",
+    "cancel": "취소",
+    "confirm": "연기하기",
+    "submitting": "처리 중...",
+    "success_title": "수업이 연기되었습니다.",
+    "new_date_label": "새 수업일",
+    "confirm_ok": "확인"
+  },
+  "evaluation_modal": {
+    "title": "일일평가서",
+    "loading": "평가서를 불러오는 중입니다...",
+    "lesson_content": "오늘 수업 내용",
+    "strengths": "잘한 점",
+    "improvements": "개선할 점",
+    "pronunciation": "발음",
+    "grammar": "문법",
+    "vocabulary": "어휘",
+    "speaking": "회화",
+    "teacher_comment": "강사 종합 코멘트"
+  },
+  "page": {
+    "eyebrow": "마이페이지",
+    "title": "내 강의실",
+    "loading": "불러오는 중입니다...",
+    "not_found": "수강 정보를 찾을 수 없습니다.",
+    "schedule_table_title": "수강 스케줄표"
+  }
+}

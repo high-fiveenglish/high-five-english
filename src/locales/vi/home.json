@@ -1,0 +1,217 @@
+{
+  "meta": {
+    "title": "HiFive English | Tiếng Anh trực tuyến 1:1",
+    "description": "12 năm kinh nghiệm dạy tiếng Anh trực tuyến 1:1. Nói tiếng Anh ngay từ buổi học đầu tiên cùng giáo viên bản ngữ và giáo viên nước ngoài chuyên nghiệp."
+  },
+  "hero": {
+    "badge": "12 năm chỉ theo một con đường: HiFive English",
+    "headline": {
+      "line1": "Đừng chỉ nghe tiếng Anh nữa,",
+      "emphasis1": "tự mình nói",
+      "line2_rest": "để chinh phục",
+      "emphasis2": "tiếng Anh qua video"
+    },
+    "subtext": "Thông qua các buổi học tương tác với giáo viên bản ngữ và giáo viên nước ngoài chuyên nghiệp, bạn sử dụng ngay tiếng Anh đã học, đồng thời hoàn thiện khả năng giao tiếp thực tế nhờ luyện tập lặp lại và phản hồi cụ thể.",
+    "cta_primary": "Đăng ký kiểm tra trình độ miễn phí",
+    "cta_secondary": "Xem quy trình đăng ký",
+    "stats": {
+      "experience_label": "Kinh nghiệm hoạt động",
+      "experience_value": "12 năm",
+      "teacher_label": "Giáo viên phụ trách",
+      "teacher_value": "Ghép đôi 1:1",
+      "growth_label": "Cách phát triển",
+      "growth_value": "Truyền miệng"
+    },
+    "demo": {
+      "title": "Phản hồi học tập hôm nay",
+      "row1_label": "Cụm từ đã học hôm nay",
+      "row1_value": "Hoàn thành 5 câu",
+      "row2_label": "Mức độ tham gia nói",
+      "row2_value": "Tích cực · Cao",
+      "row3_label": "Phần cần chỉnh sửa",
+      "row3_value": "Cách chia động từ thì quá khứ",
+      "row4_label": "Mục tiêu buổi học tới",
+      "row4_value": "Tăng thời lượng nói tự do",
+      "comment": "Nhận xét của giáo viên: \"Hôm nay con đã tiến bộ rất nhiều trong phần nói tự do!\"",
+      "badge": "Đội ngũ giáo viên bản ngữ & nước ngoài chuyên nghiệp"
+    }
+  },
+  "whyUs": {
+    "eyebrow": "WHY HIFIVE",
+    "title": "Vì sao nên chọn HiFive English?",
+    "description": "Những nguyên tắc được đúc kết qua 12 năm đồng hành cùng vô số học viên và phụ huynh được thể hiện trong từng buổi học của HiFive English.",
+    "reasons": {
+      "output": {
+        "title": "Lớp học tập trung vào nghe – nói (Output)",
+        "desc": "Không chỉ chạy theo tiến độ có sẵn, chúng tôi giúp học viên sử dụng ngay tiếng Anh đã học thông qua luyện tập lặp lại, hỏi đáp và giao tiếp tự do."
+      },
+      "experience": {
+        "title": "12 năm kinh nghiệm, một con đường chuyên môn",
+        "desc": "Giám đốc trực tiếp điều hành sự nghiệp giáo dục tiếng Anh qua video suốt 12 năm, liên tục cải tiến toàn bộ quy trình tuyển chọn, đào tạo và quản lý giáo viên."
+      },
+      "trust": {
+        "title": "Phát triển nhờ niềm tin, không phải quảng cáo",
+        "desc": "Thay vì quảng cáo rầm rộ, chúng tôi phát triển nhờ sự giới thiệu của phụ huynh và học viên đã thực sự trải nghiệm lớp học — một dịch vụ giáo dục đã được kiểm chứng."
+      },
+      "feedback": {
+        "title": "Phản hồi cụ thể và minh bạch",
+        "desc": "Không phải kiểu nhận xét chung chung như \"hôm nay học tốt\", mà hướng dẫn cụ thể những gì đã học được và những gì cần cải thiện."
+      },
+      "stages": {
+        "title": "Thiết kế theo từng giai đoạn từ tiếng Anh thực dụng đến nâng cao",
+        "desc": "Dựa trên lượng Output đầy đủ và việc chỉnh sửa có hệ thống, học viên hoàn thiện tiếng Anh thực dụng, rồi lấy đó làm bàn đạp để mở rộng lên tiếng Anh nâng cao."
+      },
+      "price": {
+        "title": "Giá cả hợp lý, chất lượng không thỏa hiệp",
+        "desc": "Chúng tôi không chỉ nhắm đến mức giá rẻ. Mục tiêu của chúng tôi là đạt được đồng thời chi phí hợp lý và chất lượng giảng dạy cao."
+      }
+    }
+  },
+  "pricing": {
+    "eyebrow": "Hướng dẫn đăng ký · Học phí",
+    "title": "Bảng giá tiếng Anh qua video",
+    "description": "Tất cả các lớp đều được phân công giáo viên phụ trách 1:1, kèm theo phiếu đánh giá học tập và kiểm tra trình độ áp dụng chung cho mọi lớp. Thời gian đăng ký càng dài, học phí mỗi buổi càng rẻ.",
+    "based_on": "Theo gói {{label}}",
+    "col_25min": "Lớp học 25 phút",
+    "col_50min": "Lớp học 50 phút",
+    "table_header_type": "Loại lớp học",
+    "table_header_fee": "Học phí",
+    "cta": "Bắt đầu với bài kiểm tra trình độ miễn phí",
+    "disclaimer": "* Học phí trên áp dụng cho lớp học cá nhân 1:1. Các chương trình khuyến mãi và ưu đãi anh chị em sẽ được tư vấn qua buổi tư vấn 1:1.",
+    "durations": {
+      "1m": { "label": "1 tháng" },
+      "3m": { "label": "3 tháng", "badge": "Phổ biến" },
+      "6m": { "label": "6 tháng", "badge": "Ưu đãi lớn nhất" }
+    },
+    "frequency": {
+      "freq5": "5 buổi/tuần",
+      "freq3": "3 buổi/tuần",
+      "freq2": "2 buổi/tuần"
+    }
+  },
+  "process": {
+    "eyebrow": "Hướng dẫn đăng ký · Quy trình",
+    "title": "Từ kiểm tra trình độ miễn phí đến khi bắt đầu học",
+    "description": "Bạn có thể bắt đầu lớp học tiếng Anh qua video được cá nhân hóa chỉ với 4 bước đơn giản, không thủ tục phức tạp.",
+    "steps": {
+      "consult": { "title": "Đăng ký tư vấn", "desc": "Để lại một vài thông tin cơ bản qua trang web hoặc kênh KakaoTalk." },
+      "leveltest": { "title": "Kiểm tra trình độ miễn phí", "desc": "Giáo viên chuyên nghiệp đánh giá chính xác trình độ hiện tại của bạn theo hình thức 1:1." },
+      "matching": { "title": "Ghép giáo viên phù hợp", "desc": "Chúng tôi phân công giáo viên phụ trách phù hợp với mục tiêu và tính cách của bạn." },
+      "start": { "title": "Bắt đầu học chính thức", "desc": "Đặt lịch vào thời gian bạn mong muốn và bắt đầu buổi học qua video." }
+    },
+    "cta": "Đăng ký kiểm tra trình độ miễn phí ngay"
+  },
+  "reviews": {
+    "eyebrow": "Hỗ trợ khách hàng · Đánh giá học viên",
+    "title": "Minh chứng bằng đánh giá, không phải quảng cáo",
+    "description": "HiFive English đã phát triển nhờ đánh giá của phụ huynh và học viên đã thực sự trải nghiệm lớp học, thay vì chi tiêu cho quảng cáo.",
+    "items": {
+      "r1": {
+        "author": "Phụ huynh bé Kim O-eun",
+        "role": "Con học lớp 3",
+        "period": "Học được 8 tháng",
+        "content": "Ban đầu con khá rụt rè khi học qua video, nhưng nhờ giáo viên luôn chào đón vui vẻ nên giờ đây con mong chờ nhất là giờ học. Nhờ phiếu đánh giá học tập, tôi biết được mỗi lần con gặp khó khăn với cách diễn đạt nào, nên việc ôn tập ở nhà cũng dễ dàng hơn nhiều."
+      },
+      "r2": {
+        "author": "Park O-jun",
+        "role": "Học sinh lớp 8",
+        "period": "Học được 1 năm 2 tháng",
+        "content": "Trước đây em chỉ học tiếng Anh để thi ở trường, nhưng từ khi học tiếng Anh qua video, giờ em có thể nói ngay suy nghĩ của mình bằng tiếng Anh với giáo viên bản ngữ. Cô sửa lỗi ngữ pháp ngay tại chỗ nên em cảm nhận rõ mình đang tiến bộ."
+      },
+      "r3": {
+        "author": "Phụ huynh bé Lee O-young",
+        "role": "Con học lớp 5",
+        "period": "Học được 6 tháng",
+        "content": "Tôi đã so sánh nhiều trung tâm tiếng Anh qua video và thấy nơi này có việc phân công và quản lý giáo viên kỹ lưỡng nhất. Mỗi lần tư vấn, họ đều nắm rõ tình hình của con nên tôi rất yên tâm. Việc có thể thấy rõ quá trình tiến bộ qua bài kiểm tra trình độ hàng tháng cũng là một điểm cộng lớn."
+      },
+      "r4": {
+        "author": "Choi O-a",
+        "role": "Người đi làm",
+        "period": "Học được 4 tháng",
+        "content": "Vì hay đi công tác nên tôi cần tiếng Anh thương mại, giáo viên đã dạy tôi những cách diễn đạt phù hợp với công việc thực tế nên tôi áp dụng được rất nhiều. Việc đặt lịch cũng linh hoạt và giáo viên rất tốt nên tôi rất hài lòng khi theo học."
+      },
+      "r5": {
+        "author": "Phụ huynh bé Jung O-ho",
+        "role": "Con học lớp 6",
+        "period": "Học được 1 năm 6 tháng",
+        "content": "Tôi thích việc thay vì nhận xét chung chung kiểu \"con học tốt lắm\", giáo viên phản hồi cụ thể hôm nay con học gì và gặp khó khăn ở đâu. Sự chăm sóc bền bỉ này khiến tôi hiểu vì sao nơi đây phát triển nhờ truyền miệng mà không cần quảng cáo."
+      },
+      "r6": {
+        "author": "Han O-su",
+        "role": "Học sinh lớp 10",
+        "period": "Học được 3 tháng",
+        "content": "Ban đầu việc phải nói tiếng Anh mỗi ngày khiến em thấy áp lực, nhưng nhờ luyện tập lặp lại, giờ tốc độ đặt câu của em đã nhanh hơn hẳn. Đôi lúc lịch của giáo viên kín hơi tiếc, nhưng nhìn chung em rất hài lòng."
+      }
+    }
+  },
+  "instructors": {
+    "eyebrow": "Giáo viên",
+    "title": "Đội ngũ giáo viên chuyên nghiệp đã được kiểm chứng",
+    "description": "Từ tuyển chọn, đào tạo đến đánh giá định kỳ — đây là những giáo viên đã vượt qua tiêu chuẩn mà HiFive English đúc kết suốt 12 năm. Nhấp vào ảnh để nghe phần giới thiệu bằng giọng nói và xem lý lịch chi tiết.",
+    "listen_hover": "Nghe giới thiệu",
+    "modal": {
+      "title": "Giới thiệu giáo viên",
+      "audio_label": "🔊 Nghe giới thiệu bằng giọng nói",
+      "audio_unsupported": "Trình duyệt của bạn không hỗ trợ phát âm thanh.",
+      "audio_disclaimer": "* Đây là giọng mẫu demo. Sẽ được thay thế bằng phần giới thiệu giọng nói thực tế của giáo viên.",
+      "career_label": "Kinh nghiệm & Chứng chỉ"
+    },
+    "bios": {
+      "sarah": {
+        "tags": ["Chuyên tiểu học", "Sửa phát âm", "Ngữ âm (Phonics)"],
+        "intro": "Giáo viên chuyên tiểu học với năng lượng tươi sáng, giúp các bé mạnh dạn mở lời nói tiếng Anh.",
+        "detail": "Là giáo viên có hơn 10 năm kinh nghiệm dạy tiếng Anh cho trẻ em, cô hướng dẫn trẻ tự đặt câu thông qua luyện tập lặp lại theo từng giai đoạn, từ ngữ âm đến đọc hiểu. Phong cách dạy tập trung vào khen ngợi và động viên, đặc biệt phù hợp với trẻ mới bắt đầu học tiếng Anh qua video.",
+        "career": ["Có chứng chỉ TESOL", "8 năm chuyên dạy tiếng Anh tiểu học", "Xếp hạng cao nhất trong đánh giá giáo viên HiFive"]
+      },
+      "james": {
+        "tags": ["Chuyên THCS-THPT", "Ngữ pháp/Viết luận", "Tranh biện"],
+        "intro": "Giáo viên chuyên THCS-THPT giúp nâng cao trình độ nhanh chóng nhờ phản hồi logic, rõ ràng.",
+        "detail": "Thầy giảng dạy sửa ngữ pháp, viết luận và tranh biện cho học sinh THCS-THPT và người trưởng thành. Không chỉ dừng ở hội thoại đơn thuần, thầy còn đưa ra phản hồi chính xác từng câu, giúp nắm vững cả tiếng Anh thi cử lẫn tiếng Anh thực tế.",
+        "career": ["Cử nhân Giáo dục học, Ontario, Canada", "6 năm chuyên dạy tiếng Anh THCS-THPT", "Huấn luyện viết IELTS/TOEFL"]
+      },
+      "emily": {
+        "tags": ["Hội thoại người lớn", "Tiếng Anh thương mại", "Nói tự do"],
+        "intro": "Giáo viên giúp học viên tự tin hơn với những cách diễn đạt có thể dùng ngay trong cuộc sống và công việc.",
+        "detail": "Cô xây dựng chương trình học riêng theo mục tiêu của từng học viên người lớn: du lịch, thương mại hay hội thoại hằng ngày. Thay vì yêu cầu câu văn hoàn hảo, cô đề cao \"sự dũng cảm cứ nói trước\", và sửa ngay các lỗi diễn đạt trong giờ học.",
+        "career": ["Tốt nghiệp Đại học Brighton, Anh Quốc", "5 năm huấn luyện tiếng Anh thương mại", "Mức độ hài lòng cao nhất từ học viên người lớn"]
+      },
+      "daniel": {
+        "tags": ["Mọi lứa tuổi", "Nói tự do", "Sửa phát âm"],
+        "intro": "Giáo viên giúp rèn luyện khả năng tư duy bằng tiếng Anh trong không khí thoải mái.",
+        "detail": "Thầy có thế mạnh giúp học viên thoải mái, bớt căng thẳng nhờ phong cách giảng dạy vui vẻ, thân thiện. Thông qua luyện tập hỏi đáp lặp đi lặp lại để đặt câu ngẫu hứng, thầy giúp rèn luyện phản xạ nhanh trong các tình huống hội thoại thực tế.",
+        "career": ["Chuyên ngành Giáo dục, Sydney, Úc", "7 năm dạy tiếng Anh qua video cho mọi lứa tuổi", "Hoàn thành khóa đào tạo chuyên sâu về sửa phát âm"]
+      }
+    }
+  },
+  "learningSystem": {
+    "eyebrow": "Hệ thống học tập",
+    "title": "Buổi học kết thúc, nhưng sự chăm sóc vẫn tiếp tục",
+    "description": "Chúng tôi cung cấp hệ thống quản lý học tập giúp phụ huynh nắm rõ con đang học gì và cần cải thiện điều gì, ngay cả khi không trực tiếp theo dõi buổi học.",
+    "items": {
+      "classroom": {
+        "title": "Lớp học của tôi",
+        "desc": "Quản lý đặt lịch, thay đổi lịch học và vào lớp học video tất cả trong một nơi. Bạn cũng có thể xem lại buổi học trước và tài liệu học tập ngay lập tức."
+      },
+      "report": {
+        "title": "Phiếu đánh giá học tập",
+        "desc": "Không phải nhận xét tổng quát chung chung, chúng tôi ghi chép cụ thể cho từng buổi học: cụm từ đã học, mức độ tham gia nói và phần cần chỉnh sửa."
+      },
+      "levelcheck": {
+        "title": "Kiểm tra trình độ hàng tháng",
+        "desc": "Dựa trên dữ liệu học tập tích lũy hàng tháng, chúng tôi cung cấp báo cáo về sự thay đổi trình độ và cùng đặt ra mục tiêu học tập tiếp theo."
+      }
+    },
+    "more_link": "Xem chi tiết"
+  },
+  "aboutTeaser": {
+    "eyebrow": "Giới thiệu",
+    "quote": "\"Chúng tôi phát triển nhờ kết quả giáo dục và niềm tin của khách hàng, chứ không phải quảng cáo.\"",
+    "quote_sub": "Đây là nguyên tắc quan trọng nhất mà HiFive English đã gìn giữ suốt 12 năm.",
+    "ceo_display": "{{name}}, Giám đốc",
+    "company_tagline": "HiFive English · 12 năm trong lĩnh vực giáo dục tiếng Anh qua video",
+    "heading": "Giáo dục tiếng Anh tối ưu cho môi trường EFL, thực sự hiệu quả",
+    "paragraph1": "Để giỏi tiếng Anh, chỉ nghe và đọc nhiều thôi là chưa đủ. HiFive English vận hành chương trình học thông qua các buổi học tiếng Anh qua video tương tác với giáo viên bản ngữ và giáo viên nước ngoài chuyên nghiệp, giúp học viên áp dụng ngay tiếng Anh đã học trong giờ học, đồng thời tự nhiên nâng cao khả năng nghe và nói.",
+    "paragraph2": "Chúng tôi không đơn thuần hoàn thành giáo trình theo tiến độ, mà coi trọng nhất việc tạo ra khả năng tiếng Anh có thể sử dụng thực tế, thông qua luyện tập lặp lại, hỏi đáp, giao tiếp tự do, chỉnh sửa câu và nhiều hình thức phản hồi phù hợp với trình độ và mục tiêu của từng học viên.",
+    "more_link": "Xem thêm câu chuyện của HiFive English"
+  }
+}

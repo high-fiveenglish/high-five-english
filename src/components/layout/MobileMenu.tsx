@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X, ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { NAV_ITEMS } from "../../data/nav";
 import { NavItemLink } from "./NavItemLink";
 import { useAuth } from "../../context/AuthContext";
@@ -16,8 +17,10 @@ export function MobileMenu({
   onOpenLogin: () => void;
   onOpenFind: () => void;
 }) {
-  const { isLoggedIn, userName, logout } = useAuth();
+  const { isLoggedIn, userName, role, logout } = useAuth();
+  const { t } = useTranslation("common");
   const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const isAdminLike = role === "general_manager" || role === "general_admin";
 
   if (!open) return null;
 
@@ -29,7 +32,7 @@ export function MobileMenu({
           <Logo compact />
           <button
             onClick={onClose}
-            aria-label="메뉴 닫기"
+            aria-label={t("aria.close_menu")}
             className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100"
           >
             <X size={22} />
@@ -40,22 +43,42 @@ export function MobileMenu({
           {isLoggedIn ? (
             <div className="space-y-2.5 text-sm">
               <p className="font-semibold text-brand-950">
-                <span className="text-accent-500">{userName}</span>님, 환영합니다
+                {t("topbar.welcome", { name: userName })}
               </p>
               <div className="flex flex-wrap gap-2">
-                <NavItemLink
-                  href="/admin"
-                  onClick={onClose}
-                  className="rounded-full bg-brand-50 px-3.5 py-1.5 font-medium text-brand-700"
-                >
-                  홈페이지관리
-                </NavItemLink>
+                {role === "student" && (
+                  <NavItemLink
+                    href="/classroom"
+                    onClick={onClose}
+                    className="rounded-full bg-brand-50 px-3.5 py-1.5 font-medium text-brand-700"
+                  >
+                    {t("topbar.my_classroom")}
+                  </NavItemLink>
+                )}
+                {role === "teacher" && (
+                  <NavItemLink
+                    href="/teacher"
+                    onClick={onClose}
+                    className="rounded-full bg-brand-50 px-3.5 py-1.5 font-medium text-brand-700"
+                  >
+                    {t("topbar.teacher_page")}
+                  </NavItemLink>
+                )}
+                {isAdminLike && (
+                  <NavItemLink
+                    href="/admin"
+                    onClick={onClose}
+                    className="rounded-full bg-brand-50 px-3.5 py-1.5 font-medium text-brand-700"
+                  >
+                    {t("topbar.admin_manage")}
+                  </NavItemLink>
+                )}
                 <NavItemLink
                   href="/mypage"
                   onClick={onClose}
                   className="rounded-full bg-brand-50 px-3.5 py-1.5 font-medium text-brand-700"
                 >
-                  정보변경
+                  {t("topbar.my_info")}
                 </NavItemLink>
                 <button
                   onClick={() => {
@@ -64,7 +87,7 @@ export function MobileMenu({
                   }}
                   className="rounded-full bg-slate-100 px-3.5 py-1.5 font-medium text-slate-600"
                 >
-                  로그아웃
+                  {t("topbar.logout")}
                 </button>
               </div>
             </div>
@@ -77,7 +100,7 @@ export function MobileMenu({
                 }}
                 className="flex-1 rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white"
               >
-                로그인
+                {t("topbar.login")}
               </button>
               <button
                 onClick={() => {
@@ -86,7 +109,7 @@ export function MobileMenu({
                 }}
                 className="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-semibold text-slate-600"
               >
-                ID/PW 찾기
+                {t("topbar.find_account")}
               </button>
             </div>
           )}
@@ -94,34 +117,34 @@ export function MobileMenu({
 
         <nav className="flex-1 px-2 py-2">
           {NAV_ITEMS.map((item) => (
-            <div key={item.label} className="border-b border-slate-50 last:border-0">
+            <div key={item.labelKey} className="border-b border-slate-50 last:border-0">
               {item.children ? (
                 <>
                   <button
                     onClick={() =>
-                      setOpenGroup((g) => (g === item.label ? null : item.label))
+                      setOpenGroup((g) => (g === item.labelKey ? null : item.labelKey))
                     }
                     className="flex w-full items-center justify-between px-3.5 py-3.5 text-[15px] font-semibold text-brand-950"
                   >
-                    {item.label}
+                    {t(item.labelKey)}
                     <ChevronDown
                       size={16}
                       className={`text-slate-400 transition ${
-                        openGroup === item.label ? "rotate-180" : ""
+                        openGroup === item.labelKey ? "rotate-180" : ""
                       }`}
                     />
                   </button>
-                  {openGroup === item.label && (
+                  {openGroup === item.labelKey && (
                     <div className="pb-2 pl-6">
                       {item.children.map((child) => (
                         <NavItemLink
-                          key={child.label}
+                          key={child.labelKey}
                           href={child.href}
                           scrollTo={child.scrollTo}
                           onClick={onClose}
                           className="block py-2 text-sm text-slate-500"
                         >
-                          {child.label}
+                          {t(child.labelKey)}
                         </NavItemLink>
                       ))}
                     </div>
@@ -134,7 +157,7 @@ export function MobileMenu({
                   onClick={onClose}
                   className="block px-3.5 py-3.5 text-[15px] font-semibold text-brand-950"
                 >
-                  {item.label}
+                  {t(item.labelKey)}
                 </NavItemLink>
               )}
             </div>
