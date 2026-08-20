@@ -4,7 +4,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
 const css = readFileSync("dist/assets/index-X2vGItp5.css", "utf-8");
-const js = readFileSync("dist/assets/index-DVRcnP5k.js", "utf-8");
+const js = readFileSync("dist/assets/index-Bw6qb7H-.js", "utf-8");
 
 const audioFiles = ["intro-1", "intro-2", "intro-3", "intro-4"];
 let jsWithAudio = js;
