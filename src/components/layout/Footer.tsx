@@ -49,11 +49,11 @@ export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
               </div>
               <div className="flex gap-1.5">
                 <dt className="shrink-0 text-white/35">사업자등록번호</dt>
-                <dd>000-00-00000</dd>
+                <dd>328-11-02334</dd>
               </div>
               <div className="flex gap-1.5">
                 <dt className="shrink-0 text-white/35">주소</dt>
-                <dd>충선로 87번길 10</dd>
+                <dd>인천광역시 부평구 충선로 87번길 10</dd>
               </div>
               <div className="flex items-center gap-1.5 pt-1">
                 <Globe size={13} className="shrink-0 text-accent-400" />
