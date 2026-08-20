@@ -1,4 +1,4 @@
-import type { AdminRescheduleRow } from "../../../services/classroomService";
+import type { AdminRescheduleRow } from "../../../services/adminService";
 
 const CAUSE_LABELS: Record<AdminRescheduleRow["cause"], string> = {
   rescheduled: "학생 연기 신청",

@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { Calendar, Clock, Repeat, User, Sparkles, Video } from "lucide-react";
-import type { Enrollment } from "../../lib/scheduling/types";
+import type { Enrollment, Lesson } from "../../lib/scheduling/types";
 import type { ClassroomCourse, LevelTestResult } from "../../data/classroomMock";
 import type { Instructor } from "../../data/instructors";
 import { getMeetingPlatform } from "../../data/meetingPlatforms";
+import type { TeacherMeetingLinks } from "../../services/store";
+import { EnterClassButton } from "./EnterClassButton";
 
 const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -23,17 +25,29 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
+function findNextScheduledLesson(lessons: Lesson[]): Lesson | null {
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const upcoming = lessons
+    .filter((l) => l.status === "scheduled" && l.scheduledDate >= todayIso)
+    .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+  return upcoming[0] ?? null;
+}
+
 export function EnrollmentSummaryCard({
   enrollment,
   course,
   teacher,
   levelTestResult,
+  lessons,
+  teacherMeetingLinks,
   onOpenTeacher,
 }: {
   enrollment: Enrollment;
   course: ClassroomCourse;
   teacher: Instructor;
   levelTestResult: LevelTestResult;
+  lessons: Lesson[];
+  teacherMeetingLinks: TeacherMeetingLinks;
   onOpenTeacher: () => void;
 }) {
   const weeklyDaysLabel = enrollment.weeklyDays
@@ -42,6 +56,7 @@ export function EnrollmentSummaryCard({
     .map((d) => WEEKDAY_LABELS[d])
     .join(", ");
   const platform = getMeetingPlatform(enrollment.meetingPlatform);
+  const nextLesson = findNextScheduledLesson(lessons);
 
   return (
     <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_8px_24px_rgba(20,44,88,0.06)] sm:p-7">
@@ -54,6 +69,12 @@ export function EnrollmentSummaryCard({
           {ENROLLMENT_STATUS_LABELS[enrollment.status]}
         </span>
       </div>
+
+      {nextLesson && (
+        <div className="mt-5">
+          <EnterClassButton lesson={nextLesson} platform={enrollment.meetingPlatform} teacherMeetingLinks={teacherMeetingLinks} />
+        </div>
+      )}
 
       <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3">
         <Field label="수강 기간" value={`${enrollment.startDate} ~ ${enrollment.endDate}`} />

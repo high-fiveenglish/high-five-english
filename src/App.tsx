@@ -16,6 +16,9 @@ import { ClassroomPage } from "./pages/ClassroomPage";
 import { AdminReschedulePage } from "./pages/AdminReschedulePage";
 import { InstallPage } from "./pages/InstallPage";
 import { AdminMeetingSettingsPage } from "./pages/AdminMeetingSettingsPage";
+import { AdminAccountsPage } from "./pages/AdminAccountsPage";
+import { TeacherDashboardPage } from "./pages/TeacherDashboardPage";
+import { RouteGuard } from "./components/auth/RouteGuard";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 
 function App() {
@@ -52,22 +55,39 @@ function App() {
               path="/classroom"
               element={<ClassroomPage onOpenLogin={openLogin} />}
             />
+            <Route
+              path="/teacher"
+              element={<TeacherDashboardPage onOpenLogin={openLogin} />}
+            />
             <Route path="/notice" element={<PlaceholderPage title="공지사항" />} />
             <Route path="/counsel" element={<PlaceholderPage title="1:1 상담" />} />
             <Route
               path="/admin"
               element={
-                <PlaceholderPage
-                  title="홈페이지 관리"
-                  links={[
-                    { label: "수업 연기 신청 내역 보기", to: "/admin/reschedule-requests" },
-                    { label: "화상회의 프로그램 설정", to: "/admin/meeting-settings" },
-                  ]}
-                />
+                <RouteGuard allow={["general_manager", "general_admin"]} onOpenLogin={openLogin}>
+                  <PlaceholderPage
+                    title="홈페이지 관리"
+                    links={[
+                      { label: "수업 연기 신청 내역 보기", to: "/admin/reschedule-requests" },
+                      { label: "화상회의 프로그램 설정", to: "/admin/meeting-settings" },
+                      { label: "계정 및 권한 관리", to: "/admin/accounts" },
+                    ]}
+                  />
+                </RouteGuard>
               }
             />
-            <Route path="/admin/reschedule-requests" element={<AdminReschedulePage />} />
-            <Route path="/admin/meeting-settings" element={<AdminMeetingSettingsPage />} />
+            <Route
+              path="/admin/reschedule-requests"
+              element={<AdminReschedulePage onOpenLogin={openLogin} />}
+            />
+            <Route
+              path="/admin/meeting-settings"
+              element={<AdminMeetingSettingsPage onOpenLogin={openLogin} />}
+            />
+            <Route
+              path="/admin/accounts"
+              element={<AdminAccountsPage onOpenLogin={openLogin} />}
+            />
             <Route path="/mypage" element={<PlaceholderPage title="정보변경" />} />
             <Route path="/install" element={<InstallPage />} />
             <Route path="*" element={<PlaceholderPage title="페이지를 찾을 수 없습니다" />} />

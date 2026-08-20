@@ -3,6 +3,7 @@ import { Star } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import type { Lesson, DailyEvaluation, SkillRating } from "../../lib/scheduling/types";
 import { getEvaluation } from "../../services/classroomService";
+import { useAuth } from "../../context/AuthContext";
 
 function SkillRow({ label, rating }: { label: string; rating: SkillRating }) {
   return (
@@ -31,18 +32,19 @@ export function EvaluationDetailModal({
   lesson: Lesson | null;
   onClose: () => void;
 }) {
+  const { actor } = useAuth();
   const [evaluation, setEvaluation] = useState<DailyEvaluation | null>(null);
 
   useEffect(() => {
-    if (!lesson) return;
+    if (!lesson || !actor) return;
     let cancelled = false;
-    getEvaluation(lesson.id).then((e) => {
-      if (!cancelled) setEvaluation(e);
+    getEvaluation(actor, lesson.id).then((res) => {
+      if (!cancelled && res.ok) setEvaluation(res.value);
     });
     return () => {
       cancelled = true;
     };
-  }, [lesson]);
+  }, [lesson, actor]);
 
   return (
     <Modal open={!!lesson} onClose={onClose} title="일일평가서" maxWidth="max-w-lg">

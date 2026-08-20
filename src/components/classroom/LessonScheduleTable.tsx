@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { FileText, CalendarClock, Video } from "lucide-react";
 import type { Lesson } from "../../lib/scheduling/types";
+import type { MeetingPlatformId } from "../../data/meetingPlatforms";
 import { LessonStatusBadge } from "./LessonStatusBadge";
 import { combineDateTimeMs, hoursBetween } from "../../lib/scheduling/dateUtils";
+import { resolveJoinUrl } from "../../lib/meeting/resolveJoinUrl";
+import type { TeacherMeetingLinks } from "../../services/store";
 
 const RESCHEDULE_CUTOFF_HOURS = 4;
 
@@ -16,12 +19,16 @@ export function LessonScheduleTable({
   lessons,
   teacherName,
   courseName,
+  teacherMeetingLinks,
+  meetingPlatform,
   onOpenEvaluation,
   onRequestReschedule,
 }: {
   lessons: Lesson[];
   teacherName: string;
   courseName: string;
+  teacherMeetingLinks: TeacherMeetingLinks;
+  meetingPlatform: MeetingPlatformId;
   onOpenEvaluation: (lesson: Lesson) => void;
   onRequestReschedule: (lesson: Lesson) => void;
 }) {
@@ -79,9 +86,9 @@ export function LessonScheduleTable({
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
                   {lesson.status === "scheduled" ? (
-                    lesson.meetingUrl ? (
+                    resolveJoinUrl(lesson, teacherMeetingLinks, meetingPlatform) ? (
                       <a
-                        href={lesson.meetingUrl}
+                        href={resolveJoinUrl(lesson, teacherMeetingLinks, meetingPlatform)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-700"

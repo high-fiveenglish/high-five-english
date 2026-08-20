@@ -2,21 +2,28 @@ import { useEffect, useState } from "react";
 import { Settings2 } from "lucide-react";
 import { Container } from "../components/ui/Container";
 import { SectionHeading } from "../components/ui/SectionHeading";
+import { RouteGuard } from "../components/auth/RouteGuard";
 import { RescheduleRequestsTable } from "../components/classroom/admin/RescheduleRequestsTable";
 import { AdminOverrideLessonModal } from "../components/modals/AdminOverrideLessonModal";
-import { listRescheduleRequests, type AdminRescheduleRow } from "../services/classroomService";
+import { useAuth } from "../context/AuthContext";
+import { listRescheduleRequests, type AdminRescheduleRow } from "../services/adminService";
 
-export function AdminReschedulePage() {
+function AdminRescheduleContent() {
+  const { actor } = useAuth();
   const [rows, setRows] = useState<AdminRescheduleRow[]>([]);
   const [overrideOpen, setOverrideOpen] = useState(false);
 
   const load = () => {
-    listRescheduleRequests().then(setRows);
+    if (!actor) return;
+    listRescheduleRequests(actor).then((res) => {
+      if (res.ok) setRows(res.value);
+    });
   };
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actor]);
 
   return (
     <section className="bg-slate-50/60 py-12 sm:py-16">
@@ -47,5 +54,17 @@ export function AdminReschedulePage() {
         onSaved={load}
       />
     </section>
+  );
+}
+
+export function AdminReschedulePage({ onOpenLogin }: { onOpenLogin: () => void }) {
+  return (
+    <RouteGuard
+      allow={["general_manager", "general_admin"]}
+      requirePermission="schedule"
+      onOpenLogin={onOpenLogin}
+    >
+      <AdminRescheduleContent />
+    </RouteGuard>
   );
 }

@@ -5,7 +5,8 @@ import {
   listSchedulableLessons,
   overrideLessonDate,
   type AdminLessonRow,
-} from "../../services/classroomService";
+} from "../../services/adminService";
+import { useAuth } from "../../context/AuthContext";
 
 export function AdminOverrideLessonModal({
   open,
@@ -25,14 +26,16 @@ export function AdminOverrideLessonModal({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const { actor } = useAuth();
 
   useEffect(() => {
-    if (!open) return;
-    listSchedulableLessons().then((rows) => {
-      setLessons(rows);
-      setLessonId(rows[0]?.id ?? "");
+    if (!open || !actor) return;
+    listSchedulableLessons(actor).then((res) => {
+      if (!res.ok) return;
+      setLessons(res.value);
+      setLessonId(res.value[0]?.id ?? "");
     });
-  }, [open]);
+  }, [open, actor]);
 
   const reset = () => {
     setNewDate("");
@@ -50,13 +53,13 @@ export function AdminOverrideLessonModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!lessonId || !newDate || !reason.trim()) {
+    if (!lessonId || !newDate || !reason.trim() || !actor) {
       setError("수업, 새 날짜, 변경 사유는 필수입니다.");
       return;
     }
     setSubmitting(true);
     setError(null);
-    const result = await overrideLessonDate(lessonId, newDate, newTime || undefined, force);
+    const result = await overrideLessonDate(actor, lessonId, newDate, newTime || undefined, force);
     setSubmitting(false);
     if (!result.ok) {
       setError(result.error.message);

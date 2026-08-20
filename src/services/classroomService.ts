@@ -1,56 +1,58 @@
-// Thin mock service layer. All functions are async so call sites don't change when
-// this is later swapped for real API calls — only this file's bodies would change.
+// Student-facing mock service layer. Every function takes the requesting `actor` and
+// checks it via src/lib/auth/permissions.ts BEFORE touching data — this is what stands
+// in for "checked at the API level" until a real backend exists (see store.ts).
 import {
-  CLASSROOM_SEED,
-  CLOSURES,
   DEMO_COURSE,
-  DEMO_STUDENT,
-  DEMO_TEACHER,
-  DEMO_TEXTBOOK,
   DEMO_LEVEL_TEST_RESULT,
-  TEACHER_UNAVAILABILITY,
+  DEMO_TEXTBOOK,
+  STUDENTS,
   type ClassroomCourse,
-  type ClassroomStudent,
   type ClassroomTextbook,
   type LevelTestResult,
 } from "../data/classroomMock";
-import {
-  computeBlockedDates,
-  extendSchedule,
-  overrideLessonDateInPlace,
-} from "../lib/scheduling/engine";
+import { INSTRUCTORS, type Instructor } from "../data/instructors";
+import { MEETING_PLATFORMS, type MeetingPlatformId } from "../data/meetingPlatforms";
+import { computeBlockedDates, extendSchedule } from "../lib/scheduling/engine";
 import type {
+  ClosureDate,
   DailyEvaluation,
   Enrollment,
-  ISODate,
   Lesson,
   RescheduleRequest,
-  Result,
+  TeacherUnavailability,
 } from "../lib/scheduling/types";
-import type { Instructor } from "../data/instructors";
-import {
-  MEETING_PLATFORMS,
-  type MeetingPlatform,
-  type MeetingPlatformId,
-} from "../data/meetingPlatforms";
+import type { Actor, ServiceResult } from "../lib/auth/types";
+import { errResult, okResult } from "../lib/auth/types";
+import { requireOwnStudent, requireRole, requireStudentOrOwningTeacherOrPermission } from "../lib/auth/permissions";
+import { store, type TeacherMeetingLinks } from "./store";
 
 let idCounter = 1000;
 const idGen = () => `svc-${++idCounter}`;
 
-// module-level mutable store, seeded once — shared by every caller (student + admin
-// views alike), standing in for a shared database until a real backend exists.
-const store = {
-  enrollment: { ...CLASSROOM_SEED.enrollment } as Enrollment,
-  lessons: [...CLASSROOM_SEED.lessons] as Lesson[],
-  evaluations: [...CLASSROOM_SEED.evaluations] as DailyEvaluation[],
-  rescheduleRequests: [...CLASSROOM_SEED.rescheduleRequests] as RescheduleRequest[],
-  // overlays kept separate from the static catalog / shared instructor data so
-  // neither of those modules needs to be mutated directly.
-  platformEnabled: Object.fromEntries(
-    MEETING_PLATFORMS.map((p) => [p.id, p.enabled]),
-  ) as Record<MeetingPlatformId, boolean>,
-  teacherDefaultPlatform: (DEMO_TEACHER.defaultMeetingPlatform ?? "zoom") as MeetingPlatformId,
-};
+export interface MeetingPlatformRow {
+  id: MeetingPlatformId;
+  name: string;
+  shortName: string;
+  brandColor: string;
+  description: string;
+  officialSiteUrl: string;
+  downloadLinks: { pc: string; android: string; ios: string };
+  installSteps: string[];
+  joinSteps: string[];
+  enabled: boolean;
+}
+
+/** Public catalog read — deliberately NOT actor-gated, since the /install page shows
+ * these cards to visitors who aren't logged in at all. */
+export async function listMeetingPlatforms(): Promise<MeetingPlatformRow[]> {
+  return MEETING_PLATFORMS.map((p) => ({ ...p, enabled: store.platformEnabled[p.id] }));
+}
+
+/** Public read of the class-entry button's timing window — not sensitive, only writes
+ * (adminService.updateEntryWindowSettings) are permission-gated. */
+export async function getEntryWindowSettings() {
+  return store.entryWindow;
+}
 
 export interface MyClassroomSnapshot {
   enrollment: Enrollment;
@@ -59,157 +61,120 @@ export interface MyClassroomSnapshot {
   textbook: ClassroomTextbook;
   levelTestResult: LevelTestResult;
   lessons: Lesson[];
+  /** This enrollment's teacher's own registered zoom/voov/teams links (see
+   * lib/meeting/resolveJoinUrl for how a lesson's actual join URL is derived from this). */
+  teacherMeetingLinks: TeacherMeetingLinks;
+  /** All academy-wide closures, for the student calendar. */
+  closures: ClosureDate[];
+  /** Only this enrollment's teacher's unavailable dates (not other teachers'). */
+  teacherUnavailability: TeacherUnavailability[];
 }
 
-export async function getMyClassroom(studentId: string): Promise<MyClassroomSnapshot | null> {
-  if (studentId !== store.enrollment.studentId) return null;
-  return {
-    enrollment: store.enrollment,
+function findActiveEnrollmentForStudent(studentId: string): Enrollment | undefined {
+  return store.enrollments.find((e) => e.studentId === studentId);
+}
+
+export async function getMyClassroom(actor: Actor): Promise<ServiceResult<MyClassroomSnapshot>> {
+  const guard = requireRole(actor, ["student"]);
+  if (!guard.ok) return guard;
+
+  const studentId = actor.linkedId!;
+  const enrollment = findActiveEnrollmentForStudent(studentId);
+  if (!enrollment) return errResult("NOT_FOUND", "수강 정보를 찾을 수 없습니다.");
+
+  const teacher = INSTRUCTORS.find((i) => i.id === enrollment.teacherId);
+  if (!teacher) return errResult("NOT_FOUND", "담당 강사 정보를 찾을 수 없습니다.");
+
+  const lessons = store.lessons
+    .filter((l) => l.enrollmentId === enrollment.id)
+    .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+
+  return okResult({
+    enrollment,
     course: DEMO_COURSE,
-    teacher: DEMO_TEACHER,
+    teacher,
     textbook: DEMO_TEXTBOOK,
     levelTestResult: DEMO_LEVEL_TEST_RESULT,
-    lessons: [...store.lessons].sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate)),
-  };
+    lessons,
+    teacherMeetingLinks: store.teacherMeetingLinks[enrollment.teacherId] ?? {},
+    closures: store.closures,
+    teacherUnavailability: store.teacherUnavailability.filter((u) => u.teacherId === enrollment.teacherId),
+  });
 }
 
-export async function getEvaluation(lessonId: string): Promise<DailyEvaluation | null> {
-  return store.evaluations.find((e) => e.lessonId === lessonId) ?? null;
+export async function getEvaluation(actor: Actor, lessonId: string): Promise<ServiceResult<DailyEvaluation | null>> {
+  const lesson = store.lessons.find((l) => l.id === lessonId);
+  if (!lesson) return errResult("NOT_FOUND", "수업을 찾을 수 없습니다.");
+  const enrollment = store.enrollments.find((e) => e.id === lesson.enrollmentId);
+  if (!enrollment) return errResult("NOT_FOUND", "수강 정보를 찾을 수 없습니다.");
+
+  const guard = requireStudentOrOwningTeacherOrPermission(
+    actor,
+    enrollment.studentId,
+    enrollment.teacherId,
+    "evaluations",
+  );
+  if (!guard.ok) return guard;
+
+  return okResult(store.evaluations.find((e) => e.lessonId === lessonId) ?? null);
 }
 
 export async function requestReschedule(
+  actor: Actor,
   lessonId: string,
   reason: string,
-): Promise<Result<RescheduleRequest>> {
+): Promise<ServiceResult<RescheduleRequest>> {
   const lesson = store.lessons.find((l) => l.id === lessonId);
-  if (!lesson) {
-    return { ok: false, error: { code: "LESSON_NOT_RESCHEDULABLE", message: "수업을 찾을 수 없습니다." } };
-  }
+  if (!lesson) return errResult("NOT_FOUND", "수업을 찾을 수 없습니다.");
+  const enrollment = store.enrollments.find((e) => e.id === lesson.enrollmentId);
+  if (!enrollment) return errResult("NOT_FOUND", "수강 정보를 찾을 수 없습니다.");
+
+  const guard = requireOwnStudent(actor, enrollment.studentId);
+  if (!guard.ok) return guard;
+
+  const allTeacherLessons = enrollmentsLessonsForTeacher(enrollment.teacherId);
   const result = extendSchedule({
-    enrollment: store.enrollment,
+    enrollment,
     allEnrollmentLessons: store.lessons,
-    allTeacherLessons: store.lessons,
+    allTeacherLessons,
     targetLesson: lesson,
     cause: "rescheduled",
     initiatedBy: "student",
     reason,
-    closures: CLOSURES,
-    unavailability: TEACHER_UNAVAILABILITY,
+    closures: store.closures,
+    unavailability: store.teacherUnavailability,
     nowMs: Date.now(),
     idGen,
   });
   if (!result.ok) return result;
 
   store.lessons = [
-    ...store.lessons.map((l) => (l.id === result.value.updatedOriginalLesson.id
-      ? result.value.updatedOriginalLesson
-      : l)),
+    ...store.lessons.map((l) =>
+      l.id === result.value.updatedOriginalLesson.id ? result.value.updatedOriginalLesson : l,
+    ),
     result.value.newLesson,
   ];
-  store.enrollment = result.value.updatedEnrollment;
+  store.enrollments = store.enrollments.map((e) =>
+    e.id === result.value.updatedEnrollment.id ? result.value.updatedEnrollment : e,
+  );
   store.rescheduleRequests = [...store.rescheduleRequests, result.value.rescheduleRequest];
 
-  return { ok: true, value: result.value.rescheduleRequest };
+  return okResult(result.value.rescheduleRequest);
 }
 
-export interface AdminRescheduleRow extends RescheduleRequest {
-  studentName: string;
-  courseName: string;
-}
-
-export async function listRescheduleRequests(): Promise<AdminRescheduleRow[]> {
-  const student: ClassroomStudent = DEMO_STUDENT;
-  return [...store.rescheduleRequests]
-    .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))
-    .map((r) => ({ ...r, studentName: student.name, courseName: DEMO_COURSE.courseName }));
-}
-
-export interface AdminLessonRow extends Lesson {
-  studentName: string;
-  courseName: string;
-}
-
-/** Lessons an admin can pick from for a manual date correction — anything still
- * upcoming (not yet attended/absent/vacated). */
-export async function listSchedulableLessons(): Promise<AdminLessonRow[]> {
-  return store.lessons
-    .filter((l) => l.status === "scheduled")
-    .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate))
-    .map((l) => ({ ...l, studentName: DEMO_STUDENT.name, courseName: DEMO_COURSE.courseName }));
-}
-
-export async function overrideLessonDate(
-  lessonId: string,
-  newDate: ISODate,
-  newTime: string | undefined,
-  force: boolean,
-): Promise<Result<Lesson>> {
-  const lesson = store.lessons.find((l) => l.id === lessonId);
-  if (!lesson) {
-    return { ok: false, error: { code: "LESSON_NOT_RESCHEDULABLE", message: "수업을 찾을 수 없습니다." } };
-  }
-  const blockedDates = computeBlockedDates(CLOSURES, TEACHER_UNAVAILABILITY, store.enrollment.teacherId);
-  const existingDates = new Set(store.lessons.map((l) => l.scheduledDate));
-
-  const result = overrideLessonDateInPlace({
-    lesson,
-    newDate,
-    newTime,
-    force,
-    allEnrollmentLessons: store.lessons,
-    weeklyDays: store.enrollment.weeklyDays,
-    blockedDates,
-    existingDates,
-  });
-  if (!result.ok) return result;
-
-  store.lessons = store.lessons.map((l) =>
-    l.id === lessonId ? result.value.updatedLesson : l,
+function enrollmentsLessonsForTeacher(teacherId: string): Lesson[] {
+  const enrollmentIds = new Set(
+    store.enrollments.filter((e) => e.teacherId === teacherId).map((e) => e.id),
   );
-  store.enrollment = { ...store.enrollment, endDate: result.value.recomputedEndDate };
-
-  return { ok: true, value: result.value.updatedLesson };
+  return store.lessons.filter((l) => enrollmentIds.has(l.enrollmentId));
 }
 
-// --- meeting platform / join-link management --------------------------------
-
-export type MeetingPlatformRow = Omit<MeetingPlatform, "id"> & {
-  id: MeetingPlatformId;
-  enabled: boolean;
-};
-
-export async function listMeetingPlatforms(): Promise<MeetingPlatformRow[]> {
-  return MEETING_PLATFORMS.map((p) => ({ ...p, enabled: store.platformEnabled[p.id] }));
+// Re-exported so other service modules (teacherService/adminService) can build blocked-date
+// sets the same way the scheduling engine already does, without duplicating the merge logic.
+export function blockedDatesFor(teacherId: string): Set<string> {
+  return computeBlockedDates(store.closures, store.teacherUnavailability, teacherId);
 }
 
-export async function setPlatformEnabled(id: MeetingPlatformId, enabled: boolean): Promise<void> {
-  store.platformEnabled = { ...store.platformEnabled, [id]: enabled };
-}
-
-export async function updateEnrollmentMeetingPlatform(
-  platformId: MeetingPlatformId,
-): Promise<Enrollment> {
-  store.enrollment = { ...store.enrollment, meetingPlatform: platformId };
-  return store.enrollment;
-}
-
-export async function getTeacherDefaultPlatform(): Promise<MeetingPlatformId> {
-  return store.teacherDefaultPlatform;
-}
-
-export async function updateTeacherDefaultPlatform(platformId: MeetingPlatformId): Promise<void> {
-  store.teacherDefaultPlatform = platformId;
-}
-
-export async function updateLessonMeetingUrl(
-  lessonId: string,
-  meetingUrl: string,
-): Promise<Result<Lesson>> {
-  const lesson = store.lessons.find((l) => l.id === lessonId);
-  if (!lesson) {
-    return { ok: false, error: { code: "LESSON_NOT_RESCHEDULABLE", message: "수업을 찾을 수 없습니다." } };
-  }
-  const updatedLesson = { ...lesson, meetingUrl };
-  store.lessons = store.lessons.map((l) => (l.id === lessonId ? updatedLesson : l));
-  return { ok: true, value: updatedLesson };
+export function findStudentName(studentId: string): string {
+  return STUDENTS.find((s) => s.id === studentId)?.name ?? studentId;
 }

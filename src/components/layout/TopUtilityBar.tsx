@@ -8,7 +8,8 @@ export function TopUtilityBar({
   onOpenLogin: () => void;
   onOpenFind: () => void;
 }) {
-  const { isLoggedIn, userName, logout } = useAuth();
+  const { isLoggedIn, userName, role, logout } = useAuth();
+  const isAdminLike = role === "general_manager" || role === "general_admin";
 
   return (
     <div className="hidden border-b border-slate-100 bg-brand-950 sm:block">
@@ -23,9 +24,21 @@ export function TopUtilityBar({
             <Link to="/" className="transition hover:text-white">
               홈
             </Link>
-            <Link to="/admin" className="transition hover:text-white">
-              홈페이지관리
-            </Link>
+            {role === "student" && (
+              <Link to="/classroom" className="transition hover:text-white">
+                내 강의실
+              </Link>
+            )}
+            {role === "teacher" && (
+              <Link to="/teacher" className="transition hover:text-white">
+                강사 페이지
+              </Link>
+            )}
+            {isAdminLike && (
+              <Link to="/admin" className="transition hover:text-white">
+                홈페이지관리
+              </Link>
+            )}
             <Link to="/mypage" className="transition hover:text-white">
               정보변경
             </Link>

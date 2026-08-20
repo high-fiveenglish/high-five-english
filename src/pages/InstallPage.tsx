@@ -36,7 +36,7 @@ function MyPlatformBanner({ platformName, platformId }: { platformName: string; 
 }
 
 export function InstallPage() {
-  const { isLoggedIn, userId } = useAuth();
+  const { isLoggedIn, actor } = useAuth();
   const [myPlatformId, setMyPlatformId] = useState<string | null>(null);
   const [myPlatformName, setMyPlatformName] = useState<string | null>(null);
   const [platforms, setPlatforms] = useState<MeetingPlatformRow[]>([]);
@@ -49,14 +49,14 @@ export function InstallPage() {
   useEffect(() => {
     // No need to reset state when logged out: the banner only renders while
     // isLoggedIn is true, so stale values are simply never read after logout.
-    if (!isLoggedIn || !userId) return;
-    getMyClassroom(userId).then((snapshot) => {
-      if (!snapshot) return;
-      const platform = platforms.find((p) => p.id === snapshot.enrollment.meetingPlatform);
-      setMyPlatformId(snapshot.enrollment.meetingPlatform);
-      setMyPlatformName(platform?.name ?? snapshot.enrollment.meetingPlatform);
+    if (!isLoggedIn || !actor || actor.role !== "student") return;
+    getMyClassroom(actor).then((res) => {
+      if (!res.ok) return;
+      const platform = platforms.find((p) => p.id === res.value.enrollment.meetingPlatform);
+      setMyPlatformId(res.value.enrollment.meetingPlatform);
+      setMyPlatformName(platform?.name ?? res.value.enrollment.meetingPlatform);
     });
-  }, [isLoggedIn, userId, platforms]);
+  }, [isLoggedIn, actor, platforms]);
 
   return (
     <>

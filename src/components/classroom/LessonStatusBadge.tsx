@@ -20,6 +20,18 @@ const LESSON_STATUS_CLASSES: Record<LessonStatus, string> = {
   admin_cancelled: "bg-slate-100 text-slate-500",
 };
 
+/** Solid dot colors for compact markers (e.g. the classroom calendar), matching the same
+ * color family as the badge above without its background/text pill styling. */
+export const LESSON_STATUS_DOT_CLASSES: Record<LessonStatus, string> = {
+  scheduled: "bg-brand-500",
+  completed: "bg-emerald-500",
+  absent: "bg-red-500",
+  rescheduled: "bg-accent-500",
+  teacher_absent: "bg-purple-500",
+  academy_closed: "bg-slate-400",
+  admin_cancelled: "bg-slate-400",
+};
+
 export function LessonStatusBadge({ status }: { status: LessonStatus }) {
   return (
     <span

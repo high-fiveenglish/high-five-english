@@ -1,37 +1,54 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { DEMO_STUDENT } from "../data/classroomMock";
+import type { Actor, PermissionKey, Role } from "../lib/auth/types";
+import { login as loginRequest } from "../services/authService";
 
 type AuthContextValue = {
   isLoggedIn: boolean;
   userName: string | null;
-  /** Demo limitation: there is no real per-user backend yet, so every login resolves
-   * to the same seeded demo student id — this is what classroomService keys off. */
+  role: Role | null;
+  /** studentId for a student, teacherId for a teacher, null for admin/manager/logged-out. */
   userId: string | null;
-  login: (name: string) => void;
+  permissions: PermissionKey[];
+  /** The single object every permission check (service-layer AND RouteGuard) is built
+   * from — null while logged out. */
+  actor: Actor | null;
+  /** Resolves with the logged-in role on success, or an error message on failure. */
+  login: (id: string, password: string) => Promise<{ ok: true; role: Role } | { ok: false; message: string }>;
   logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [actor, setActor] = useState<Actor | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
 
-  const login = (name: string) => {
-    setUserName(name || "회원");
-    setUserId(DEMO_STUDENT.id);
-    setIsLoggedIn(true);
+  const login = async (id: string, password: string) => {
+    const result = await loginRequest(id, password);
+    if (!result.ok) return { ok: false as const, message: result.error.message };
+    setActor(result.value.actor);
+    setUserName(result.value.displayName);
+    return { ok: true as const, role: result.value.actor.role };
   };
 
   const logout = () => {
-    setIsLoggedIn(false);
+    setActor(null);
     setUserName(null);
-    setUserId(null);
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, userName, userId, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        isLoggedIn: !!actor,
+        userName,
+        role: actor?.role ?? null,
+        userId: actor?.linkedId ?? null,
+        permissions: actor?.permissions ?? [],
+        actor,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

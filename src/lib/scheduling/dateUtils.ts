@@ -58,3 +58,23 @@ export function combineDateTimeMs(date: ISODate, time: ISOTime): number {
 export function hoursBetween(fromMs: number, toMs: number): number {
   return (toMs - fromMs) / (60 * 60 * 1000);
 }
+
+/** First day of the calendar month containing `date`, e.g. "2026-08-17" -> "2026-08-01". */
+export function firstOfMonth(date: ISODate): ISODate {
+  const [y, m] = date.split("-");
+  return `${y}-${m}-01`;
+}
+
+/** Adds whole calendar months to `date` (clamped to day 1 first, so this is always exact —
+ * no day-count drift across months of different lengths). */
+export function addMonths(date: ISODate, n: number): ISODate {
+  const [y, m] = firstOfMonth(date).split("-").map(Number);
+  const total = (m - 1) + n;
+  const targetYear = y + Math.floor(total / 12);
+  const targetMonth = ((total % 12) + 12) % 12;
+  return `${targetYear}-${String(targetMonth + 1).padStart(2, "0")}-01`;
+}
+
+export function todayIso(): ISODate {
+  return new Date().toISOString().slice(0, 10);
+}

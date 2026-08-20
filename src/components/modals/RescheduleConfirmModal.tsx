@@ -3,6 +3,7 @@ import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import type { Lesson } from "../../lib/scheduling/types";
 import { requestReschedule } from "../../services/classroomService";
+import { useAuth } from "../../context/AuthContext";
 
 function formatDate(iso: string) {
   const [y, m, d] = iso.split("-");
@@ -19,6 +20,7 @@ export function RescheduleConfirmModal({
   onClose: () => void;
   onRescheduled: (newDate: string) => void;
 }) {
+  const { actor } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
@@ -31,10 +33,10 @@ export function RescheduleConfirmModal({
   };
 
   const handleConfirm = async () => {
-    if (!lesson) return;
+    if (!lesson || !actor) return;
     setSubmitting(true);
     setError(null);
-    const res = await requestReschedule(lesson.id, "");
+    const res = await requestReschedule(actor, lesson.id, "");
     setSubmitting(false);
     if (!res.ok) {
       setError(res.error.message);
