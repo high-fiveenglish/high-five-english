@@ -117,6 +117,7 @@ export function MobileMenu({
                         <NavItemLink
                           key={child.label}
                           href={child.href}
+                          scrollTo={child.scrollTo}
                           onClick={onClose}
                           className="block py-2 text-sm text-slate-500"
                         >
@@ -128,7 +129,8 @@ export function MobileMenu({
                 </>
               ) : (
                 <NavItemLink
-                  href={item.href ?? "#"}
+                  href={item.href ?? "/"}
+                  scrollTo={item.scrollTo}
                   onClick={onClose}
                   className="block px-3.5 py-3.5 text-[15px] font-semibold text-brand-950"
                 >

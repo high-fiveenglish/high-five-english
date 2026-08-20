@@ -8,18 +8,31 @@ export function MainNav() {
       <ul className="flex items-center justify-center">
         {NAV_ITEMS.map((item) => (
           <li key={item.label} className="group relative">
-            <NavItemLink
-              href={item.href ?? "#"}
-              className="flex items-center gap-1 px-4 py-4 text-[15px] font-semibold text-brand-950 transition hover:text-brand-600 lg:px-5"
-            >
-              {item.label}
-              {item.children && (
-                <ChevronDown
-                  size={14}
-                  className="text-slate-400 transition group-hover:rotate-180 group-hover:text-brand-600"
-                />
-              )}
-            </NavItemLink>
+            {item.href ? (
+              <NavItemLink
+                href={item.href}
+                scrollTo={item.scrollTo}
+                className="flex items-center gap-1 px-4 py-4 text-[15px] font-semibold text-brand-950 transition hover:text-brand-600 lg:px-5"
+              >
+                {item.label}
+                {item.children && (
+                  <ChevronDown
+                    size={14}
+                    className="text-slate-400 transition group-hover:rotate-180 group-hover:text-brand-600"
+                  />
+                )}
+              </NavItemLink>
+            ) : (
+              <span className="flex cursor-default items-center gap-1 px-4 py-4 text-[15px] font-semibold text-brand-950 lg:px-5">
+                {item.label}
+                {item.children && (
+                  <ChevronDown
+                    size={14}
+                    className="text-slate-400 transition group-hover:rotate-180 group-hover:text-brand-600"
+                  />
+                )}
+              </span>
+            )}
 
             {item.children && (
               <div className="pointer-events-none absolute left-1/2 top-full z-30 w-52 -translate-x-1/2 pt-1 opacity-0 transition-all duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
@@ -28,6 +41,7 @@ export function MainNav() {
                     <NavItemLink
                       key={child.label}
                       href={child.href}
+                      scrollTo={child.scrollTo}
                       className="block px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-brand-50 hover:text-brand-700"
                     >
                       {child.label}

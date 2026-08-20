@@ -4,6 +4,7 @@ import { NAV_ITEMS } from "../../data/nav";
 import { Container } from "../ui/Container";
 import { CONTACT } from "../../data/contact";
 import { BrandMark } from "./BrandMark";
+import { NavItemLink } from "./NavItemLink";
 
 export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
   return (
@@ -23,13 +24,14 @@ export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
 
         <nav className="mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 border-y border-white/10 py-6 text-sm">
           {NAV_ITEMS.map((item) => (
-            <a
+            <NavItemLink
               key={item.label}
-              href={item.href ?? item.children?.[0]?.href ?? "#"}
+              href={item.href ?? item.children?.[0]?.href ?? "/"}
+              scrollTo={item.scrollTo ?? item.children?.[0]?.scrollTo}
               className="font-medium text-white/70 transition hover:text-white"
             >
               {item.label}
-            </a>
+            </NavItemLink>
           ))}
         </nav>
 
@@ -51,7 +53,7 @@ export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
               </div>
               <div className="flex gap-1.5">
                 <dt className="shrink-0 text-white/35">주소</dt>
-                <dd>서울특별시 OO구 OO로 00, 0층</dd>
+                <dd>충선로 87번길 10</dd>
               </div>
               <div className="flex items-center gap-1.5 pt-1">
                 <Globe size={13} className="shrink-0 text-accent-400" />
@@ -123,12 +125,12 @@ export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
         <div className="mt-10 flex flex-col items-center gap-2 border-t border-white/10 pt-6 text-center text-[12px] text-white/35 sm:flex-row sm:justify-between">
           <p>© {new Date().getFullYear()} HiFive English. All rights reserved.</p>
           <div className="flex gap-4">
-            <a href="#" className="hover:text-white/60">
+            <span className="cursor-default" title="준비 중입니다">
               이용약관
-            </a>
-            <a href="#" className="hover:text-white/60">
+            </span>
+            <span className="cursor-default" title="준비 중입니다">
               개인정보처리방침
-            </a>
+            </span>
           </div>
         </div>
       </Container>

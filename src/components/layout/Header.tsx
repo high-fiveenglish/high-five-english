@@ -7,17 +7,24 @@ import { Logo } from "./Logo";
 import { LoginModal } from "../modals/LoginModal";
 import { FindAccountModal } from "../modals/FindAccountModal";
 
-export function Header() {
-  const [loginOpen, setLoginOpen] = useState(false);
+export function Header({
+  loginOpen,
+  onOpenLogin,
+  onCloseLogin,
+}: {
+  loginOpen: boolean;
+  onOpenLogin: () => void;
+  onCloseLogin: () => void;
+}) {
   const [findOpen, setFindOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const openLogin = () => {
     setFindOpen(false);
-    setLoginOpen(true);
+    onOpenLogin();
   };
   const openFind = () => {
-    setLoginOpen(false);
+    onCloseLogin();
     setFindOpen(true);
   };
 
@@ -55,7 +62,7 @@ export function Header() {
       />
       <LoginModal
         open={loginOpen}
-        onClose={() => setLoginOpen(false)}
+        onClose={onCloseLogin}
         onSwitchToFind={openFind}
       />
       <FindAccountModal open={findOpen} onClose={() => setFindOpen(false)} />

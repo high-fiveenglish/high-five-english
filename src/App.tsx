@@ -12,18 +12,26 @@ import { AboutPage } from "./pages/AboutPage";
 import { ProgramPage } from "./pages/ProgramPage";
 import { CurriculumPage } from "./pages/CurriculumPage";
 import { ProcessPage } from "./pages/ProcessPage";
+import { ClassroomPage } from "./pages/ClassroomPage";
+import { AdminReschedulePage } from "./pages/AdminReschedulePage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 
 function App() {
   const [levelTestOpen, setLevelTestOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const openLevelTest = () => setLevelTestOpen(true);
+  const openLogin = () => setLoginOpen(true);
 
   return (
     <AuthProvider>
       <ScrollToHash />
       <div className="flex min-h-screen flex-col">
-        <Header />
+        <Header
+          loginOpen={loginOpen}
+          onOpenLogin={openLogin}
+          onCloseLogin={() => setLoginOpen(false)}
+        />
 
         <main className="flex-1">
           <Routes>
@@ -38,9 +46,22 @@ function App() {
               path="/process"
               element={<ProcessPage onOpenLevelTest={openLevelTest} />}
             />
+            <Route
+              path="/classroom"
+              element={<ClassroomPage onOpenLogin={openLogin} />}
+            />
             <Route path="/notice" element={<PlaceholderPage title="공지사항" />} />
             <Route path="/counsel" element={<PlaceholderPage title="1:1 상담" />} />
-            <Route path="/admin" element={<PlaceholderPage title="홈페이지 관리" />} />
+            <Route
+              path="/admin"
+              element={
+                <PlaceholderPage
+                  title="홈페이지 관리"
+                  links={[{ label: "수업 연기 신청 내역 보기", to: "/admin/reschedule-requests" }]}
+                />
+              }
+            />
+            <Route path="/admin/reschedule-requests" element={<AdminReschedulePage />} />
             <Route path="/mypage" element={<PlaceholderPage title="정보변경" />} />
             <Route
               path="/install/zoom"

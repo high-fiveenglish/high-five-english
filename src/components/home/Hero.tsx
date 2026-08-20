@@ -1,4 +1,5 @@
 import { Star, ShieldCheck, Users2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Container } from "../ui/Container";
 
 export function Hero({ onOpenLevelTest }: { onOpenLevelTest: () => void }) {
@@ -34,12 +35,12 @@ export function Hero({ onOpenLevelTest }: { onOpenLevelTest: () => void }) {
             >
               무료 레벨테스트 신청
             </button>
-            <a
-              href="#process"
+            <Link
+              to="/process"
               className="rounded-xl border border-slate-200 bg-white px-6 py-3.5 text-sm font-bold text-brand-950 transition hover:-translate-y-0.5 hover:border-brand-300"
             >
               수강절차 살펴보기
-            </a>
+            </Link>
           </div>
 
           <dl className="mt-10 grid grid-cols-3 gap-4 border-t border-slate-100 pt-6 text-center sm:text-left">

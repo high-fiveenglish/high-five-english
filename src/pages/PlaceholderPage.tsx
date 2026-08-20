@@ -2,7 +2,13 @@ import { Link } from "react-router-dom";
 import { Construction } from "lucide-react";
 import { Container } from "../components/ui/Container";
 
-export function PlaceholderPage({ title }: { title: string }) {
+export function PlaceholderPage({
+  title,
+  links,
+}: {
+  title: string;
+  links?: { label: string; to: string }[];
+}) {
   return (
     <Container className="flex min-h-[60vh] flex-col items-center justify-center py-24 text-center">
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-brand-500">
@@ -13,6 +19,21 @@ export function PlaceholderPage({ title }: { title: string }) {
         해당 페이지는 현재 준비 중입니다. 빠른 시일 내에 자세한 내용으로
         찾아뵙겠습니다.
       </p>
+
+      {links && links.length > 0 && (
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          {links.map((l) => (
+            <Link
+              key={l.to}
+              to={l.to}
+              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-brand-700 transition hover:border-brand-300"
+            >
+              {l.label}
+            </Link>
+          ))}
+        </div>
+      )}
+
       <Link
         to="/"
         className="mt-8 rounded-xl bg-brand-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-brand-700"

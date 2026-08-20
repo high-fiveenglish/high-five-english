@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# preview export zips / single-file artifact builds for sharing offline
+*.zip
+artifact-export.html
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

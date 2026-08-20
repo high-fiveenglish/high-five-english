@@ -76,8 +76,13 @@ export function ProcessPage({
           <div className="flex items-center gap-1 overflow-x-auto pb-2 sm:flex-wrap sm:justify-center sm:overflow-visible">
             {FLOW_LABELS.map((label, i) => (
               <div key={label} className="flex shrink-0 items-center">
-                <a
-                  href={`#step-${i + 1}`}
+                <button
+                  type="button"
+                  onClick={() =>
+                    document
+                      .getElementById(`step-${i + 1}`)
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }
                   className="flex flex-col items-center gap-1.5 rounded-xl px-2.5 py-2 text-center transition hover:bg-white"
                 >
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
@@ -86,7 +91,7 @@ export function ProcessPage({
                   <span className="max-w-[84px] text-[11px] font-semibold leading-tight text-brand-900 sm:max-w-none">
                     {label}
                   </span>
-                </a>
+                </button>
                 {i < FLOW_LABELS.length - 1 && (
                   <ChevronRight size={16} className="mx-0.5 shrink-0 text-slate-300" />
                 )}
