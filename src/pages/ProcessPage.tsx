@@ -27,6 +27,43 @@ const STEP_ICONS = {
   GraduationCap,
 } as const;
 
+/** One step's icon tile — a small numbered badge pinned on the icon (not the icon
+ * itself being the number) gives the number → icon → label hierarchy its own visual
+ * tier at each size, and is reused identically by both the desktop single-row layout
+ * and the tablet/mobile grid layout below so they never drift out of sync. */
+function MiniStepButton({
+  index,
+  icon: Icon,
+  title,
+  onClick,
+}: {
+  index: number;
+  icon: (typeof STEP_ICONS)[keyof typeof STEP_ICONS];
+  title: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex w-full flex-col items-center gap-2.5 rounded-2xl px-2 py-2.5 text-center transition hover:bg-white"
+    >
+      <div className="relative">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 transition group-hover:bg-brand-100 sm:h-[4.5rem] sm:w-[4.5rem]">
+          <Icon size={28} className="sm:hidden" />
+          <Icon size={32} className="hidden sm:block" />
+        </div>
+        <span className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-xs font-extrabold text-white ring-[3px] ring-white">
+          {index + 1}
+        </span>
+      </div>
+      <span className="max-w-[110px] text-[13.5px] font-bold leading-snug text-brand-900 sm:max-w-[7.5rem] sm:text-[15px]">
+        {title}
+      </span>
+    </button>
+  );
+}
+
 export function ProcessPage({
   onOpenLevelTest,
 }: {
@@ -73,31 +110,44 @@ export function ProcessPage({
           </button>
         </Container>
 
-        {/* mini flow overview */}
-        <Container className="mt-12 max-w-5xl">
-          <div className="flex items-center gap-1 overflow-x-auto pb-2 sm:flex-wrap sm:justify-center sm:overflow-visible">
+        {/* mini flow overview — a single row on desktop so the whole 8-step flow reads
+            left-to-right at a glance, but a 2/4-column grid below lg: cramming 8 items
+            into one row only works with room per item to spare, which phones and even
+            most tablets don't have; a grid lets each icon stay full-size instead. */}
+        <Container className="mt-12 max-w-7xl">
+          <div className="hidden lg:flex lg:items-start lg:justify-between">
             {PROCESS_STEPS.map((s, i) => (
-              <div key={s.step} className="flex shrink-0 items-center">
-                <button
-                  type="button"
+              <div key={s.step} className="flex flex-1 items-start justify-center">
+                <MiniStepButton
+                  index={i}
+                  icon={STEP_ICONS[s.icon]}
+                  title={t(`steps.${s.step}.title`)}
                   onClick={() =>
                     document
                       .getElementById(`step-${s.step}`)
                       ?.scrollIntoView({ behavior: "smooth", block: "start" })
                   }
-                  className="flex flex-col items-center gap-1.5 rounded-xl px-2.5 py-2 text-center transition hover:bg-white"
-                >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
-                    {i + 1}
-                  </span>
-                  <span className="max-w-[84px] text-[11px] font-semibold leading-tight text-brand-900 sm:max-w-none">
-                    {t(`steps.${s.step}.title`)}
-                  </span>
-                </button>
+                />
                 {i < PROCESS_STEPS.length - 1 && (
-                  <ChevronRight size={16} className="mx-0.5 shrink-0 text-slate-300" />
+                  <ChevronRight size={22} className="mt-7 shrink-0 text-slate-300" />
                 )}
               </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-2 gap-y-5 sm:grid-cols-4 sm:gap-x-4 lg:hidden">
+            {PROCESS_STEPS.map((s, i) => (
+              <MiniStepButton
+                key={s.step}
+                index={i}
+                icon={STEP_ICONS[s.icon]}
+                title={t(`steps.${s.step}.title`)}
+                onClick={() =>
+                  document
+                    .getElementById(`step-${s.step}`)
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+              />
             ))}
           </div>
         </Container>
