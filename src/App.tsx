@@ -26,6 +26,9 @@ import { AdminNoticesPage } from "./pages/AdminNoticesPage";
 import { AdminReviewsPage } from "./pages/AdminReviewsPage";
 import { AdminLevelTestPage } from "./pages/AdminLevelTestPage";
 import { AdminPricingPage } from "./pages/AdminPricingPage";
+import { AdminInstructorsPage } from "./pages/AdminInstructorsPage";
+import { AdminConsultChannelsPage } from "./pages/AdminConsultChannelsPage";
+import { ConsultPage } from "./pages/ConsultPage";
 import { TeacherDashboardPage } from "./pages/TeacherDashboardPage";
 import { RouteGuard } from "./components/auth/RouteGuard";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
@@ -64,7 +67,7 @@ function App() {
                 <Route path="process" element={<ProcessPage onOpenLevelTest={openLevelTest} />} />
                 <Route path="install" element={<InstallPage />} />
                 <Route path="notice" element={<NoticeListPage />} />
-                <Route path="counsel" element={<PlaceholderPage title={t("nav.counsel")} />} />
+                <Route path="counsel" element={<ConsultPage />} />
                 <Route path="terms" element={<LegalPage doc="terms" path="/terms" />} />
                 <Route path="privacy" element={<LegalPage doc="privacy" path="/privacy" />} />
               </Route>
@@ -93,6 +96,8 @@ function App() {
                         { label: t("admin:home.link_reviews"), to: "/admin/reviews" },
                         { label: t("admin:home.link_level_test"), to: "/admin/level-test-requests" },
                         { label: t("admin:home.link_pricing"), to: "/admin/pricing" },
+                        { label: t("admin:home.link_instructors"), to: "/admin/instructors" },
+                        { label: t("admin:home.link_consult_channels"), to: "/admin/consult-channels" },
                       ]}
                     />
                   </RouteGuard>
@@ -125,6 +130,14 @@ function App() {
               <Route
                 path="/admin/pricing"
                 element={<AdminPricingPage onOpenLogin={openLogin} />}
+              />
+              <Route
+                path="/admin/instructors"
+                element={<AdminInstructorsPage onOpenLogin={openLogin} />}
+              />
+              <Route
+                path="/admin/consult-channels"
+                element={<AdminConsultChannelsPage onOpenLogin={openLogin} />}
               />
               <Route path="/mypage" element={<PlaceholderPage title={t("topbar.my_info")} />} />
               <Route path="*" element={<PlaceholderPage title={t("errors.not_found_title")} />} />

@@ -13,6 +13,8 @@ import { DEFAULT_ENTRY_WINDOW, type EntryWindowSettings } from "../data/siteSett
 import { SEED_NOTICES } from "../data/noticesSeed";
 import { SEED_STUDENT_REVIEWS } from "../data/reviewsSeed";
 import { PRICING_SEED, type PricingDuration } from "../data/pricing";
+import { SEED_CONSULT_CHANNELS } from "../data/consultChannelsSeed";
+import { INSTRUCTORS, type Instructor } from "../data/instructors";
 import type {
   ClosureDate,
   DailyEvaluation,
@@ -22,7 +24,12 @@ import type {
   TeacherUnavailability,
 } from "../lib/scheduling/types";
 import type { PermissionKey } from "../lib/auth/types";
-import type { LevelTestRequest, Notice, StudentReview } from "../lib/community/types";
+import type {
+  ConsultChannel,
+  LevelTestRequest,
+  Notice,
+  StudentReview,
+} from "../lib/community/types";
 
 export type TeacherMeetingLinks = Partial<Record<MeetingPlatformId, string>>;
 
@@ -57,6 +64,17 @@ export const store = {
     ...d,
     rows: d.rows.map((r) => ({ ...r, price25: { ...r.price25 }, price50: { ...r.price50 } })),
   })) as PricingDuration[],
+  // Deep-cloned so admin edits to career/classFeatures/etc. (array fields) never mutate
+  // the static INSTRUCTORS seed that classroomMock.ts still reads directly by id.
+  instructors: INSTRUCTORS.map((i) => ({
+    ...i,
+    career: [...i.career],
+    availableDays: [...i.availableDays],
+    classFeatures: [...i.classFeatures],
+    specialties: [...i.specialties],
+    levels: [...i.levels],
+  })) as Instructor[],
+  consultChannels: [...SEED_CONSULT_CHANNELS] as ConsultChannel[],
 };
 
 function cloneLinks(

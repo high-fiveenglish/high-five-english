@@ -154,7 +154,13 @@
       "audio_label": "🔊 Nghe giới thiệu bằng giọng nói",
       "audio_unsupported": "Trình duyệt của bạn không hỗ trợ phát âm thanh.",
       "audio_disclaimer": "* Đây là giọng mẫu demo. Sẽ được thay thế bằng phần giới thiệu giọng nói thực tế của giáo viên.",
-      "career_label": "Kinh nghiệm & Chứng chỉ"
+      "career_label": "Kinh nghiệm & Chứng chỉ",
+      "play_label": "Phát",
+      "pause_label": "Tạm dừng",
+      "hours_label": "Giờ có thể dạy",
+      "days_label": "Ngày có thể dạy",
+      "specialties_label": "Chuyên môn",
+      "levels_label": "Cấp độ giảng dạy"
     },
     "bios": {
       "sarah": {

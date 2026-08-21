@@ -103,7 +103,9 @@
     "link_notices": "공지사항 관리",
     "link_reviews": "수강후기 관리",
     "link_level_test": "레벨테스트 신청 내역 보기",
-    "link_pricing": "수강료 관리"
+    "link_pricing": "수강료 관리",
+    "link_instructors": "강사소개 관리",
+    "link_consult_channels": "1:1 상담 채널 관리"
   },
   "notices": {
     "admin_title": "공지사항 관리",
@@ -153,5 +155,48 @@
     "admin_title": "수강료 관리",
     "admin_description": "국가별 판매가격을 독립적으로 관리합니다. 한 통화의 가격을 수정해도 다른 통화의 가격에는 영향을 주지 않으며, 환율로 자동 환산되지 않습니다.",
     "class_column": "수업 구분"
+  },
+  "instructors": {
+    "admin_title": "강사소개 관리",
+    "no_rows": "등록된 강사가 없습니다.",
+    "new_button": "새 강사 등록",
+    "create_title": "강사 등록",
+    "edit_title": "강사 정보 수정",
+    "field_name": "이름",
+    "field_name_en": "영어 이름",
+    "field_country": "국가",
+    "field_flag": "국기 이모지",
+    "field_photo": "프로필 사진",
+    "upload_photo": "사진 업로드",
+    "field_audio": "음성 소개",
+    "upload_audio": "음성 파일 업로드",
+    "field_bio": "자기소개",
+    "field_career": "경력 / 자격",
+    "field_class_features": "수업 특징",
+    "field_specialties": "전문 분야",
+    "multiline_placeholder": "한 줄에 하나씩 입력하세요",
+    "field_teaching_style": "수업 스타일",
+    "field_available_hours": "근무 가능 시간",
+    "available_hours_placeholder": "예: 평일 19:00–22:00",
+    "field_available_days": "수업 가능 요일",
+    "field_levels": "담당 가능 레벨",
+    "field_published": "공개",
+    "validation_error": "이름, 영어 이름, 자기소개는 필수입니다.",
+    "saving": "저장 중...",
+    "save": "저장",
+    "status_published": "공개",
+    "status_hidden": "비공개",
+    "delete_button": "삭제",
+    "delete_blocked": "재직 중인 강사 계정이거나 배정된 수강생이 있어 삭제할 수 없습니다. 비공개 처리를 이용해주세요."
+  },
+  "consult_channels": {
+    "admin_title": "1:1 상담 채널 관리",
+    "admin_description": "카카오톡·위챗·고객센터 등 상담 채널의 표시 이름, ID, 링크, 활성화 여부를 관리합니다. 링크를 저장하면 홈페이지의 상담 버튼에 즉시 반영됩니다.",
+    "field_display_name": "표시 이름",
+    "field_value": "ID / 연락처",
+    "field_url": "상담 링크",
+    "field_enabled": "활성화",
+    "saving": "저장 중...",
+    "save": "저장"
   }
 }

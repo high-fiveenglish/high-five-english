@@ -154,7 +154,13 @@
       "audio_label": "🔊 Listen to Voice Introduction",
       "audio_unsupported": "Your browser does not support audio playback.",
       "audio_disclaimer": "* This is a sample demo voice. It will be replaced with the actual teacher's voice introduction.",
-      "career_label": "Background & Qualifications"
+      "career_label": "Background & Qualifications",
+      "play_label": "Play",
+      "pause_label": "Pause",
+      "hours_label": "Available Hours",
+      "days_label": "Available Days",
+      "specialties_label": "Specialties",
+      "levels_label": "Levels Taught"
     },
     "bios": {
       "sarah": {

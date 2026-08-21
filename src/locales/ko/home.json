@@ -154,7 +154,13 @@
       "audio_label": "🔊 음성 소개 듣기",
       "audio_unsupported": "브라우저가 오디오 재생을 지원하지 않습니다.",
       "audio_disclaimer": "* 데모용 샘플 음성입니다. 실제 강사 음성 소개로 교체될 예정입니다.",
-      "career_label": "이력 및 자격"
+      "career_label": "이력 및 자격",
+      "play_label": "재생",
+      "pause_label": "일시정지",
+      "hours_label": "근무 가능 시간",
+      "days_label": "수업 가능 요일",
+      "specialties_label": "전문 분야",
+      "levels_label": "담당 가능 레벨"
     },
     "bios": {
       "sarah": {

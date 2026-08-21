@@ -1,16 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Volume2 } from "lucide-react";
 import { Container } from "../ui/Container";
 import { SectionHeading } from "../ui/SectionHeading";
-import { INSTRUCTORS, type Instructor } from "../../data/instructors";
+import type { Instructor } from "../../data/instructors";
+import { listPublicInstructors } from "../../services/instructorService";
 import { useLanguage } from "../../context/LanguageContext";
 import { InstructorModal } from "./InstructorModal";
 
 export function InstructorsSection() {
   const { t } = useTranslation("home");
   const { lang } = useLanguage();
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [selected, setSelected] = useState<Instructor | null>(null);
+
+  useEffect(() => {
+    listPublicInstructors().then(setInstructors);
+  }, []);
 
   return (
     <section id="instructors" className="scroll-mt-28 bg-white py-20 sm:py-24">
@@ -22,7 +28,7 @@ export function InstructorsSection() {
         />
 
         <div className="mt-12 grid grid-cols-2 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {INSTRUCTORS.map((ins) => (
+          {instructors.map((ins) => (
             <button
               key={ins.id}
               onClick={() => setSelected(ins)}
@@ -31,9 +37,13 @@ export function InstructorsSection() {
               <div
                 className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br shadow-[0_10px_30px_rgba(20,44,88,0.12)] transition duration-300 group-hover:-translate-y-1.5 group-hover:shadow-[0_18px_38px_rgba(20,44,88,0.2)] ${ins.gradient}`}
               >
-                <span className="text-5xl font-extrabold text-white/90">
-                  {(lang === "ko" ? ins.name : ins.nameEn)[0]}
-                </span>
+                {ins.photoUrl ? (
+                  <img src={ins.photoUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-5xl font-extrabold text-white/90">
+                    {(lang === "ko" ? ins.name : ins.nameEn)[0]}
+                  </span>
+                )}
                 <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[11px] font-bold text-brand-700">
                   {ins.flag}
                 </span>
@@ -55,7 +65,7 @@ export function InstructorsSection() {
                 )}
               </p>
               <p className="mt-0.5 truncate text-xs text-slate-400">
-                {(t(`instructors.bios.${ins.id}.tags`, { returnObjects: true }) as string[]).join(" · ")}
+                {ins.classFeatures.join(" · ")}
               </p>
             </button>
           ))}

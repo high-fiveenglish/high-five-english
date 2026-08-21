@@ -51,3 +51,22 @@ export interface LevelTestRequest {
   studentAge: number;
   status: LevelTestStatus;
 }
+
+// A fixed-but-extensible set today (kakao/wechat/customerService) — adding a future
+// channel (e.g. Line) is one literal added to this union plus one seed row, same
+// extensibility pattern as MeetingPlatformId/SupportedLanguages elsewhere.
+export type ConsultChannelId = "kakao" | "wechat" | "customerService";
+
+export interface ConsultChannel {
+  id: ConsultChannelId;
+  /** Admin-entered label, e.g. "카카오톡 상담" — NOT translated; UI copy (the button
+   * text/aria-label) is translated separately via i18n, keyed off `id`, not this field. */
+  displayName: string;
+  /** The channel's id/handle/phone number, shown as plain text. */
+  value: string;
+  /** Deep link or web URL to open the channel directly. Absent = no direct link yet;
+   * callers must fall back to showing `value` with a copy button (see
+   * consultChannelService.updateConsultChannel's URL validation). */
+  url?: string;
+  enabled: boolean;
+}

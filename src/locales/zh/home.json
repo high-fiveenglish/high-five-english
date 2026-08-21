@@ -154,7 +154,13 @@
       "audio_label": "🔊 收听语音介绍",
       "audio_unsupported": "您的浏览器不支持音频播放。",
       "audio_disclaimer": "* 此为演示用示例音频，未来将替换为真实教师的语音介绍。",
-      "career_label": "履历与资质"
+      "career_label": "履历与资质",
+      "play_label": "播放",
+      "pause_label": "暂停",
+      "hours_label": "可授课时间",
+      "days_label": "可授课日期",
+      "specialties_label": "专业领域",
+      "levels_label": "可授课级别"
     },
     "bios": {
       "sarah": {
