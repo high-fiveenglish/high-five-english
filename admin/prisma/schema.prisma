@@ -1,0 +1,273 @@
+// Prisma schema — High-Five English LMS 관리자 시스템 (MVP)
+// 범위: 사이트 마스터 · 회원(학생) · 강사 · 레벨테스트 · 수강신청 · 수업세션(전체일정표)
+// 모든 테이블에 siteId를 넣어 멀티테넌트 확장에 대비하되, 지금은 site id=1 고정 운영.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// 사이트 / 협력사
+// ---------------------------------------------------------------------------
+
+model Site {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  domain    String?
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+
+  agents        Agent[]
+  students      Student[]
+  teachers      Teacher[]
+  enrollments   Enrollment[]
+  levelTests    LevelTest[]
+  classSessions ClassSession[]
+
+  @@map("sites")
+}
+
+model Agent {
+  id        Int      @id @default(autoincrement())
+  siteId    Int
+  site      Site     @relation(fields: [siteId], references: [id])
+  name      String
+  code      String   @unique
+  createdAt DateTime @default(now())
+
+  students    Student[]
+  enrollments Enrollment[]
+  levelTests  LevelTest[]
+
+  @@index([siteId])
+  @@map("agents")
+}
+
+// ---------------------------------------------------------------------------
+// 회원 (학생)
+// ---------------------------------------------------------------------------
+
+enum StudentGrade {
+  ADMIN
+  AGENT
+  BRANCH
+  GENERAL
+}
+
+enum StudentStatus {
+  ACTIVE
+  EXPIRED
+  HOLDING
+}
+
+model Student {
+  id           Int           @id @default(autoincrement())
+  siteId       Int
+  site         Site          @relation(fields: [siteId], references: [id])
+  agentId      Int?
+  agent        Agent?        @relation(fields: [agentId], references: [id])
+  name         String
+  loginId      String        @unique
+  passwordHash String
+  grade        StudentGrade  @default(GENERAL)
+  points       Int           @default(0)
+  discountRate Decimal       @default(0) @db.Decimal(5, 2)
+  status       StudentStatus @default(ACTIVE)
+  joinedAt     DateTime      @default(now())
+  lastLoginAt  DateTime?
+
+  enrollments       Enrollment[]
+  levelTests        LevelTest[]
+  classSessions     ClassSession[]
+  consultationNotes ConsultationNote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
+  @@index([agentId])
+  @@map("students")
+}
+
+model ConsultationNote {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  student   Student  @relation(fields: [studentId], references: [id])
+  adminId   Int?
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([studentId])
+  @@map("consultation_notes")
+}
+
+// ---------------------------------------------------------------------------
+// 강사
+// ---------------------------------------------------------------------------
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Teacher {
+  id             Int            @id @default(autoincrement())
+  siteId         Int
+  site           Site           @relation(fields: [siteId], references: [id])
+  realName       String
+  nickname       String?
+  loginId        String         @unique
+  passwordHash   String
+  nationality    String?
+  timezoneOffset Int? // UTC 대비 분(minute) 오프셋
+  teamLeaderId   Int?
+  teamLeader     Teacher?       @relation("TeamLead", fields: [teamLeaderId], references: [id])
+  teamMembers    Teacher[]      @relation("TeamLead")
+  email          String?
+  approvalStatus ApprovalStatus @default(PENDING)
+  joinedAt       DateTime       @default(now())
+  lastLoginAt    DateTime?
+
+  rates         TeacherRate[]
+  enrollments   Enrollment[]
+  classSessions ClassSession[]
+  levelTests    LevelTest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
+  @@map("teachers")
+}
+
+model TeacherRate {
+  id            Int      @id @default(autoincrement())
+  teacherId     Int
+  teacher       Teacher  @relation(fields: [teacherId], references: [id])
+  ratePerUnit   Decimal  @db.Decimal(10, 2)
+  unitMinutes   Int      @default(25)
+  effectiveFrom DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([teacherId])
+  @@map("teacher_rates")
+}
+
+// ---------------------------------------------------------------------------
+// 수강 / 수업 세션
+// ---------------------------------------------------------------------------
+
+enum EnrollmentStatus {
+  APPLIED
+  PAID
+  ACTIVE
+  HOLDING
+  COMPLETED
+  RENEWED
+  LOST
+}
+
+model Enrollment {
+  id               Int              @id @default(autoincrement())
+  siteId           Int
+  site             Site             @relation(fields: [siteId], references: [id])
+  agentId          Int?
+  agent            Agent?           @relation(fields: [agentId], references: [id])
+  studentId        Int
+  student          Student          @relation(fields: [studentId], references: [id])
+  teacherId        Int?
+  teacher          Teacher?         @relation(fields: [teacherId], references: [id])
+  packageMonths    Int
+  classMethod      String
+  scheduleDays     String
+  classDurationMin Int              @default(25)
+  totalSessions    Int
+  startDate        DateTime
+  endDate          DateTime
+  status           EnrollmentStatus @default(APPLIED)
+  paymentStatus    String?
+  orderNo          String?
+  classType        String           @default("1:1")
+  textbookId       Int?
+
+  classSessions ClassSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
+  @@index([studentId])
+  @@index([teacherId])
+  @@map("enrollments")
+}
+
+enum SessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  MAKEUP_NEEDED
+}
+
+model ClassSession {
+  id           Int           @id @default(autoincrement())
+  siteId       Int
+  site         Site          @relation(fields: [siteId], references: [id])
+  enrollmentId Int
+  enrollment   Enrollment    @relation(fields: [enrollmentId], references: [id])
+  studentId    Int
+  student      Student       @relation(fields: [studentId], references: [id])
+  teacherId    Int
+  teacher      Teacher       @relation(fields: [teacherId], references: [id])
+  scheduledAt  DateTime
+  durationMin  Int           @default(25)
+  status       SessionStatus @default(SCHEDULED)
+  attendance   String?
+  progressNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
+  @@index([scheduledAt])
+  @@index([teacherId])
+  @@index([studentId])
+  @@map("class_sessions")
+}
+
+// ---------------------------------------------------------------------------
+// 레벨테스트
+// ---------------------------------------------------------------------------
+
+model LevelTest {
+  id                     Int       @id @default(autoincrement())
+  siteId                 Int
+  site                   Site      @relation(fields: [siteId], references: [id])
+  agentId                Int?
+  agent                  Agent?    @relation(fields: [agentId], references: [id])
+  studentId              Int
+  student                Student   @relation(fields: [studentId], references: [id])
+  teacherId              Int?
+  teacher                Teacher?  @relation(fields: [teacherId], references: [id])
+  subject                String?
+  classMethod            String?
+  appliedAt              DateTime  @default(now())
+  scheduledTestDate      DateTime?
+  scheduledClassDatetime DateTime?
+  evaluationStatus       String?
+  progressStatus         String?
+  consultationStatus     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
+  @@index([studentId])
+  @@map("level_tests")
+}
