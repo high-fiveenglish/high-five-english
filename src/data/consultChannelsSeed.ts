@@ -24,6 +24,10 @@ export const SEED_CONSULT_CHANNELS: ConsultChannel[] = [
     id: "customerService",
     displayName: "고객센터",
     value: CONTACT.website,
-    enabled: true,
+    // Off by default — there's no real support phone/link yet, just the marketing
+    // website URL, which doesn't make sense as a "고객센터 문의하기" contact method.
+    // An admin can flip this on from /admin/consult-channels once a real number/link
+    // is ready — that's exactly what the enabled toggle is for.
+    enabled: false,
   },
 ];
