@@ -32,7 +32,8 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // /login과 정적 자산은 제외하고 나머지 전체를 보호한다.
-    "/((?!login|_next/static|_next/image|favicon.ico).*)",
+    // /login, 공개 API(/api/public/*, 메인 사이트가 인증 없이 호출), 정적 자산은
+    // 제외하고 나머지 전체(관리자 화면)를 보호한다.
+    "/((?!login|api/public|_next/static|_next/image|favicon.ico).*)",
   ],
 };

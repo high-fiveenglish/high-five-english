@@ -251,8 +251,11 @@ model LevelTest {
   site                   Site      @relation(fields: [siteId], references: [id])
   agentId                Int?
   agent                  Agent?    @relation(fields: [agentId], references: [id])
-  studentId              Int
-  student                Student   @relation(fields: [studentId], references: [id])
+  // 공개 리드 폼(메인 사이트의 "무료 레벨테스트 신청")으로 들어온 건은 아직 계정이
+  // 없으므로 studentId가 null이고 아래 lead* 필드가 채워진다. 관리자가 실제 학생
+  // 계정과 연결/생성하면 studentId를 채워 정식 레벨테스트로 전환한다.
+  studentId              Int?
+  student                Student?  @relation(fields: [studentId], references: [id])
   teacherId              Int?
   teacher                Teacher?  @relation(fields: [teacherId], references: [id])
   subject                String?
@@ -263,6 +266,19 @@ model LevelTest {
   evaluationStatus       String?
   progressStatus         String?
   consultationStatus     String?
+
+  // 리드 폼 전용 필드 — 메인 사이트 공개 신청 폼(src/components/modals/LevelTestModal.tsx)의
+  // 입력값을 그대로 저장한다. studentId가 채워지면 더 이상 필요 없어지지만 이력으로 남긴다.
+  leadContactName     String?
+  leadContactPhone    String?
+  leadPreferredTimeUTC DateTime?
+  leadPreferredTimeZone String?
+  leadLessonFrequency String?
+  leadLessonDurationMin Int?
+  leadMeetingPlatform String?
+  leadReferredTeacherName String?
+  leadStudentEnglishName String?
+  leadStudentAge       Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
