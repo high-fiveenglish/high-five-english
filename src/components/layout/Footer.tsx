@@ -1,44 +1,21 @@
 import { useTranslation } from "react-i18next";
 import { MessageCircle, Clock, Landmark, Globe } from "lucide-react";
-import { NAV_ITEMS } from "../../data/nav";
 import { Container } from "../ui/Container";
 import { CONTACT } from "../../data/contact";
 import { BrandMark } from "./BrandMark";
-import { NavItemLink } from "./NavItemLink";
 import { LocalizedLink } from "../i18n/LocalizedLink";
 
 export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
   const { t } = useTranslation("common");
 
   return (
-    <footer className="border-t border-brand-900/10 bg-brand-950 text-white/70">
-      <Container className="py-14">
-        <div className="flex flex-col items-center text-center">
-          <LocalizedLink to="/" className="flex items-center gap-2.5">
-            <BrandMark size={38} />
-            <span className="text-xl font-extrabold tracking-tight text-white">
-              {t("footer.brand_name")}
-            </span>
-          </LocalizedLink>
-          <p className="mt-2 text-xs tracking-wide text-white/40">
-            {t("footer.brand_sub")}
-          </p>
-        </div>
+    <footer className="border-t border-white/10 bg-brand-950 text-white/70">
+      <Container className="py-10">
+        <LocalizedLink to="/" className="flex justify-center" aria-label={t("footer.brand_name")}>
+          <BrandMark size={30} />
+        </LocalizedLink>
 
-        <nav className="mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 border-y border-white/10 py-6 text-sm">
-          {NAV_ITEMS.map((item) => (
-            <NavItemLink
-              key={item.labelKey}
-              href={item.href ?? item.children?.[0]?.href ?? "/"}
-              scrollTo={item.scrollTo ?? item.children?.[0]?.scrollTo}
-              className="font-medium text-white/70 transition hover:text-white"
-            >
-              {t(item.labelKey)}
-            </NavItemLink>
-          ))}
-        </nav>
-
-        <div className="mt-10 grid gap-10 md:grid-cols-3">
+        <div className="mt-8 grid gap-10 md:grid-cols-3">
           <div>
             <h4 className="mb-3 text-sm font-bold text-white">{t("footer.company_info")}</h4>
             <dl className="space-y-1.5 text-[13px] leading-relaxed text-white/55">

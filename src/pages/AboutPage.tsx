@@ -61,7 +61,7 @@ export function AboutPage() {
     <>
       <SeoHead titleKey="meta.title" descriptionKey="meta.description" ns="about" path="/about" />
       {/* page header */}
-      <section className="bg-gradient-to-b from-brand-50 via-white to-white py-14 sm:py-16">
+      <section className="bg-gradient-to-b from-brand-50 via-white to-white pt-14 pb-6 sm:pt-16 sm:pb-8">
         <Container className="text-center">
           <span className="inline-block rounded-full bg-brand-600/10 px-3.5 py-1.5 text-xs font-bold text-brand-700">
             {t("page_header.eyebrow")}
@@ -76,7 +76,7 @@ export function AboutPage() {
       </section>
 
       {/* CEO letter */}
-      <section className="py-16 sm:py-20">
+      <section className="pt-8 pb-16 sm:pt-10 sm:pb-20">
         <Container className="max-w-3xl">
           <div className="mb-8 flex items-center gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-base font-bold text-white">

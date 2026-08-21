@@ -7,7 +7,7 @@ import { useLanguage } from "../../context/LanguageContext";
 import { getLanguageCurrency } from "../../i18n/config";
 import { formatPrice } from "../../data/currencies";
 import { listPricing } from "../../services/pricingService";
-import type { PricingDuration } from "../../data/pricing";
+import { PRICING_SEED, type PricingDuration } from "../../data/pricing";
 
 const DEFAULT_ACTIVE_DURATION_ID = "3m";
 
@@ -19,7 +19,10 @@ export function PricingSection({
   const { t } = useTranslation("home");
   const { lang } = useLanguage();
   const currency = getLanguageCurrency(lang) ?? "KRW";
-  const [durations, setDurations] = useState<PricingDuration[]>([]);
+  // Seeds with the bundled static table so it paints instantly like everything else on
+  // the page — the real admin backend fetch then quietly replaces it once it resolves
+  // (which can take a while on a cold DB connection). Same pattern as InstructorsSection.
+  const [durations, setDurations] = useState<PricingDuration[]>(PRICING_SEED);
   const [activeId, setActiveId] = useState(DEFAULT_ACTIVE_DURATION_ID);
 
   useEffect(() => {
@@ -66,107 +69,117 @@ export function PricingSection({
         </Container>
       </div>
 
-      {!active ? null : (
-        <Container id="pricing" className="py-12 sm:py-16">
-          <SectionHeading
-            eyebrow={t("pricing.eyebrow")}
-            title={t("pricing.title")}
-            description={t("pricing.description")}
-          />
+      {/* id="pricing" must render immediately regardless of fetch state — the nav's
+          scroll-to-anchor gives up after ~1s (see ScrollToHash.tsx), and listPricing()
+          now goes over the network to the admin backend instead of reading an in-memory
+          mock, so it can easily take longer than that. Gating this whole block on
+          `active` meant a slow/failed fetch made the anchor never exist, which looked
+          like "the pricing table disappeared" when clicking the nav link. */}
+      <Container id="pricing" className="py-12 sm:py-16">
+        <SectionHeading
+          eyebrow={t("pricing.eyebrow")}
+          title={t("pricing.title")}
+          description={t("pricing.description")}
+        />
 
-          {/* duration tabs */}
-          <div className="mx-auto mt-10 flex w-full max-w-md items-center justify-center gap-2 rounded-2xl bg-slate-100 p-1.5">
-            {durations.map((d) => (
-              <button
-                key={d.id}
-                onClick={() => setActiveId(d.id)}
-                className={`relative flex-1 rounded-xl py-2.5 text-sm font-bold transition ${
-                  activeId === d.id
-                    ? "bg-white text-brand-700 shadow-[0_4px_14px_rgba(20,44,88,0.12)]"
-                    : "text-slate-500 hover:text-brand-600"
-                }`}
-              >
-                {t(`pricing.durations.${d.id}.label`)}
-                {d.hasBadge && (
-                  <span
-                    className={`ml-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      activeId === d.id
-                        ? "bg-accent-500 text-white"
-                        : "bg-slate-200 text-slate-500"
-                    }`}
-                  >
-                    {t(`pricing.durations.${d.id}.badge`)}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+        {!active ? (
+          <p className="mt-10 text-center text-sm text-slate-400">{t("pricing.loading")}</p>
+        ) : (
+          <>
+            {/* duration tabs */}
+            <div className="mx-auto mt-10 flex w-full max-w-md items-center justify-center gap-2 rounded-2xl bg-slate-100 p-1.5">
+              {durations.map((d) => (
+                <button
+                  key={d.id}
+                  onClick={() => setActiveId(d.id)}
+                  className={`relative flex-1 rounded-xl py-2.5 text-sm font-bold transition ${
+                    activeId === d.id
+                      ? "bg-white text-brand-700 shadow-[0_4px_14px_rgba(20,44,88,0.12)]"
+                      : "text-slate-500 hover:text-brand-600"
+                  }`}
+                >
+                  {t(`pricing.durations.${d.id}.label`)}
+                  {d.hasBadge && (
+                    <span
+                      className={`ml-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        activeId === d.id
+                          ? "bg-accent-500 text-white"
+                          : "bg-slate-200 text-slate-500"
+                      }`}
+                    >
+                      {t(`pricing.durations.${d.id}.badge`)}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
 
-          {/* price tables: 25min / 50min */}
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            {(
-              [
-                { key: "price25" as const, title: t("pricing.col_25min") },
-                { key: "price50" as const, title: t("pricing.col_50min") },
-              ]
-            ).map((col) => (
-              <div
-                key={col.key}
-                className="overflow-hidden rounded-2xl border border-slate-100 shadow-[0_8px_24px_rgba(20,44,88,0.06)]"
-              >
-                <div className="flex items-center justify-between bg-brand-950 px-6 py-4">
-                  <h3 className="text-sm font-bold text-white">{col.title}</h3>
-                  <span className="text-xs font-medium text-white/50">
-                    {t("pricing.based_on", { label: t(`pricing.durations.${active.id}.label`) })}
-                  </span>
+            {/* price tables: 25min / 50min */}
+            <div className="mt-8 grid gap-6 lg:grid-cols-2">
+              {(
+                [
+                  { key: "price25" as const, title: t("pricing.col_25min") },
+                  { key: "price50" as const, title: t("pricing.col_50min") },
+                ]
+              ).map((col) => (
+                <div
+                  key={col.key}
+                  className="overflow-hidden rounded-2xl border border-slate-100 shadow-[0_8px_24px_rgba(20,44,88,0.06)]"
+                >
+                  <div className="flex items-center justify-between bg-brand-950 px-6 py-4">
+                    <h3 className="text-sm font-bold text-white">{col.title}</h3>
+                    <span className="text-xs font-medium text-white/50">
+                      {t("pricing.based_on", { label: t(`pricing.durations.${active.id}.label`) })}
+                    </span>
+                  </div>
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-accent-50">
+                        <th className="px-6 py-3 text-left text-xs font-bold text-accent-700">
+                          {t("pricing.table_header_type")}
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-bold text-accent-700">
+                          {t("pricing.table_header_fee")}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {active.rows.map((row, i) => {
+                        const price = (col.key === "price25" ? row.price25 : row.price50)[currency];
+                        return (
+                          <tr
+                            key={row.frequencyId}
+                            className={i % 2 === 0 ? "bg-white" : "bg-slate-50/70"}
+                          >
+                            <td className="px-6 py-4 text-sm font-medium text-slate-600">
+                              {t(`pricing.frequency.${row.frequencyId}`)}
+                            </td>
+                            <td className="px-6 py-4 text-right text-base font-extrabold text-brand-950">
+                              {price !== undefined ? formatPrice(price, currency) : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-accent-50">
-                      <th className="px-6 py-3 text-left text-xs font-bold text-accent-700">
-                        {t("pricing.table_header_type")}
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-bold text-accent-700">
-                        {t("pricing.table_header_fee")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {active.rows.map((row, i) => {
-                      const price = (col.key === "price25" ? row.price25 : row.price50)[currency];
-                      return (
-                        <tr
-                          key={row.frequencyId}
-                          className={i % 2 === 0 ? "bg-white" : "bg-slate-50/70"}
-                        >
-                          <td className="px-6 py-4 text-sm font-medium text-slate-600">
-                            {t(`pricing.frequency.${row.frequencyId}`)}
-                          </td>
-                          <td className="px-6 py-4 text-right text-base font-extrabold text-brand-950">
-                            {price !== undefined ? formatPrice(price, currency) : "—"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          <div className="mt-10 flex flex-col items-center gap-4">
-            <button
-              onClick={onOpenLevelTest}
-              className="inline-flex items-center gap-2 rounded-xl bg-accent-500 px-8 py-3.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(248,114,26,0.3)] transition hover:-translate-y-0.5 hover:bg-accent-600"
-            >
-              <Sparkles size={16} /> {t("pricing.cta")}
-            </button>
-            <p className="text-center text-xs text-slate-400">
-              {t("pricing.disclaimer")}
-            </p>
-          </div>
-        </Container>
-      )}
+            <div className="mt-10 flex flex-col items-center gap-4">
+              <button
+                onClick={onOpenLevelTest}
+                className="inline-flex items-center gap-2 rounded-xl bg-accent-500 px-8 py-3.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(248,114,26,0.3)] transition hover:-translate-y-0.5 hover:bg-accent-600"
+              >
+                <Sparkles size={16} /> {t("pricing.cta")}
+              </button>
+              <p className="text-center text-xs text-slate-400">
+                {t("pricing.disclaimer")}
+              </p>
+            </div>
+          </>
+        )}
+      </Container>
     </section>
   );
 }

@@ -3,15 +3,21 @@ import { useTranslation } from "react-i18next";
 import { Volume2 } from "lucide-react";
 import { Container } from "../ui/Container";
 import { SectionHeading } from "../ui/SectionHeading";
-import type { Instructor } from "../../data/instructors";
+import { INSTRUCTORS, type Instructor } from "../../data/instructors";
 import { listPublicInstructors } from "../../services/instructorService";
 import { useLanguage } from "../../context/LanguageContext";
 import { InstructorModal } from "./InstructorModal";
 
+// Seeds the section with the bundled static list so it paints instantly like everything
+// else on the page — the real admin backend fetch then quietly replaces it once it
+// resolves (which can take a while on a cold DB connection). Same pattern as
+// PricingSection.tsx.
+const INITIAL_INSTRUCTORS = [...INSTRUCTORS].filter((i) => i.published).sort((a, b) => a.order - b.order);
+
 export function InstructorsSection() {
   const { t } = useTranslation("home");
   const { lang } = useLanguage();
-  const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [instructors, setInstructors] = useState<Instructor[]>(INITIAL_INSTRUCTORS);
   const [selected, setSelected] = useState<Instructor | null>(null);
 
   useEffect(() => {

@@ -24,7 +24,7 @@ export function CurriculumPage({
     <>
       <SeoHead titleKey="meta.title" descriptionKey="meta.description" ns="curriculum" path="/curriculum" />
       {/* hero */}
-      <section className="bg-gradient-to-b from-brand-50 via-white to-white py-16 sm:py-20">
+      <section className="bg-gradient-to-b from-brand-50 via-white to-white pt-16 pb-6 sm:pt-20 sm:pb-8">
         <Container className="max-w-3xl text-center">
           <span className="inline-block rounded-full bg-brand-600/10 px-3.5 py-1.5 text-xs font-bold text-brand-700">
             {t("hero.eyebrow")}
@@ -39,7 +39,7 @@ export function CurriculumPage({
       </section>
 
       {/* stage roadmap */}
-      <section className="py-16 sm:py-20">
+      <section className="pt-8 pb-16 sm:pt-10 sm:pb-20">
         <Container className="max-w-3xl">
           <SectionHeading
             eyebrow={t("roadmap.eyebrow")}

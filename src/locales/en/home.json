@@ -85,6 +85,7 @@
     "table_header_type": "Class Type",
     "table_header_fee": "Tuition",
     "cta": "Start with a Free Level Test",
+    "loading": "Loading pricing...",
     "disclaimer": "* The tuition above is for private 1:1 lessons. Promotions and sibling discounts are available through a 1:1 consultation.",
     "durations": {
       "1m": { "label": "1 Month" },

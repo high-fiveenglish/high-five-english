@@ -85,6 +85,7 @@
     "table_header_type": "Loại lớp học",
     "table_header_fee": "Học phí",
     "cta": "Bắt đầu với bài kiểm tra trình độ miễn phí",
+    "loading": "Đang tải bảng giá...",
     "disclaimer": "* Học phí trên áp dụng cho lớp học cá nhân 1:1. Các chương trình khuyến mãi và ưu đãi anh chị em sẽ được tư vấn qua buổi tư vấn 1:1.",
     "durations": {
       "1m": { "label": "1 tháng" },

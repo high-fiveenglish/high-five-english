@@ -85,6 +85,7 @@
     "table_header_type": "课程类型",
     "table_header_fee": "课程费用",
     "cta": "从免费水平测试开始",
+    "loading": "正在加载价格表...",
     "disclaimer": "* 以上费用以1对1个人课程为准，促销及兄弟姐妹优惠等信息请通过1:1咨询了解。",
     "durations": {
       "1m": { "label": "1个月" },

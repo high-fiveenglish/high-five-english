@@ -32,7 +32,7 @@ export function ProgramPage({
     <>
       <SeoHead titleKey="meta.title" descriptionKey="meta.description" ns="program" path="/program" />
       {/* hero */}
-      <section className="bg-gradient-to-b from-brand-50 via-white to-white py-16 sm:py-20">
+      <section className="bg-gradient-to-b from-brand-50 via-white to-white pt-16 pb-6 sm:pt-20 sm:pb-8">
         <Container className="max-w-3xl text-center">
           <span className="inline-block rounded-full bg-brand-600/10 px-3.5 py-1.5 text-xs font-bold text-brand-700">
             {HERO.eyebrow}
@@ -53,7 +53,7 @@ export function ProgramPage({
       </section>
 
       {/* output section */}
-      <section className="py-16 sm:py-20">
+      <section className="pt-8 pb-16 sm:pt-10 sm:pb-20">
         <Container className="max-w-3xl">
           <span className="text-xs font-bold text-accent-600">{OUTPUT_SECTION.eyebrow}</span>
           <h2 className="mt-2 text-xl font-extrabold text-brand-950 sm:text-2xl">
