@@ -1,27 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
+import { corsHeaders, corsOptionsResponse } from "@/lib/cors";
 
 // 메인 마케팅 사이트(Vite, src/services/levelTestService.ts)의 "무료 레벨테스트 신청"
 // 폼이 로그인 없이 호출하는 공개 엔드포인트. proxy.ts의 matcher에서 이 경로만 인증을
 // 제외해뒀다 — 새 방문자는 아직 계정이 없으므로 인증을 요구할 수 없다.
-const ALLOWED_ORIGINS = (process.env.PUBLIC_SITE_ORIGINS ?? "http://localhost:5173")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-function corsHeaders(origin: string | null): HeadersInit {
-  const allow = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    "Access-Control-Allow-Origin": allow,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    Vary: "Origin",
-  };
-}
-
 export async function OPTIONS(request: Request) {
-  return new Response(null, { status: 204, headers: corsHeaders(request.headers.get("origin")) });
+  return corsOptionsResponse(request);
 }
 
 const VALID_FREQUENCIES = ["freq2", "freq3", "freq5"];

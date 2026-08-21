@@ -1,13 +1,19 @@
-// Instructor mock service layer — same requirePermission-first pattern as
-// noticeService.ts/reviewService.ts. Uses the "teachers" PermissionKey, which already
-// existed in src/lib/auth/types.ts (already labeled, already granted to admin1) but had
-// no service function actually checking it until now.
+// Instructor service layer. listPublicInstructors now reads from the real admin/LMS
+// backend's public API (admin/src/app/api/public/instructors) — the admin's "강사소개
+// 관리" screen there is the source of truth for the public marketing display. Falls
+// back to the local mock store if that backend is unreachable (e.g. running this site
+// standalone without the admin app), so the homepage never renders an empty section.
+// The admin-only functions below (create/update/delete/reorder) still operate on this
+// mock store and back the OLD Vite admin instructor CRUD page — that page still works,
+// it just no longer affects what the public homepage shows (see levelTestService.ts for
+// the same pattern, applied first).
 import type { Instructor } from "../data/instructors";
 import { ACCOUNTS } from "../data/accounts";
 import type { Actor, ServiceResult } from "../lib/auth/types";
 import { errResult, okResult } from "../lib/auth/types";
 import { requirePermission } from "../lib/auth/permissions";
 import { store } from "./store";
+import { ADMIN_API_URL } from "../lib/adminApi";
 
 function nextInstructorId(nameEn: string): string {
   const slug = nameEn.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -16,8 +22,63 @@ function nextInstructorId(nameEn: string): string {
 
 export type InstructorInput = Omit<Instructor, "id" | "order">;
 
+type BackendInstructor = {
+  id: number;
+  slug: string;
+  name: string;
+  nameEn: string;
+  country: string;
+  flag: string;
+  gradient: string;
+  photoUrl: string | null;
+  audioSrc: string | null;
+  defaultMeetingPlatform: string | null;
+  bio: string;
+  career: string[];
+  availableDays: number[];
+  availableHours: string;
+  classFeatures: string[];
+  specialties: string[];
+  levels: string[];
+  teachingStyle: string;
+  published: boolean;
+  order: number;
+};
+
+function fromBackend(i: BackendInstructor): Instructor {
+  return {
+    id: i.slug,
+    name: i.name,
+    nameEn: i.nameEn,
+    country: i.country,
+    flag: i.flag,
+    gradient: i.gradient,
+    photoUrl: i.photoUrl ?? undefined,
+    audioSrc: i.audioSrc ?? undefined,
+    defaultMeetingPlatform: (i.defaultMeetingPlatform ?? undefined) as Instructor["defaultMeetingPlatform"],
+    bio: i.bio,
+    career: i.career,
+    availableDays: i.availableDays as Instructor["availableDays"],
+    availableHours: i.availableHours,
+    classFeatures: i.classFeatures,
+    specialties: i.specialties,
+    levels: i.levels as Instructor["levels"],
+    teachingStyle: i.teachingStyle,
+    published: i.published,
+    order: i.order,
+  };
+}
+
 export async function listPublicInstructors(): Promise<Instructor[]> {
-  return [...store.instructors].filter((i) => i.published).sort((a, b) => a.order - b.order);
+  try {
+    const res = await fetch(`${ADMIN_API_URL}/api/public/instructors`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = (await res.json()) as BackendInstructor[];
+    return data.map(fromBackend);
+  } catch (err) {
+    console.warn("[instructorService] admin backend unreachable, falling back to mock store", err);
+    return [...store.instructors].filter((i) => i.published).sort((a, b) => a.order - b.order);
+  }
 }
 
 export async function listAllInstructors(actor: Actor | null): Promise<ServiceResult<Instructor[]>> {

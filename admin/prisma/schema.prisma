@@ -23,12 +23,14 @@ model Site {
   status    String   @default("active")
   createdAt DateTime @default(now())
 
-  agents        Agent[]
-  students      Student[]
-  teachers      Teacher[]
-  enrollments   Enrollment[]
-  levelTests    LevelTest[]
-  classSessions ClassSession[]
+  agents          Agent[]
+  students        Student[]
+  teachers        Teacher[]
+  enrollments     Enrollment[]
+  levelTests      LevelTest[]
+  classSessions   ClassSession[]
+  instructors     Instructor[]
+  pricingDurations PricingDuration[]
 
   @@map("sites")
 }
@@ -286,4 +288,77 @@ model LevelTest {
   @@index([siteId])
   @@index([studentId])
   @@map("level_tests")
+}
+
+// ---------------------------------------------------------------------------
+// 강사소개 (마케팅 사이트 공개 프로필) — LMS 운영용 Teacher와는 별개 개념.
+// slug는 메인 Vite 사이트의 기존 정적 강사 id(sarah/james/emily/daniel)와 맞춰두면
+// 참고하기 쉽지만, 이 테이블 자체가 그 사이트의 교사 로그인/수강 연결과는 무관하다.
+// ---------------------------------------------------------------------------
+
+model Instructor {
+  id             Int      @id @default(autoincrement())
+  siteId         Int
+  site           Site     @relation(fields: [siteId], references: [id])
+  slug           String   @unique
+  name           String
+  nameEn         String
+  country        String
+  flag           String
+  gradient       String
+  photoUrl       String?  @db.Text
+  audioSrc       String?  @db.Text
+  defaultMeetingPlatform String?
+  bio            String   @db.Text
+  career         String[]
+  availableDays  Int[]
+  availableHours String
+  classFeatures  String[]
+  specialties    String[]
+  levels         String[]
+  teachingStyle  String
+  published      Boolean  @default(true)
+  order          Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
+  @@map("instructors")
+}
+
+// ---------------------------------------------------------------------------
+// 화상영어 가격표 — 기간(1/3/6개월) × 빈도(주2/3/5회) × 수업시간(25/50분) ×
+// 통화(KRW/CNY/VND). 통화별 가격은 서로 독립적으로 저장되며 환율 자동 환산이
+// 아니다(src/data/currencies.ts의 기존 설계 원칙 그대로 유지).
+// ---------------------------------------------------------------------------
+
+model PricingDuration {
+  id       Int      @id @default(autoincrement())
+  siteId   Int
+  site     Site     @relation(fields: [siteId], references: [id])
+  code     String
+  hasBadge Boolean  @default(false)
+  order    Int      @default(0)
+  rows     PricingRow[]
+
+  @@unique([siteId, code])
+  @@index([siteId])
+  @@map("pricing_durations")
+}
+
+model PricingRow {
+  id          Int             @id @default(autoincrement())
+  durationId  Int
+  duration    PricingDuration @relation(fields: [durationId], references: [id])
+  frequencyId String
+  price25KRW  Int?
+  price25CNY  Int?
+  price25VND  Int?
+  price50KRW  Int?
+  price50CNY  Int?
+  price50VND  Int?
+
+  @@unique([durationId, frequencyId])
+  @@map("pricing_rows")
 }

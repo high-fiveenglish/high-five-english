@@ -25,6 +25,13 @@ const NAV_GROUPS = [
     title: "레벨테스트",
     items: [{ href: "/level-tests", label: "신청/진행 관리" }],
   },
+  {
+    title: "콘텐츠 관리",
+    items: [
+      { href: "/instructors", label: "강사소개 관리" },
+      { href: "/pricing", label: "가격표 관리" },
+    ],
+  },
 ] as const;
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
