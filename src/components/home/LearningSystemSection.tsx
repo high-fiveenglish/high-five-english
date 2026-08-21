@@ -15,7 +15,7 @@ export function LearningSystemSection() {
   return (
     <section
       id="learning-system"
-      className="scroll-mt-28 bg-brand-950 py-20 text-white sm:py-24"
+      className="bg-brand-950 py-20 text-white sm:py-24"
     >
       <Container>
         <SectionHeading

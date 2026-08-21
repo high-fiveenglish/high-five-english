@@ -21,7 +21,7 @@ export function ReviewsSection() {
   }, []);
 
   return (
-    <section id="reviews" className="scroll-mt-28 bg-white py-20 sm:py-24">
+    <section id="reviews" className="bg-white py-20 sm:py-24">
       <Container>
         <SectionHeading
           eyebrow={t("reviews.eyebrow")}

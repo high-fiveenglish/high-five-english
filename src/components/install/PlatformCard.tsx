@@ -48,7 +48,7 @@ export function PlatformCard({
   return (
     <div
       id={platform.id}
-      className="scroll-mt-28 rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_8px_24px_rgba(20,44,88,0.06)] sm:p-7"
+      className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_8px_24px_rgba(20,44,88,0.06)] sm:p-7"
     >
       <div className="flex items-center gap-3">
         <div

@@ -68,6 +68,14 @@
     }
   },
   "pricing": {
+    "hook": {
+      "headline": "Chỉ 25 Phút Mỗi Ngày, Tiếng Anh Thay Đổi",
+      "body": "Dù không ở bên con, bạn vẫn biết rõ mọi khoảnh khắc trong buổi học.\nĐã học gì, đã sửa lỗi gì, tiến bộ ra sao —\nBuổi học chỉ 25 phút, nhưng sự trưởng thành của con được ghi lại liên tục.",
+      "subline": "Học 1 Kèm 1 Riêng Biệt · 12 Năm Kinh Nghiệm Giảng Dạy · Giáo Viên Phù Hợp Với Bạn",
+      "cta_lead": "Kiểm tra trình độ miễn phí 10 phút để tìm khóa học phù hợp với bạn.",
+      "cta_primary": "Kiểm Tra Trình Độ Miễn Phí 10 Phút",
+      "cta_secondary": "Xem Đội Ngũ Giáo Viên"
+    },
     "eyebrow": "Hướng dẫn đăng ký · Học phí",
     "title": "Bảng giá tiếng Anh qua video",
     "description": "Tất cả các lớp đều được phân công giáo viên phụ trách 1:1, kèm theo phiếu đánh giá học tập và kiểm tra trình độ áp dụng chung cho mọi lớp. Thời gian đăng ký càng dài, học phí mỗi buổi càng rẻ.",
@@ -191,8 +199,8 @@
   },
   "learningSystem": {
     "eyebrow": "Hệ thống học tập",
-    "title": "Buổi học kết thúc, nhưng sự chăm sóc vẫn tiếp tục",
-    "description": "Chúng tôi cung cấp hệ thống quản lý học tập giúp phụ huynh nắm rõ con đang học gì và cần cải thiện điều gì, ngay cả khi không trực tiếp theo dõi buổi học.",
+    "title": "Hôm Nay Con Bạn Đã Học Được Gì Trong Giờ Tiếng Anh, Bạn Có Biết Không?",
+    "description": "Bạn không cần phải ngồi xem con học mới biết được.\n\nTừ mới đã học, câu đã được sửa, cách diễn đạt làm tốt, sự tiến bộ và những điều cần cải thiện —\nchúng tôi ghi lại như thể đã cùng con theo dõi trọn vẹn buổi học.\n\nVà cuối cùng là một lời nhắn thật lòng từ chính giáo viên phụ trách.\n\nKhi buổi học kết thúc, cả ngày học của con sẽ hiện rõ trước mắt bạn.",
     "items": {
       "classroom": {
         "title": "Lớp học của tôi",

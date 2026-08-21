@@ -36,7 +36,11 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 6.5rem;
+  /* Reserves space for the sticky header (~134px) so anchor scrolls land flush
+     below it. Individual sections must NOT also set scroll-mt-* — scroll-padding
+     (on the scroller) and scroll-margin (on the target) add together per spec,
+     so doubling up here previously produced a large stray gap above each section. */
+  scroll-padding-top: 8.5rem;
 }
 
 body {

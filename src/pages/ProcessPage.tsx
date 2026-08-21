@@ -164,7 +164,7 @@ export function ProcessPage({
                 ? (t(`steps.${s.step}.bullets`, { returnObjects: true }) as string[])
                 : undefined;
               return (
-                <div key={s.step} id={`step-${s.step}`} className="relative scroll-mt-28 sm:pl-16">
+                <div key={s.step} id={`step-${s.step}`} className="relative sm:pl-16">
                   <div className="absolute left-0 top-0 hidden h-12 w-12 items-center justify-center rounded-full bg-brand-600 text-base font-extrabold text-white sm:flex">
                     {s.step}
                   </div>

@@ -68,6 +68,14 @@
     }
   },
   "pricing": {
+    "hook": {
+      "headline": "Just 25 Minutes a Day Changes Everything",
+      "body": "You'll know exactly what happens in every class, even when you're not there.\nWhat was learned, what was corrected, how much progress was made —\nthe class may be 25 minutes, but the growth keeps going in the record.",
+      "subline": "1:1 Personalized Lessons · 12 Years of Teaching Experience · A Teacher Matched to You",
+      "cta_lead": "Find the right class for you with a free 10-minute level test.",
+      "cta_primary": "Free 10-Min Level Test",
+      "cta_secondary": "Meet Our Teachers"
+    },
     "eyebrow": "Enrollment · Pricing",
     "title": "Video English Price List",
     "description": "All plans include a dedicated 1:1 teacher, with learning evaluations and level tests provided for every class. The longer your enrollment period, the lower your per-session cost.",
@@ -191,8 +199,8 @@
   },
   "learningSystem": {
     "eyebrow": "Learning System",
-    "title": "The Class Ends, But the Support Continues",
-    "description": "We provide a learning management system that lets parents clearly see what their child is learning and what needs improvement — even without watching every class.",
+    "title": "Do You Know What Your Child Learned in Class Today?",
+    "description": "You don't need to watch every class to find out.\n\nNew words learned, sentences corrected, expressions mastered, progress made, and what still needs work —\nwe report on it as if we sat through the entire class with your child.\n\nAnd at the end, a real note from their teacher, just for them.\n\nWhen class ends, your child's whole day is right there for you to see.",
     "items": {
       "classroom": {
         "title": "My Classroom",

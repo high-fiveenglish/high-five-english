@@ -33,7 +33,7 @@ export function SectionHeading({
       </h2>
       {description && (
         <p
-          className={`mx-auto mt-4 max-w-2xl text-[15px] leading-relaxed sm:text-base ${
+          className={`mx-auto mt-4 max-w-2xl whitespace-pre-line text-[15px] leading-relaxed sm:text-base ${
             align === "left" ? "mx-0" : ""
           } ${light ? "text-white/70" : "text-slate-500"}`}
         >

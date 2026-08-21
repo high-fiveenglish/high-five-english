@@ -18,7 +18,7 @@ export function ProcessSection({
   const { t } = useTranslation("home");
 
   return (
-    <section id="process" className="scroll-mt-28 bg-brand-50/60 py-20 sm:py-24">
+    <section id="process" className="bg-brand-50/60 py-20 sm:py-24">
       <Container>
         <SectionHeading
           eyebrow={t("process.eyebrow")}

@@ -19,7 +19,7 @@ export function InstructorsSection() {
   }, []);
 
   return (
-    <section id="instructors" className="scroll-mt-28 bg-white py-20 sm:py-24">
+    <section id="instructors" className="bg-white py-20 sm:py-24">
       <Container>
         <SectionHeading
           eyebrow={t("instructors.eyebrow")}
