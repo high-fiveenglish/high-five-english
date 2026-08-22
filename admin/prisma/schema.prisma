@@ -236,11 +236,28 @@ model ClassSession {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  evaluation LessonEvaluation?
+
   @@index([siteId])
   @@index([scheduledAt])
   @@index([teacherId])
   @@index([studentId])
   @@map("class_sessions")
+}
+
+// 일일평가서 — 수업 1회당 1개, 강사가 수업 직후 작성. 2000자 제한은 DB(VarChar(2000))와
+// 폼 양쪽에서 강제한다. ClassSession에 이미 student/teacher/scheduledAt이 있으므로
+// 이 테이블엔 본문만 두고 나머지는 관계를 통해 조회한다.
+model LessonEvaluation {
+  id             Int          @id @default(autoincrement())
+  classSessionId Int          @unique
+  classSession   ClassSession @relation(fields: [classSessionId], references: [id])
+  content        String       @db.VarChar(2000)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("lesson_evaluations")
 }
 
 // ---------------------------------------------------------------------------
