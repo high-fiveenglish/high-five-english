@@ -31,6 +31,7 @@ model Site {
   classSessions   ClassSession[]
   instructors     Instructor[]
   pricingDurations PricingDuration[]
+  leaveRequests   LeaveRequest[]
 
   @@map("sites")
 }
@@ -88,6 +89,7 @@ model Student {
   levelTests        LevelTest[]
   classSessions     ClassSession[]
   consultationNotes ConsultationNote[]
+  leaveRequests     LeaveRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -200,6 +202,7 @@ model Enrollment {
   textbookId       Int?
 
   classSessions ClassSession[]
+  leaveRequests LeaveRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -215,6 +218,7 @@ enum SessionStatus {
   COMPLETED
   CANCELLED
   MAKEUP_NEEDED
+  LEAVE // 학생 휴강 신청으로 결석 처리된 수업 — 회차 미차감, 수강기간 자동 연장
 }
 
 model ClassSession {
@@ -236,7 +240,8 @@ model ClassSession {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  evaluation LessonEvaluation?
+  evaluation   LessonEvaluation?
+  leaveRequest LeaveRequest?
 
   @@index([siteId])
   @@index([scheduledAt])
@@ -258,6 +263,31 @@ model LessonEvaluation {
   updatedAt DateTime @updatedAt
 
   @@map("lesson_evaluations")
+}
+
+// 휴강 신청 — 학생이 예정된(SCHEDULED) 수업을 직접 휴강 처리하면 관리자 승인 없이
+// 즉시 적용된다: 해당 ClassSession은 LEAVE 상태로 바뀌어 총 회차에서 차감되지
+// 않고, 연결된 Enrollment.endDate가 extendedDays만큼 자동으로 늘어나 관리자가
+// 별도로 일정을 재조정하지 않아도 된다. 관리자는 /leave-requests 화면에서
+// 이력을 보고 필요 시 되돌릴(취소) 수 있다.
+model LeaveRequest {
+  id             Int          @id @default(autoincrement())
+  siteId         Int
+  site           Site         @relation(fields: [siteId], references: [id])
+  classSessionId Int          @unique
+  classSession   ClassSession @relation(fields: [classSessionId], references: [id])
+  enrollmentId   Int
+  enrollment     Enrollment   @relation(fields: [enrollmentId], references: [id])
+  studentId      Int
+  student        Student      @relation(fields: [studentId], references: [id])
+  reason         String?
+  extendedDays   Int          @default(1)
+
+  createdAt DateTime @default(now())
+
+  @@index([siteId])
+  @@index([studentId])
+  @@map("leave_requests")
 }
 
 // ---------------------------------------------------------------------------

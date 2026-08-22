@@ -11,6 +11,7 @@ const STATUS_LABEL: Record<string, string> = {
   COMPLETED: "완료",
   CANCELLED: "취소",
   MAKEUP_NEEDED: "보충필요",
+  LEAVE: "휴강",
 };
 
 export default async function TeacherSessionsPage({

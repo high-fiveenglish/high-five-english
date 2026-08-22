@@ -9,6 +9,7 @@ const OPTIONS: { value: SessionStatus; label: string }[] = [
   { value: "COMPLETED", label: "완료" },
   { value: "CANCELLED", label: "취소" },
   { value: "MAKEUP_NEEDED", label: "보충필요" },
+  { value: "LEAVE", label: "휴강" },
 ];
 
 export function SessionStatusSelect({ id, status }: { id: number; status: SessionStatus }) {

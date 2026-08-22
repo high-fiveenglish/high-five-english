@@ -20,6 +20,7 @@ const NAV_GROUPS = [
       { href: "/enrollments", label: "수강신청 관리" },
       { href: "/schedule", label: "전체 일정표" },
       { href: "/evaluations", label: "일일평가서 관리" },
+      { href: "/leave-requests", label: "휴강 관리" },
     ],
   },
   {
