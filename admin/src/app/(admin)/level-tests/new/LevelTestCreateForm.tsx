@@ -5,13 +5,21 @@ import { createLevelTest } from "../actions";
 
 type Option = { id: number; label: string };
 
-export function LevelTestCreateForm({ students }: { students: Option[] }) {
+export function LevelTestCreateForm({
+  students,
+  defaultStudentId = null,
+  defaultClassMethod = null,
+}: {
+  students: Option[];
+  defaultStudentId?: number | null;
+  defaultClassMethod?: string | null;
+}) {
   const [state, formAction, pending] = useActionState(createLevelTest, undefined);
 
   return (
     <form action={formAction} className="flex max-w-md flex-col gap-4">
       <Field label="학생">
-        <select name="studentId" required defaultValue="" className="input">
+        <select name="studentId" required defaultValue={defaultStudentId ?? ""} className="input">
           <option value="" disabled>
             선택하세요
           </option>
@@ -26,7 +34,12 @@ export function LevelTestCreateForm({ students }: { students: Option[] }) {
         <input name="subject" className="input" />
       </Field>
       <Field label="수업 방식 (선택)">
-        <input name="classMethod" placeholder="zoom / skype 등" className="input" />
+        <input
+          name="classMethod"
+          defaultValue={defaultClassMethod ?? ""}
+          placeholder="zoom / skype 등"
+          className="input"
+        />
       </Field>
       <Field label="테스트 희망일시 (선택)">
         <input name="scheduledTestDate" type="datetime-local" className="input" />

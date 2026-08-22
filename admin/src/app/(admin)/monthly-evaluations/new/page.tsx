@@ -4,7 +4,7 @@ import { MonthlyEvaluationCreateForm } from "./MonthlyEvaluationCreateForm";
 
 export default async function NewMonthlyEvaluationPage() {
   const [students, teachers] = await Promise.all([
-    prisma.student.findMany({ where: { siteId: DEFAULT_SITE_ID }, orderBy: { name: "asc" } }),
+    prisma.student.findMany({ where: { siteId: DEFAULT_SITE_ID, deletedAt: null }, orderBy: { name: "asc" } }),
     prisma.teacher.findMany({ where: { siteId: DEFAULT_SITE_ID }, orderBy: { realName: "asc" } }),
   ]);
 

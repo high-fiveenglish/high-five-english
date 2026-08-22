@@ -119,6 +119,10 @@ model Student {
   teamsId              String?
   referrerId           String?
 
+  // 소프트 삭제 — 수강내역/레벨테스트/결제/상담노트 등 연결 데이터가 있을 수 있어
+  // 실제로 지우지 않고 deletedAt만 채운다. 학생 목록은 deletedAt: null만 보여준다.
+  deletedAt DateTime?
+
   enrollments       Enrollment[]
   levelTests        LevelTest[]
   classSessions     ClassSession[]

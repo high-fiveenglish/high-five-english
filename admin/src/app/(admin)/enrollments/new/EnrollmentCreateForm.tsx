@@ -8,16 +8,20 @@ type Option = { id: number; label: string };
 export function EnrollmentCreateForm({
   students,
   teachers,
+  defaultStudentId = null,
+  defaultClassMethod = null,
 }: {
   students: Option[];
   teachers: Option[];
+  defaultStudentId?: number | null;
+  defaultClassMethod?: string | null;
 }) {
   const [state, formAction, pending] = useActionState(createEnrollment, undefined);
 
   return (
     <form action={formAction} className="flex max-w-md flex-col gap-4">
       <Field label="학생">
-        <select name="studentId" required defaultValue="" className="input">
+        <select name="studentId" required defaultValue={defaultStudentId ?? ""} className="input">
           <option value="" disabled>
             선택하세요
           </option>
@@ -46,7 +50,13 @@ export function EnrollmentCreateForm({
         </select>
       </Field>
       <Field label="수업 방식">
-        <input name="classMethod" placeholder="zoom / skype 등" required className="input" />
+        <input
+          name="classMethod"
+          defaultValue={defaultClassMethod ?? ""}
+          placeholder="zoom / skype 등"
+          required
+          className="input"
+        />
       </Field>
       <Field label="수업 요일">
         <input name="scheduleDays" placeholder="예: 화목" required className="input" />

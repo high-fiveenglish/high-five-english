@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { StudentEditForm } from "./StudentEditForm";
 import { ConsultationNotes } from "./ConsultationNotes";
 
@@ -15,12 +16,13 @@ export default async function EditStudentPage({
   const { id } = await params;
   const studentId = Number(id);
 
-  const [student, notes] = await Promise.all([
+  const [student, notes, agents] = await Promise.all([
     prisma.student.findUnique({ where: { id: studentId } }),
     prisma.consultationNote.findMany({
       where: { studentId },
       orderBy: { createdAt: "desc" },
     }),
+    prisma.agent.findMany({ where: { siteId: DEFAULT_SITE_ID }, orderBy: { name: "asc" } }),
   ]);
 
   if (!student) notFound();
@@ -33,6 +35,7 @@ export default async function EditStudentPage({
           id: student.id,
           name: student.name,
           loginId: student.loginId,
+          agentId: student.agentId,
           grade: student.grade,
           status: student.status,
           points: student.points,
@@ -53,6 +56,7 @@ export default async function EditStudentPage({
           teamsId: student.teamsId,
           referrerId: student.referrerId,
         }}
+        agents={agents.map((a) => ({ id: a.id, name: a.name }))}
       />
       <ConsultationNotes
         studentId={student.id}

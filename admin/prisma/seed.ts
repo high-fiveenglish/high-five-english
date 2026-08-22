@@ -117,6 +117,13 @@ const PRICING_SEED = [
   },
 ];
 
+// 협력사 — 학생별로 지정하며, 추후 별도의 협력사 관리 화면에서 CRUD하도록 확장한다.
+const AGENT_SEED = [
+  { code: "highfive", name: "직영에이전트" },
+  { code: "mnmenglish", name: "맘앤맘화상영어" },
+  { code: "synergyenglish", name: "시너지잉글리쉬" },
+];
+
 async function main() {
   const site = await prisma.site.upsert({
     where: { code: "hifive" },
@@ -127,6 +134,14 @@ async function main() {
       status: "active",
     },
   });
+
+  for (const agent of AGENT_SEED) {
+    await prisma.agent.upsert({
+      where: { code: agent.code },
+      update: {},
+      create: { ...agent, siteId: site.id },
+    });
+  }
 
   for (const instructor of INSTRUCTOR_SEED) {
     await prisma.instructor.upsert({

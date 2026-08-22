@@ -2,11 +2,13 @@
 
 import { useActionState } from "react";
 import { updateStudent } from "../actions";
+import { GRADE_OPTIONS, STATUS_OPTIONS } from "../constants";
 
 export type StudentEditValues = {
   id: number;
   name: string;
   loginId: string;
+  agentId: number | null;
   grade: string;
   status: string;
   points: number;
@@ -28,7 +30,13 @@ export type StudentEditValues = {
   referrerId: string | null;
 };
 
-export function StudentEditForm({ student }: { student: StudentEditValues }) {
+export function StudentEditForm({
+  student,
+  agents,
+}: {
+  student: StudentEditValues;
+  agents: { id: number; name: string }[];
+}) {
   const action = updateStudent.bind(null, student.id);
   const [state, formAction, pending] = useActionState(action, undefined);
   const s = student;
@@ -59,19 +67,32 @@ export function StudentEditForm({ student }: { student: StudentEditValues }) {
           <Field label="직업 (선택)">
             <input name="occupation" defaultValue={s.occupation ?? ""} className="input" />
           </Field>
-          <Field label="등급">
+          <Field label="협력사 (선택)">
+            <select name="agentId" defaultValue={s.agentId ?? ""} className="input">
+              <option value="">미지정</option>
+              {agents.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="회원등급">
             <select name="grade" defaultValue={s.grade} className="input">
-              <option value="GENERAL">일반</option>
-              <option value="BRANCH">지점</option>
-              <option value="AGENT">협력사</option>
-              <option value="ADMIN">관리자</option>
+              {GRADE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
             </select>
           </Field>
           <Field label="상태">
             <select name="status" defaultValue={s.status} className="input">
-              <option value="ACTIVE">활동중</option>
-              <option value="HOLDING">홀드</option>
-              <option value="EXPIRED">만료</option>
+              {STATUS_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
             </select>
           </Field>
         </div>
