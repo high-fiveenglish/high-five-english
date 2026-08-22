@@ -26,6 +26,11 @@ export async function createEnrollment(_prevState: { error?: string } | undefine
   const startDate = String(formData.get("startDate") ?? "");
   const endDate = String(formData.get("endDate") ?? "");
   const classType = String(formData.get("classType") ?? "1:1");
+  const textbookName = String(formData.get("textbookName") ?? "").trim();
+  const classTime = String(formData.get("classTime") ?? "").trim();
+  const adminNote = String(formData.get("adminNote") ?? "").trim();
+  const returnToRaw = String(formData.get("returnTo") ?? "/enrollments");
+  const returnTo = returnToRaw.startsWith("/") ? returnToRaw : "/enrollments";
 
   if (!studentId || !classMethod || !scheduleDays || !totalSessions || !startDate || !endDate) {
     return { error: "필수 항목을 모두 입력해주세요." };
@@ -44,13 +49,17 @@ export async function createEnrollment(_prevState: { error?: string } | undefine
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       classType,
+      textbookName: textbookName || null,
+      classTime: classTime || null,
+      adminNote: adminNote || null,
       status: "APPLIED",
       paymentStatus: "UNPAID",
     },
   });
 
   revalidatePath("/enrollments");
-  redirect("/enrollments");
+  revalidatePath("/students");
+  redirect(returnTo);
 }
 
 export async function updateEnrollmentStatus(id: number, status: EnrollmentStatus) {

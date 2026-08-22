@@ -14,13 +14,19 @@ function fmtDateTime(d: Date) {
   return d.toISOString().slice(0, 16).replace("T", " ");
 }
 
+const NOTICE_LABEL: Record<string, string> = {
+  "level-test-created": "레벨테스트가 등록되었습니다.",
+  "enrollment-created": "수강신청이 등록되었습니다.",
+};
+
 export default async function StudentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; notice?: string }>;
 }) {
-  const { filter } = await searchParams;
+  const { filter, notice } = await searchParams;
   const showDeleted = filter === "deleted";
+  const noticeText = notice ? NOTICE_LABEL[notice] : undefined;
 
   const [students, agents] = await Promise.all([
     prisma.student.findMany({
@@ -46,6 +52,12 @@ export default async function StudentsPage({
           + 학생 등록
         </Link>
       </div>
+
+      {noticeText && (
+        <div className="mb-4 rounded-lg bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
+          {noticeText}
+        </div>
+      )}
 
       <div className="mb-4 flex gap-2 text-sm">
         <Link
@@ -136,13 +148,13 @@ export default async function StudentsPage({
                         />
                         <ImpersonateButton studentId={s.id} studentName={s.name} />
                         <Link
-                          href={`/level-tests/new?studentId=${s.id}`}
+                          href={`/students/${s.id}/level-test`}
                           className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
                         >
                           레벨테스트 등록
                         </Link>
                         <Link
-                          href={`/enrollments/new?studentId=${s.id}`}
+                          href={`/students/${s.id}/enrollment`}
                           className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
                         >
                           수강등록

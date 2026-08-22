@@ -117,6 +117,8 @@ model Student {
   preferredClassMethod String?
   smsOptIn             Boolean           @default(true)
   teamsId              String?
+  kakaoId              String?
+  email                String?
   referrerId           String?
 
   // 소프트 삭제 — 수강내역/레벨테스트/결제/상담노트 등 연결 데이터가 있을 수 있어
@@ -275,6 +277,12 @@ model Enrollment {
   orderNo          String?
   classType        String           @default("1:1")
   textbookId       Int?
+  // 교재 테이블이 아직 없어 이름을 그대로 저장한다(textbookId는 미사용 상태로 남겨둠 —
+  // 이후 Textbook 모델을 만들면 이 값을 기준으로 이관한다).
+  textbookName     String?
+  // 수업 시각(HH:mm) — scheduleDays는 요일만 담고 있어 시각 정보가 없었다.
+  classTime        String?
+  adminNote        String?          @db.Text
 
   classSessions ClassSession[]
   leaveRequests LeaveRequest[]
@@ -415,6 +423,14 @@ model LevelTest {
   evaluationStatus       String?
   progressStatus         String?
   consultationStatus     String?
+
+  // 관리자 레벨테스트 신청 폼 입력값 — 선택지는 src/lib/levelTestOptions.ts가 단일 출처다.
+  // 문자열로 두는 이유: 운영 중 항목이 추가/변경돼도 마이그레이션 없이 상수만 고치면 되고,
+  // 이후 별도 관리 테이블로 승격할 때도 값을 그대로 옮길 수 있다.
+  englishLevel  String?
+  ageGroup      String?
+  interestTopic String?
+  teacherNote   String? @db.Text
 
   // 리드 폼 전용 필드 — 메인 사이트 공개 신청 폼(src/components/modals/LevelTestModal.tsx)의
   // 입력값을 그대로 저장한다. studentId가 채워지면 더 이상 필요 없어지지만 이력으로 남긴다.
