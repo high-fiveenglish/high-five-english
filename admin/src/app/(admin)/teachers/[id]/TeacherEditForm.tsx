@@ -2,59 +2,236 @@
 
 import { useActionState } from "react";
 import { updateTeacher } from "../actions";
+import { FileToBase64Field } from "../FileToBase64Field";
 
-type Teacher = {
+const HOURS = Array.from({ length: 24 }, (_, h) => h);
+
+export type TeacherEditValues = {
   id: number;
   realName: string;
   nickname: string | null;
+  loginId: string;
   nationality: string | null;
   email: string | null;
   approvalStatus: string;
   currentRate: string | null;
+  teacherGrade: string;
+  teamLeaderId: number | null;
+  sex: string | null;
+  age: number | null;
+  schoolName: string | null;
+  major: string | null;
+  address: string | null;
+  availableTimeText: string | null;
+  availableHours: number[];
+  mobilePhone: string | null;
+  teamsId: string | null;
+  zoomUrl: string | null;
+  zoomPw: string | null;
+  tencentUrl: string | null;
+  experience: string | null;
+  selfIntroduction: string | null;
+  photoUrl: string | null;
+  voiceUrl: string | null;
+  videoYoutubeCode: string | null;
+  tesol: boolean;
+  priority: number;
 };
 
-export function TeacherEditForm({ teacher }: { teacher: Teacher }) {
+export function TeacherEditForm({
+  teacher,
+  teamLeaderOptions,
+}: {
+  teacher: TeacherEditValues;
+  teamLeaderOptions: { id: number; label: string }[];
+}) {
   const action = updateTeacher.bind(null, teacher.id);
   const [state, formAction, pending] = useActionState(action, undefined);
+  const t = teacher;
 
   return (
-    <form action={formAction} className="flex max-w-md flex-col gap-4">
-      <Field label="실명">
-        <input name="realName" defaultValue={teacher.realName} required className="input" />
-      </Field>
-      <Field label="닉네임 (선택)">
-        <input name="nickname" defaultValue={teacher.nickname ?? ""} className="input" />
-      </Field>
-      <Field label="국적 (선택)">
-        <input name="nationality" defaultValue={teacher.nationality ?? ""} className="input" />
-      </Field>
-      <Field label="이메일 (선택)">
-        <input name="email" type="email" defaultValue={teacher.email ?? ""} className="input" />
-      </Field>
-      <Field label="승인 상태">
-        <select name="approvalStatus" defaultValue={teacher.approvalStatus} className="input">
-          <option value="PENDING">승인 대기</option>
-          <option value="APPROVED">승인됨</option>
-          <option value="REJECTED">반려</option>
-        </select>
-      </Field>
-      <Field label={`현재 단가: ${teacher.currentRate ? teacher.currentRate + "원" : "미설정"} — 변경 시 새 이력으로 추가`}>
-        <input name="newRatePerUnit" type="number" min={0} placeholder="변경 시에만 입력" className="input" />
-      </Field>
-      <Field label="비밀번호 재설정 (선택)">
-        <input name="newPassword" type="password" placeholder="변경 시에만 입력" className="input" />
-      </Field>
+    <form action={formAction} className="flex max-w-2xl flex-col gap-6">
+      <Section title="기본 정보">
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="로그인 ID (변경 불가)">
+            <input value={t.loginId} disabled className="input bg-slate-50 text-slate-400" />
+          </Field>
+          <Field label="실명">
+            <input name="realName" defaultValue={t.realName} required className="input" />
+          </Field>
+          <Field label="닉네임 (선택)">
+            <input name="nickname" defaultValue={t.nickname ?? ""} className="input" />
+          </Field>
+          <Field label="강사 등급">
+            <select name="teacherGrade" defaultValue={t.teacherGrade} className="input">
+              <option value="GENERAL">일반강사</option>
+              <option value="SENIOR">수석강사</option>
+            </select>
+          </Field>
+          <Field label="팀 리더 (선택)">
+            <select name="teamLeaderId" defaultValue={t.teamLeaderId ?? ""} className="input">
+              <option value="">없음</option>
+              {teamLeaderOptions.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="국적 (선택)">
+            <input name="nationality" defaultValue={t.nationality ?? ""} className="input" />
+          </Field>
+          <Field label="승인 상태">
+            <select name="approvalStatus" defaultValue={t.approvalStatus} className="input">
+              <option value="PENDING">승인 대기</option>
+              <option value="APPROVED">승인됨</option>
+              <option value="REJECTED">반려</option>
+            </select>
+          </Field>
+        </div>
+      </Section>
+
+      <Section title="신상 정보">
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="성별 (선택)">
+            <select name="sex" defaultValue={t.sex ?? ""} className="input">
+              <option value="">선택 안 함</option>
+              <option value="MALE">남</option>
+              <option value="FEMALE">여</option>
+            </select>
+          </Field>
+          <Field label="나이 (선택)">
+            <input name="age" type="number" min={0} defaultValue={t.age ?? ""} className="input" />
+          </Field>
+          <Field label="학교 (선택)">
+            <input name="schoolName" defaultValue={t.schoolName ?? ""} className="input" />
+          </Field>
+          <Field label="전공 (선택)">
+            <input name="major" defaultValue={t.major ?? ""} className="input" />
+          </Field>
+        </div>
+      </Section>
+
+      <Section title="연락처">
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="이메일 (선택)">
+            <input name="email" type="email" defaultValue={t.email ?? ""} className="input" />
+          </Field>
+          <Field label="휴대폰 번호 (선택)">
+            <input name="mobilePhone" defaultValue={t.mobilePhone ?? ""} className="input" />
+          </Field>
+        </div>
+        <Field label="주소 (선택)">
+          <input name="address" defaultValue={t.address ?? ""} className="input" />
+        </Field>
+      </Section>
+
+      <Section title="화상 미팅 접속 정보">
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Teams ID (선택)">
+            <input name="teamsId" defaultValue={t.teamsId ?? ""} className="input" />
+          </Field>
+          <Field label="Tencent URL (선택)">
+            <input name="tencentUrl" defaultValue={t.tencentUrl ?? ""} className="input" />
+          </Field>
+          <Field label="Zoom URL (선택)">
+            <input name="zoomUrl" defaultValue={t.zoomUrl ?? ""} className="input" />
+          </Field>
+          <Field label="Zoom PW (선택)">
+            <input name="zoomPw" defaultValue={t.zoomPw ?? ""} className="input" />
+          </Field>
+        </div>
+      </Section>
+
+      <Section title="소개">
+        <Field label="경력 (선택)">
+          <textarea name="experience" defaultValue={t.experience ?? ""} rows={3} className="input" />
+        </Field>
+        <Field label="자기소개 (선택)">
+          <textarea name="selfIntroduction" defaultValue={t.selfIntroduction ?? ""} rows={3} className="input" />
+        </Field>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="소개 영상 유튜브 코드 (선택)">
+            <input name="videoYoutubeCode" defaultValue={t.videoYoutubeCode ?? ""} className="input" />
+          </Field>
+          <label className="mt-6 flex items-center gap-2 text-sm font-medium text-slate-600">
+            <input type="checkbox" name="tesol" defaultChecked={t.tesol} />
+            TESOL 자격 보유
+          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <FileToBase64Field
+            name="photoUrl"
+            accept="image/*"
+            label="사진 (내부 참고용)"
+            defaultValue={t.photoUrl}
+            previewKind="image"
+          />
+          <FileToBase64Field
+            name="voiceUrl"
+            accept="audio/*"
+            label="음성 (내부 참고용)"
+            defaultValue={t.voiceUrl}
+            previewKind="audio"
+          />
+        </div>
+      </Section>
+
+      <Section title="근무 가능 시간">
+        <Field label="근무 가능 시간 (자유 텍스트, 선택)">
+          <input
+            name="availableTimeText"
+            defaultValue={t.availableTimeText ?? ""}
+            placeholder="예: 평일 19:00-22:00"
+            className="input"
+          />
+        </Field>
+        <div>
+          <span className="mb-1.5 block text-sm font-medium text-slate-600">시간대별 근무 가능 (기준시 기준)</span>
+          <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8">
+            {HOURS.map((h) => (
+              <label key={h} className="flex items-center gap-1 rounded-lg border border-slate-200 px-1.5 py-1 text-xs text-slate-600">
+                <input type="checkbox" name="availableHours" value={h} defaultChecked={t.availableHours.includes(h)} />
+                {h}~{h + 1}
+              </label>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      <Section title="운영 정보">
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="우선순위 (숫자가 높을수록 목록 상위)">
+            <input name="priority" type="number" defaultValue={t.priority} className="input" />
+          </Field>
+          <Field label={`현재 단가: ${t.currentRate ? t.currentRate + "원" : "미설정"} — 변경 시 새 이력으로 추가`}>
+            <input name="newRatePerUnit" type="number" min={0} placeholder="변경 시에만 입력" className="input" />
+          </Field>
+        </div>
+        <Field label="비밀번호 재설정 (선택)">
+          <input name="newPassword" type="password" placeholder="변경 시에만 입력" className="input" />
+        </Field>
+      </Section>
 
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
 
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
+        className="w-fit rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
       >
         {pending ? "저장 중..." : "저장"}
       </button>
     </form>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5">
+      <h2 className="text-sm font-bold text-slate-900">{title}</h2>
+      {children}
+    </div>
   );
 }
 

@@ -69,6 +69,20 @@ enum StudentStatus {
   HOLDING
 }
 
+enum Sex {
+  MALE
+  FEMALE
+}
+
+enum ResidenceRegion {
+  KOREA
+  CHINA
+  VIETNAM
+  JAPAN
+  AUSTRALIA
+  USA_OTHER
+}
+
 model Student {
   id           Int           @id @default(autoincrement())
   siteId       Int
@@ -84,6 +98,25 @@ model Student {
   status       StudentStatus @default(ACTIVE)
   joinedAt     DateTime      @default(now())
   lastLoginAt  DateTime?
+
+  // 프로필 상세 정보 — 레퍼런스 사이트(z01.htm 학생정보수정)의 필드를 대부분 반영.
+  // 협력사 브랜딩(로고/공지)은 Agent 자체의 설정이라 여기 포함하지 않고, 포인트
+  // 적립/사용 내역은 원장(ledger) 테이블이 필요한 별도 기능이라 이번 범위에서 제외.
+  englishName          String?
+  sex                  Sex?
+  birthDate            DateTime?
+  occupation           String?
+  region               ResidenceRegion?
+  address              String?
+  landlinePhone        String?
+  mobilePhone          String?
+  etcNote              String?           @db.Text
+  parentName           String?
+  parentContact        String?
+  preferredClassMethod String?
+  smsOptIn             Boolean           @default(true)
+  teamsId              String?
+  referrerId           String?
 
   enrollments       Enrollment[]
   levelTests        LevelTest[]
@@ -121,6 +154,11 @@ enum ApprovalStatus {
   REJECTED
 }
 
+enum TeacherGrade {
+  SENIOR
+  GENERAL
+}
+
 model Teacher {
   id             Int            @id @default(autoincrement())
   siteId         Int
@@ -138,6 +176,30 @@ model Teacher {
   approvalStatus ApprovalStatus @default(PENDING)
   joinedAt       DateTime       @default(now())
   lastLoginAt    DateTime?
+
+  // 프로필 상세 정보 — 레퍼런스 사이트(z02.htm 강사정보수정)의 필드를 대부분 반영.
+  // 사진/음성은 마케팅용 강사소개(Instructor)와는 별개로, LMS 내부에서 신원 확인 등
+  // 운영 목적으로만 쓰는 참고용 데이터다.
+  teacherGrade     TeacherGrade @default(GENERAL)
+  sex              Sex?
+  age              Int?
+  schoolName       String?
+  major            String?
+  address          String?
+  availableTimeText String?
+  availableHours   Int[] // 0~23, 근무 가능 시간대(시간 단위)
+  mobilePhone      String?
+  teamsId          String?
+  zoomUrl          String?
+  zoomPw           String?
+  tencentUrl       String?
+  experience       String?  @db.Text
+  selfIntroduction String?  @db.Text
+  photoUrl         String?  @db.Text
+  voiceUrl         String?  @db.Text
+  videoYoutubeCode String?
+  tesol            Boolean  @default(false)
+  priority         Int      @default(0)
 
   rates         TeacherRate[]
   enrollments   Enrollment[]

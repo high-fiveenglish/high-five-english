@@ -1,6 +1,11 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { StudentEditForm } from "./StudentEditForm";
+import { ConsultationNotes } from "./ConsultationNotes";
+
+function fmtDateTime(d: Date) {
+  return d.toISOString().slice(0, 16).replace("T", " ");
+}
 
 export default async function EditStudentPage({
   params,
@@ -8,13 +13,21 @@ export default async function EditStudentPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const student = await prisma.student.findUnique({ where: { id: Number(id) } });
+  const studentId = Number(id);
+
+  const [student, notes] = await Promise.all([
+    prisma.student.findUnique({ where: { id: studentId } }),
+    prisma.consultationNote.findMany({
+      where: { studentId },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   if (!student) notFound();
 
   return (
-    <div>
-      <h1 className="mb-6 text-xl font-bold text-slate-900">학생 정보 수정 — {student.name}</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-xl font-bold text-slate-900">학생 정보 수정 — {student.name}</h1>
       <StudentEditForm
         student={{
           id: student.id,
@@ -24,7 +37,26 @@ export default async function EditStudentPage({
           status: student.status,
           points: student.points,
           discountRate: student.discountRate.toString(),
+          englishName: student.englishName,
+          sex: student.sex,
+          birthDate: student.birthDate ? student.birthDate.toISOString().slice(0, 10) : null,
+          occupation: student.occupation,
+          region: student.region,
+          address: student.address,
+          landlinePhone: student.landlinePhone,
+          mobilePhone: student.mobilePhone,
+          etcNote: student.etcNote,
+          parentName: student.parentName,
+          parentContact: student.parentContact,
+          preferredClassMethod: student.preferredClassMethod,
+          smsOptIn: student.smsOptIn,
+          teamsId: student.teamsId,
+          referrerId: student.referrerId,
         }}
+      />
+      <ConsultationNotes
+        studentId={student.id}
+        notes={notes.map((n) => ({ id: n.id, content: n.content, createdAt: fmtDateTime(n.createdAt) }))}
       />
     </div>
   );

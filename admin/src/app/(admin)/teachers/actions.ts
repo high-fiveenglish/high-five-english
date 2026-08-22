@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { isAuthenticated } from "@/lib/auth";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
-import type { ApprovalStatus } from "@/generated/prisma/client";
+import type { ApprovalStatus, Sex, TeacherGrade } from "@/generated/prisma/client";
 
 async function requireAuth() {
   if (!(await isAuthenticated())) {
@@ -68,6 +68,28 @@ export async function updateTeacher(id: number, _prevState: { error?: string } |
   const newPassword = String(formData.get("newPassword") ?? "");
   const newRatePerUnit = Number(formData.get("newRatePerUnit") ?? 0);
 
+  const teacherGrade = String(formData.get("teacherGrade") ?? "GENERAL") as TeacherGrade;
+  const teamLeaderIdRaw = String(formData.get("teamLeaderId") ?? "");
+  const sexRaw = String(formData.get("sex") ?? "");
+  const ageRaw = String(formData.get("age") ?? "");
+  const schoolName = String(formData.get("schoolName") ?? "").trim();
+  const major = String(formData.get("major") ?? "").trim();
+  const address = String(formData.get("address") ?? "").trim();
+  const availableTimeText = String(formData.get("availableTimeText") ?? "").trim();
+  const availableHours = formData.getAll("availableHours").map((h) => Number(h));
+  const mobilePhone = String(formData.get("mobilePhone") ?? "").trim();
+  const teamsId = String(formData.get("teamsId") ?? "").trim();
+  const zoomUrl = String(formData.get("zoomUrl") ?? "").trim();
+  const zoomPw = String(formData.get("zoomPw") ?? "").trim();
+  const tencentUrl = String(formData.get("tencentUrl") ?? "").trim();
+  const experience = String(formData.get("experience") ?? "").trim();
+  const selfIntroduction = String(formData.get("selfIntroduction") ?? "").trim();
+  const photoUrl = String(formData.get("photoUrl") ?? "") || null;
+  const voiceUrl = String(formData.get("voiceUrl") ?? "") || null;
+  const videoYoutubeCode = String(formData.get("videoYoutubeCode") ?? "").trim();
+  const tesol = formData.get("tesol") === "on";
+  const priority = Number(formData.get("priority") ?? 0);
+
   if (!realName) {
     return { error: "실명은 필수입니다." };
   }
@@ -80,6 +102,27 @@ export async function updateTeacher(id: number, _prevState: { error?: string } |
       nationality: nationality || null,
       email: email || null,
       approvalStatus,
+      teacherGrade,
+      teamLeaderId: teamLeaderIdRaw ? Number(teamLeaderIdRaw) : null,
+      sex: sexRaw ? (sexRaw as Sex) : null,
+      age: ageRaw ? Number(ageRaw) : null,
+      schoolName: schoolName || null,
+      major: major || null,
+      address: address || null,
+      availableTimeText: availableTimeText || null,
+      availableHours,
+      mobilePhone: mobilePhone || null,
+      teamsId: teamsId || null,
+      zoomUrl: zoomUrl || null,
+      zoomPw: zoomPw || null,
+      tencentUrl: tencentUrl || null,
+      experience: experience || null,
+      selfIntroduction: selfIntroduction || null,
+      photoUrl,
+      voiceUrl,
+      videoYoutubeCode: videoYoutubeCode || null,
+      tesol,
+      priority,
       ...(newPassword ? { passwordHash: await bcrypt.hash(newPassword, 10) } : {}),
       ...(newRatePerUnit
         ? { rates: { create: { ratePerUnit: newRatePerUnit, unitMinutes: 25, effectiveFrom: new Date() } } }

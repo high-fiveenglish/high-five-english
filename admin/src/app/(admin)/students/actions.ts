@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { isAuthenticated } from "@/lib/auth";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
-import type { StudentGrade, StudentStatus } from "@/generated/prisma/client";
+import type { StudentGrade, StudentStatus, Sex, ResidenceRegion } from "@/generated/prisma/client";
 
 async function requireAuth() {
   if (!(await isAuthenticated())) {
@@ -61,6 +61,22 @@ export async function updateStudent(id: number, _prevState: { error?: string } |
   const points = Number(formData.get("points") ?? 0);
   const newPassword = String(formData.get("newPassword") ?? "");
 
+  const englishName = String(formData.get("englishName") ?? "").trim();
+  const sexRaw = String(formData.get("sex") ?? "");
+  const birthDateRaw = String(formData.get("birthDate") ?? "");
+  const occupation = String(formData.get("occupation") ?? "").trim();
+  const regionRaw = String(formData.get("region") ?? "");
+  const address = String(formData.get("address") ?? "").trim();
+  const landlinePhone = String(formData.get("landlinePhone") ?? "").trim();
+  const mobilePhone = String(formData.get("mobilePhone") ?? "").trim();
+  const etcNote = String(formData.get("etcNote") ?? "").trim();
+  const parentName = String(formData.get("parentName") ?? "").trim();
+  const parentContact = String(formData.get("parentContact") ?? "").trim();
+  const preferredClassMethod = String(formData.get("preferredClassMethod") ?? "").trim();
+  const smsOptIn = formData.get("smsOptIn") === "on";
+  const teamsId = String(formData.get("teamsId") ?? "").trim();
+  const referrerId = String(formData.get("referrerId") ?? "").trim();
+
   if (!name) {
     return { error: "이름은 필수입니다." };
   }
@@ -73,6 +89,21 @@ export async function updateStudent(id: number, _prevState: { error?: string } |
       status,
       discountRate,
       points,
+      englishName: englishName || null,
+      sex: sexRaw ? (sexRaw as Sex) : null,
+      birthDate: birthDateRaw ? new Date(birthDateRaw) : null,
+      occupation: occupation || null,
+      region: regionRaw ? (regionRaw as ResidenceRegion) : null,
+      address: address || null,
+      landlinePhone: landlinePhone || null,
+      mobilePhone: mobilePhone || null,
+      etcNote: etcNote || null,
+      parentName: parentName || null,
+      parentContact: parentContact || null,
+      preferredClassMethod: preferredClassMethod || null,
+      smsOptIn,
+      teamsId: teamsId || null,
+      referrerId: referrerId || null,
       ...(newPassword ? { passwordHash: await bcrypt.hash(newPassword, 10) } : {}),
     },
   });
@@ -86,4 +117,22 @@ export async function deleteStudent(id: number) {
   await requireAuth();
   await prisma.student.delete({ where: { id } });
   revalidatePath("/students");
+}
+
+export async function addConsultationNote(studentId: number, formData: FormData) {
+  await requireAuth();
+  const content = String(formData.get("content") ?? "").trim();
+  if (!content) return;
+
+  await prisma.consultationNote.create({
+    data: { studentId, content },
+  });
+
+  revalidatePath(`/students/${studentId}`);
+}
+
+export async function deleteConsultationNote(studentId: number, noteId: number) {
+  await requireAuth();
+  await prisma.consultationNote.delete({ where: { id: noteId } });
+  revalidatePath(`/students/${studentId}`);
 }
