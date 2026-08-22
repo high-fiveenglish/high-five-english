@@ -17,10 +17,18 @@ const NAV_GROUPS = [
   {
     title: "수업 운영",
     items: [
-      { href: "/enrollments", label: "수강신청 관리" },
       { href: "/schedule", label: "전체 일정표" },
-      { href: "/evaluations", label: "일일평가서 관리" },
       { href: "/leave-requests", label: "휴강 관리" },
+    ],
+  },
+  {
+    title: "수강내역관리",
+    items: [
+      { href: "/enrollments", label: "수강내역관리" },
+      { href: "/deleted-sessions", label: "수업 삭제 내역" },
+      { href: "/overlapping-sessions", label: "겹치는 수업 내역" },
+      { href: "/evaluations", label: "일일평가서 관리" },
+      { href: "/monthly-evaluations", label: "월평가서 관리" },
     ],
   },
   {

@@ -4,28 +4,55 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { DeleteButton } from "../DeleteButton";
 import { deleteEnrollment } from "./actions";
 import { StatusSelect } from "./StatusSelect";
+import { PaymentStatusSelect } from "./PaymentStatusSelect";
+import { FILTER_TABS, buildEnrollmentWhere } from "./filters";
 
 function fmtDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-export default async function EnrollmentsPage() {
+export default async function EnrollmentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
+  const { filter } = await searchParams;
+
   const enrollments = await prisma.enrollment.findMany({
-    where: { siteId: DEFAULT_SITE_ID },
+    where: { siteId: DEFAULT_SITE_ID, ...buildEnrollmentWhere(filter) },
     orderBy: { id: "desc" },
     include: { student: true, teacher: true },
+    take: 300,
   });
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">수강신청 관리</h1>
+        <h1 className="text-xl font-bold text-slate-900">수강내역관리</h1>
         <Link
           href="/enrollments/new"
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
         >
           + 수강신청 등록
         </Link>
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2 text-sm">
+        {FILTER_TABS.map((tab) => {
+          const active = (filter ?? "all") === tab.key;
+          const href = tab.key === "all" ? "/enrollments" : `/enrollments?filter=${tab.key}`;
+          return (
+            <Link
+              key={tab.key}
+              href={href}
+              className={`rounded-lg px-3 py-1.5 font-medium ${
+                active ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-600"
+              }`}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
@@ -40,6 +67,7 @@ export default async function EnrollmentsPage() {
               <th className="px-4 py-3">기간</th>
               <th className="px-4 py-3">총 회차</th>
               <th className="px-4 py-3">상태</th>
+              <th className="px-4 py-3">결제</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -58,6 +86,9 @@ export default async function EnrollmentsPage() {
                 <td className="px-4 py-3">
                   <StatusSelect id={e.id} status={e.status} />
                 </td>
+                <td className="px-4 py-3">
+                  <PaymentStatusSelect id={e.id} paymentStatus={e.paymentStatus} />
+                </td>
                 <td className="px-4 py-3 text-right">
                   <DeleteButton action={deleteEnrollment.bind(null, e.id)} />
                 </td>
@@ -65,8 +96,8 @@ export default async function EnrollmentsPage() {
             ))}
             {enrollments.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-slate-400">
-                  등록된 수강신청이 없습니다.
+                <td colSpan={10} className="px-4 py-10 text-center text-slate-400">
+                  해당하는 수강내역이 없습니다.
                 </td>
               </tr>
             )}

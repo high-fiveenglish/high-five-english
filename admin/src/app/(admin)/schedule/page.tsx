@@ -29,6 +29,7 @@ export default async function SchedulePage({
     where: {
       siteId: DEFAULT_SITE_ID,
       scheduledAt: { gte: rangeFrom, lte: rangeTo },
+      deletedAt: null,
     },
     orderBy: { scheduledAt: "asc" },
     include: { student: true, teacher: true },

@@ -32,6 +32,7 @@ model Site {
   instructors     Instructor[]
   pricingDurations PricingDuration[]
   leaveRequests   LeaveRequest[]
+  monthlyEvaluations MonthlyEvaluation[]
 
   @@map("sites")
 }
@@ -123,6 +124,7 @@ model Student {
   classSessions     ClassSession[]
   consultationNotes ConsultationNote[]
   leaveRequests     LeaveRequest[]
+  monthlyEvaluations MonthlyEvaluation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -205,6 +207,7 @@ model Teacher {
   enrollments   Enrollment[]
   classSessions ClassSession[]
   levelTests    LevelTest[]
+  monthlyEvaluations MonthlyEvaluation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -240,6 +243,12 @@ enum EnrollmentStatus {
   LOST
 }
 
+enum PaymentStatus {
+  UNPAID
+  PAID
+  FAILED
+}
+
 model Enrollment {
   id               Int              @id @default(autoincrement())
   siteId           Int
@@ -258,7 +267,7 @@ model Enrollment {
   startDate        DateTime
   endDate          DateTime
   status           EnrollmentStatus @default(APPLIED)
-  paymentStatus    String?
+  paymentStatus    PaymentStatus?
   orderNo          String?
   classType        String           @default("1:1")
   textbookId       Int?
@@ -299,6 +308,10 @@ model ClassSession {
   attendance   String?
   progressNote String?
 
+  // 소프트 삭제 — "수업 삭제 내역"에서 이력으로 조회할 수 있도록 실제로 지우지 않고
+  // deletedAt만 채운다. 전체일정표/충돌감지 등 나머지 조회는 전부 deletedAt: null만 본다.
+  deletedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -325,6 +338,27 @@ model LessonEvaluation {
   updatedAt DateTime @updatedAt
 
   @@map("lesson_evaluations")
+}
+
+// 월평가서 — 학생 1명당 특정 월(yearMonth, "YYYY-MM")에 1개, 관리자가 그 달의 전체
+// 수업을 종합해 작성/수정한다. 일일평가서보다 분량이 많을 수 있어 길이 제한을 더 넉넉히 둔다.
+model MonthlyEvaluation {
+  id        Int      @id @default(autoincrement())
+  siteId    Int
+  site      Site     @relation(fields: [siteId], references: [id])
+  studentId Int
+  student   Student  @relation(fields: [studentId], references: [id])
+  teacherId Int?
+  teacher   Teacher? @relation(fields: [teacherId], references: [id])
+  yearMonth String // "YYYY-MM"
+  content   String   @db.VarChar(4000)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, yearMonth])
+  @@index([siteId])
+  @@map("monthly_evaluations")
 }
 
 // 휴강 신청 — 학생이 예정된(SCHEDULED) 수업을 직접 휴강 처리하면 관리자 승인 없이

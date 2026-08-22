@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { isAuthenticated } from "@/lib/auth";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
-import type { EnrollmentStatus } from "@/generated/prisma/client";
+import type { EnrollmentStatus, PaymentStatus } from "@/generated/prisma/client";
 
 async function requireAuth() {
   if (!(await isAuthenticated())) {
@@ -45,6 +45,7 @@ export async function createEnrollment(_prevState: { error?: string } | undefine
       endDate: new Date(endDate),
       classType,
       status: "APPLIED",
+      paymentStatus: "UNPAID",
     },
   });
 
@@ -55,6 +56,12 @@ export async function createEnrollment(_prevState: { error?: string } | undefine
 export async function updateEnrollmentStatus(id: number, status: EnrollmentStatus) {
   await requireAuth();
   await prisma.enrollment.update({ where: { id }, data: { status } });
+  revalidatePath("/enrollments");
+}
+
+export async function updateEnrollmentPaymentStatus(id: number, paymentStatus: PaymentStatus | null) {
+  await requireAuth();
+  await prisma.enrollment.update({ where: { id }, data: { paymentStatus } });
   revalidatePath("/enrollments");
 }
 

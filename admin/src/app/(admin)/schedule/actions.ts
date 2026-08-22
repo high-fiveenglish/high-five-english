@@ -63,6 +63,14 @@ export async function updateClassSessionStatus(id: number, status: SessionStatus
 
 export async function deleteClassSession(id: number) {
   await requireAuth();
-  await prisma.classSession.delete({ where: { id } });
+  await prisma.classSession.update({ where: { id }, data: { deletedAt: new Date() } });
   revalidatePath("/schedule");
+  revalidatePath("/deleted-sessions");
+}
+
+export async function restoreClassSession(id: number) {
+  await requireAuth();
+  await prisma.classSession.update({ where: { id }, data: { deletedAt: null } });
+  revalidatePath("/schedule");
+  revalidatePath("/deleted-sessions");
 }
