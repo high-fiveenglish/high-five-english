@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { assignLevelTestTeacher } from "./actions";
 
 type Option = { id: number; label: string };
@@ -14,16 +14,23 @@ export function TeacherAssignSelect({
   teacherId: number | null;
   teachers: Option[];
 }) {
+  const [value, setValue] = useState(teacherId ?? "");
   const [pending, startTransition] = useTransition();
 
   return (
     <select
-      defaultValue={teacherId ?? ""}
+      value={value}
       disabled={pending}
       onChange={(e) => {
-        const value = e.target.value;
-        startTransition(() => {
-          assignLevelTestTeacher(id, value ? Number(value) : null);
+        const raw = e.target.value;
+        const previous = value;
+        setValue(raw);
+        startTransition(async () => {
+          const result = await assignLevelTestTeacher(id, raw ? Number(raw) : null);
+          if (result?.error) {
+            alert(result.error);
+            setValue(previous);
+          }
         });
       }}
       className="rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-500 disabled:opacity-50"

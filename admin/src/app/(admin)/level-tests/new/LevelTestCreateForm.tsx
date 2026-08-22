@@ -28,8 +28,8 @@ export function LevelTestCreateForm({ students }: { students: Option[] }) {
       <Field label="수업 방식 (선택)">
         <input name="classMethod" placeholder="zoom / skype 등" className="input" />
       </Field>
-      <Field label="테스트 희망일 (선택)">
-        <input name="scheduledTestDate" type="date" className="input" />
+      <Field label="테스트 희망일시 (선택)">
+        <input name="scheduledTestDate" type="datetime-local" className="input" />
       </Field>
 
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}

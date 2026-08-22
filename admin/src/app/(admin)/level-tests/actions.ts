@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { isAuthenticated } from "@/lib/auth";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
+import { findTeacherScheduleConflict, LEVEL_TEST_DURATION_MIN } from "@/lib/scheduleConflict";
 
 async function requireAuth() {
   if (!(await isAuthenticated())) {
@@ -45,10 +46,27 @@ export async function updateLevelTestProgress(id: number, progressStatus: string
   revalidatePath("/level-tests");
 }
 
-export async function assignLevelTestTeacher(id: number, teacherId: number | null) {
+export async function assignLevelTestTeacher(id: number, teacherId: number | null): Promise<{ error?: string }> {
   await requireAuth();
+
+  if (teacherId) {
+    const levelTest = await prisma.levelTest.findUnique({ where: { id } });
+    if (levelTest?.scheduledTestDate) {
+      const conflict = await findTeacherScheduleConflict({
+        teacherId,
+        start: levelTest.scheduledTestDate,
+        durationMin: LEVEL_TEST_DURATION_MIN,
+        excludeLevelTestId: id,
+      });
+      if (conflict) {
+        return { error: `해당 강사는 같은 시간에 이미 다른 일정이 있습니다: ${conflict.label}` };
+      }
+    }
+  }
+
   await prisma.levelTest.update({ where: { id }, data: { teacherId } });
   revalidatePath("/level-tests");
+  return {};
 }
 
 export async function deleteLevelTest(id: number) {
