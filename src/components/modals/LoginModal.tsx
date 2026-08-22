@@ -6,11 +6,12 @@ import { Modal } from "../ui/Modal";
 import { useAuth } from "../../context/AuthContext";
 import type { Role } from "../../lib/auth/types";
 
-const ROLE_HOME: Record<Role, string> = {
+// 관리자 계정은 더 이상 이 사이트의 자체 /admin(예전 mock 패널)로 자동 이동하지 않는다 —
+// 실제 관리자 페이지(별도 Next.js 앱)는 상단바의 "홈페이지관리" 링크에서 새 탭으로
+// 연다(TopUtilityBar.tsx). 로그인 직후에는 방문 중이던 화면에 그대로 남는다.
+const ROLE_HOME: Partial<Record<Role, string>> = {
   student: "/classroom",
   teacher: "/teacher",
-  general_admin: "/admin",
-  general_manager: "/admin",
 };
 
 export function LoginModal({
@@ -50,7 +51,8 @@ export function LoginModal({
       return;
     }
     handleClose();
-    navigate(ROLE_HOME[result.role]);
+    const home = ROLE_HOME[result.role];
+    if (home) navigate(home);
   };
 
   return (

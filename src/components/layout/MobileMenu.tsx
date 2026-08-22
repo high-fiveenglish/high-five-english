@@ -5,6 +5,7 @@ import { NAV_ITEMS } from "../../data/nav";
 import { NavItemLink } from "./NavItemLink";
 import { useAuth } from "../../context/AuthContext";
 import { Logo } from "./Logo";
+import { ADMIN_API_URL } from "../../lib/adminApi";
 
 export function MobileMenu({
   open,
@@ -65,13 +66,15 @@ export function MobileMenu({
                   </NavItemLink>
                 )}
                 {isAdminLike && (
-                  <NavItemLink
-                    href="/admin"
+                  <a
+                    href={ADMIN_API_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={onClose}
                     className="rounded-full bg-brand-50 px-3.5 py-1.5 font-medium text-brand-700"
                   >
                     {t("topbar.admin_manage")}
-                  </NavItemLink>
+                  </a>
                 )}
                 <NavItemLink
                   href="/mypage"

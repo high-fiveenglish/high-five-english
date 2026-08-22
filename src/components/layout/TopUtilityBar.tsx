@@ -5,6 +5,7 @@ import { LocalizedLink } from "../i18n/LocalizedLink";
 import { LanguageSelector } from "../i18n/LanguageSelector";
 import { ADMIN_LANGUAGES, SUPPORTED_LANG_CODES, TEACHER_LANGUAGES } from "../../i18n/config";
 import { isProtectedPath } from "../../i18n/paths";
+import { ADMIN_API_URL } from "../../lib/adminApi";
 
 export function TopUtilityBar({
   onOpenLogin,
@@ -56,9 +57,14 @@ export function TopUtilityBar({
               </LocalizedLink>
             )}
             {isAdminLike && (
-              <LocalizedLink to="/admin" className="transition hover:text-white">
+              <a
+                href={ADMIN_API_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition hover:text-white"
+              >
                 {t("topbar.admin_manage")}
-              </LocalizedLink>
+              </a>
             )}
             <LocalizedLink to="/mypage" className="transition hover:text-white">
               {t("topbar.my_info")}
