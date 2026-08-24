@@ -26,3 +26,6 @@ artifact-export.html
 *.njsproj
 *.sln
 *.sw?
+
+# Local Netlify folder
+.netlify
