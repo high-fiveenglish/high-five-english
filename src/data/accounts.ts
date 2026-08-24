@@ -21,6 +21,14 @@ export type Account = {
 
 export const ACCOUNTS: Account[] = [
   {
+    id: "admin",
+    password: "0000",
+    name: "관리자",
+    role: "general_manager",
+    linkedId: null,
+    preferredLanguage: "ko",
+  },
+  {
     id: "manager",
     password: "manager123",
     name: "김대표",
