@@ -14,12 +14,27 @@ function expectedToken(): string {
   return createHmac("sha256", secret).update(TOKEN_PAYLOAD).digest("hex");
 }
 
-export function verifyPassword(password: string): boolean {
-  const expected = process.env.ADMIN_PASSWORD;
-  if (!expected) {
-    throw new Error("ADMIN_PASSWORD 환경변수가 설정되지 않았습니다.");
+function timingSafeStringEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  // 길이가 다르면 timingSafeEqual이 바로 던지므로, 같은 길이의 더미 버퍼와 비교해
+  // 길이 자체로 정보가 새지 않게 한다.
+  if (bufA.length !== bufB.length) {
+    timingSafeEqual(bufA, bufA);
+    return false;
   }
-  return password === expected;
+  return timingSafeEqual(bufA, bufB);
+}
+
+export function verifyLogin(id: string, password: string): boolean {
+  const expectedId = process.env.ADMIN_ID;
+  const expectedPassword = process.env.ADMIN_PASSWORD;
+  if (!expectedId || !expectedPassword) {
+    throw new Error("ADMIN_ID/ADMIN_PASSWORD 환경변수가 설정되지 않았습니다.");
+  }
+  const idOk = timingSafeStringEqual(id, expectedId);
+  const passwordOk = timingSafeStringEqual(password, expectedPassword);
+  return idOk && passwordOk;
 }
 
 export async function createSession() {

@@ -9,6 +9,21 @@ export function LoginForm() {
   return (
     <form action={formAction} className="flex w-full max-w-sm flex-col gap-4">
       <div>
+        <label htmlFor="id" className="mb-1 block text-sm font-medium text-slate-600">
+          관리자 아이디
+        </label>
+        <input
+          id="id"
+          name="id"
+          type="text"
+          required
+          autoFocus
+          autoComplete="username"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+        />
+      </div>
+
+      <div>
         <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-600">
           관리자 비밀번호
         </label>
@@ -17,7 +32,7 @@ export function LoginForm() {
           name="password"
           type="password"
           required
-          autoFocus
+          autoComplete="current-password"
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
         />
       </div>
