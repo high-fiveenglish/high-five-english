@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { DeleteButton } from "../DeleteButton";
 import { deleteTeacher } from "./actions";
+import { AccountStatusSelect } from "./AccountStatusSelect";
 
 const APPROVAL_LABEL: Record<string, string> = {
   PENDING: "승인 대기",
@@ -10,9 +11,19 @@ const APPROVAL_LABEL: Record<string, string> = {
   REJECTED: "반려",
 };
 
-export default async function TeachersPage() {
+export default async function TeachersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
+  const { filter } = await searchParams;
+  const showInactive = filter === "inactive";
+
   const teachers = await prisma.teacher.findMany({
-    where: { siteId: DEFAULT_SITE_ID },
+    where: {
+      siteId: DEFAULT_SITE_ID,
+      accountStatus: showInactive ? { not: "ACTIVE" } : "ACTIVE",
+    },
     orderBy: { id: "desc" },
     include: { rates: { orderBy: { effectiveFrom: "desc" }, take: 1 } },
   });
@@ -29,6 +40,25 @@ export default async function TeachersPage() {
         </Link>
       </div>
 
+      <div className="mb-4 flex gap-2 text-sm">
+        <Link
+          href="/teachers"
+          className={`rounded-lg px-3 py-1.5 font-medium ${
+            !showInactive ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-600"
+          }`}
+        >
+          활성 강사
+        </Link>
+        <Link
+          href="/teachers?filter=inactive"
+          className={`rounded-lg px-3 py-1.5 font-medium ${
+            showInactive ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-600"
+          }`}
+        >
+          비활성/정지 강사
+        </Link>
+      </div>
+
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <table className="w-full text-sm">
           <thead>
@@ -38,6 +68,7 @@ export default async function TeachersPage() {
               <th className="px-4 py-3">로그인 ID</th>
               <th className="px-4 py-3">국적</th>
               <th className="px-4 py-3">승인 상태</th>
+              <th className="px-4 py-3">계정 상태</th>
               <th className="px-4 py-3">현재 단가(25분)</th>
               <th className="px-4 py-3" />
             </tr>
@@ -54,18 +85,21 @@ export default async function TeachersPage() {
                 <td className="px-4 py-3 text-slate-600">{t.loginId}</td>
                 <td className="px-4 py-3 text-slate-600">{t.nationality ?? "-"}</td>
                 <td className="px-4 py-3 text-slate-600">{APPROVAL_LABEL[t.approvalStatus]}</td>
+                <td className="px-4 py-3">
+                  <AccountStatusSelect teacherId={t.id} accountStatus={t.accountStatus} />
+                </td>
                 <td className="px-4 py-3 text-slate-600">
                   {t.rates[0] ? `${t.rates[0].ratePerUnit.toString()}원` : "-"}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <DeleteButton action={deleteTeacher.bind(null, t.id)} />
+                  {!showInactive && <DeleteButton action={deleteTeacher.bind(null, t.id)} />}
                 </td>
               </tr>
             ))}
             {teachers.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
-                  등록된 강사가 없습니다.
+                <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
+                  {showInactive ? "비활성/정지 상태인 강사가 없습니다." : "등록된 강사가 없습니다."}
                 </td>
               </tr>
             )}

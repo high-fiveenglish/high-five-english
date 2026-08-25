@@ -9,6 +9,7 @@ import { ConsultationNoteModal } from "./ConsultationNoteModal";
 import { ImpersonateButton } from "./ImpersonateButton";
 import { StudentDeleteButton } from "./StudentDeleteButton";
 import { RestoreStudentButton } from "./RestoreStudentButton";
+import { AccountStatusSelect } from "./AccountStatusSelect";
 
 function fmtDateTime(d: Date) {
   return d.toISOString().slice(0, 16).replace("T", " ");
@@ -86,6 +87,7 @@ export default async function StudentsPage({
               <th className="px-3 py-3">회원등급</th>
               <th className="px-3 py-3">이름 / 아이디</th>
               <th className="px-3 py-3">수강상태</th>
+              <th className="px-3 py-3">계정 상태</th>
               <th className="px-3 py-3">가입일</th>
               <th className="px-3 py-3">관리</th>
             </tr>
@@ -131,6 +133,13 @@ export default async function StudentsPage({
                       </span>
                     )}
                   </td>
+                  <td className="px-3 py-3">
+                    {showDeleted ? (
+                      <span className="text-slate-500">{s.accountStatus}</span>
+                    ) : (
+                      <AccountStatusSelect studentId={s.id} accountStatus={s.accountStatus} />
+                    )}
+                  </td>
                   <td className="px-3 py-3 text-slate-500">{s.joinedAt.toISOString().slice(0, 10)}</td>
                   <td className="px-3 py-3">
                     {showDeleted ? (
@@ -174,7 +183,7 @@ export default async function StudentsPage({
             })}
             {students.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
                   {showDeleted ? "삭제된 회원이 없습니다." : "등록된 학생이 없습니다."}
                 </td>
               </tr>

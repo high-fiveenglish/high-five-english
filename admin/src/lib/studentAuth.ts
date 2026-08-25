@@ -14,7 +14,7 @@ function sign(studentId: number): string {
 
 export async function verifyStudentLogin(loginId: string, password: string): Promise<number | null> {
   const student = await prisma.student.findUnique({ where: { loginId } });
-  if (!student || student.deletedAt) return null;
+  if (!student || student.deletedAt || student.accountStatus !== "ACTIVE") return null;
   const ok = await bcrypt.compare(password, student.passwordHash);
   return ok ? student.id : null;
 }
@@ -57,11 +57,14 @@ export async function getStudentId(): Promise<number | null> {
   return studentId;
 }
 
+// status를 매 요청마다 다시 확인한다 — 관리자가 계정을 삭제/SUSPENDED/INACTIVE로
+// 바꾸면 이 학생이 들고 있는 서명된 쿠키가 여전히 유효해도 다음 요청부터 즉시
+// 차단되어야 한다(임퍼소네이션 세션도 동일한 student_session을 쓰므로 함께 적용됨).
 export async function requireStudent() {
   const studentId = await getStudentId();
   if (!studentId) redirect("/student/login");
   const student = await prisma.student.findUnique({ where: { id: studentId } });
-  if (!student) redirect("/student/login");
+  if (!student || student.deletedAt || student.accountStatus !== "ACTIVE") redirect("/student/login");
   return student;
 }
 

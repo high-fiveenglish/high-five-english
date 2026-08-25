@@ -3,19 +3,15 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { isAuthenticated } from "@/lib/auth";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { findTeacherScheduleConflict } from "@/lib/scheduleConflict";
 import type { SessionStatus } from "@/generated/prisma/client";
 
-async function requireAuth() {
-  if (!(await isAuthenticated())) {
-    throw new Error("인증되지 않은 요청입니다.");
-  }
-}
-
 export async function createClassSession(_prevState: { error?: string } | undefined, formData: FormData) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "schedules.create");
 
   const enrollmentId = Number(formData.get("enrollmentId"));
   const scheduledAt = String(formData.get("scheduledAt") ?? "");
@@ -39,7 +35,7 @@ export async function createClassSession(_prevState: { error?: string } | undefi
     return { error: `해당 강사는 같은 시간에 이미 다른 일정이 있습니다: ${conflict.label}` };
   }
 
-  await prisma.classSession.create({
+  const session = await prisma.classSession.create({
     data: {
       siteId: DEFAULT_SITE_ID,
       enrollmentId,
@@ -50,27 +46,34 @@ export async function createClassSession(_prevState: { error?: string } | undefi
       status: "SCHEDULED",
     },
   });
+  await logAudit({ actor, action: "SCHEDULE_CREATED", targetType: "ClassSession", targetId: session.id });
 
   revalidatePath("/schedule");
   redirect("/schedule");
 }
 
 export async function updateClassSessionStatus(id: number, status: SessionStatus) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "schedules.update");
   await prisma.classSession.update({ where: { id }, data: { status } });
+  await logAudit({ actor, action: "SCHEDULE_UPDATED", targetType: "ClassSession", targetId: id, description: `상태 변경: ${status}` });
   revalidatePath("/schedule");
 }
 
 export async function deleteClassSession(id: number) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "schedules.delete");
   await prisma.classSession.update({ where: { id }, data: { deletedAt: new Date() } });
+  await logAudit({ actor, action: "SCHEDULE_CANCELLED", targetType: "ClassSession", targetId: id });
   revalidatePath("/schedule");
   revalidatePath("/deleted-sessions");
 }
 
 export async function restoreClassSession(id: number) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "schedules.update");
   await prisma.classSession.update({ where: { id }, data: { deletedAt: null } });
+  await logAudit({ actor, action: "SCHEDULE_UPDATED", targetType: "ClassSession", targetId: id, description: "삭제 취소(복원)" });
   revalidatePath("/schedule");
   revalidatePath("/deleted-sessions");
 }

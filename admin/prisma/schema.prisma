@@ -12,6 +12,108 @@ datasource db {
 }
 
 // ---------------------------------------------------------------------------
+// 권한 시스템 (RBAC)
+// ---------------------------------------------------------------------------
+
+enum RoleName {
+  ADMIN
+  MANAGER
+  TEACHER
+  STUDENT
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum AuditAction {
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  LOGOUT
+  PASSWORD_CHANGED
+  ACCOUNT_CREATED
+  ACCOUNT_DISABLED
+  ROLE_CHANGED
+  PERMISSION_CHANGED
+  CREATE
+  UPDATE
+  DELETE
+  IMPERSONATION_STARTED
+  IMPERSONATION_ENDED
+  SCHEDULE_CREATED
+  SCHEDULE_UPDATED
+  SCHEDULE_CANCELLED
+  EVALUATION_CREATED
+  EVALUATION_UPDATED
+  LEAVE_REQUESTED
+  LEAVE_APPROVED
+  LEAVE_REJECTED
+}
+
+// ADMIN/MANAGER 전용 로그인 계정. TEACHER/STUDENT는 각자의 테이블(Teacher/Student)에
+// 이미 실계정+로그인이 있으므로 여기 포함하지 않는다 — 이 테이블은 지금까지 계정 자체가
+// 없던 두 역할(단일 공유 admin/0000 로그인만 있던 ADMIN, 아예 없던 MANAGER)만 채운다.
+model AdminUser {
+  id           Int           @id @default(autoincrement())
+  siteId       Int
+  site         Site          @relation(fields: [siteId], references: [id])
+  loginId      String        @unique
+  passwordHash String
+  name         String
+  role         RoleName
+  status       AccountStatus @default(ACTIVE)
+  lastLoginAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([siteId])
+  @@map("admin_users")
+}
+
+model Permission {
+  id          Int    @id @default(autoincrement())
+  key         String @unique
+  description String
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+// ADMIN용 행은 의도적으로 만들지 않는다 — ADMIN은 코드에서 항상 전체 허용하고 이
+// 테이블을 조회하지 않으므로, 있으나 없으나 의미가 없다. 권한관리 화면도 ADMIN을
+// 편집 대상에서 제외해 "ADMIN이 자기 권한을 지워 잠기는" 상황을 원천 차단한다.
+model RolePermission {
+  role         RoleName
+  permissionId Int
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([role, permissionId])
+  @@map("role_permissions")
+}
+
+model AuditLog {
+  id          Int         @id @default(autoincrement())
+  actorRole   RoleName?
+  actorId     Int?
+  actorName   String?
+  action      AuditAction
+  targetType  String?
+  targetId    String?
+  description String?
+  ipAddress   String?
+  createdAt   DateTime    @default(now())
+
+  @@index([actorId])
+  @@index([targetType, targetId])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
 // 사이트 / 협력사
 // ---------------------------------------------------------------------------
 
@@ -23,15 +125,16 @@ model Site {
   status    String   @default("active")
   createdAt DateTime @default(now())
 
-  agents          Agent[]
-  students        Student[]
-  teachers        Teacher[]
-  enrollments     Enrollment[]
-  levelTests      LevelTest[]
-  classSessions   ClassSession[]
-  instructors     Instructor[]
-  pricingDurations PricingDuration[]
-  leaveRequests   LeaveRequest[]
+  agents             Agent[]
+  adminUsers         AdminUser[]
+  students           Student[]
+  teachers           Teacher[]
+  enrollments        Enrollment[]
+  levelTests         LevelTest[]
+  classSessions      ClassSession[]
+  instructors        Instructor[]
+  pricingDurations   PricingDuration[]
+  leaveRequests      LeaveRequest[]
   monthlyEvaluations MonthlyEvaluation[]
 
   @@map("sites")
@@ -85,20 +188,23 @@ enum ResidenceRegion {
 }
 
 model Student {
-  id           Int           @id @default(autoincrement())
-  siteId       Int
-  site         Site          @relation(fields: [siteId], references: [id])
-  agentId      Int?
-  agent        Agent?        @relation(fields: [agentId], references: [id])
-  name         String
-  loginId      String        @unique
-  passwordHash String
-  grade        StudentGrade  @default(GENERAL)
-  points       Int           @default(0)
-  discountRate Decimal       @default(0) @db.Decimal(5, 2)
-  status       StudentStatus @default(ACTIVE)
-  joinedAt     DateTime      @default(now())
-  lastLoginAt  DateTime?
+  id            Int           @id @default(autoincrement())
+  siteId        Int
+  site          Site          @relation(fields: [siteId], references: [id])
+  agentId       Int?
+  agent         Agent?        @relation(fields: [agentId], references: [id])
+  name          String
+  loginId       String        @unique
+  passwordHash  String
+  grade         StudentGrade  @default(GENERAL)
+  points        Int           @default(0)
+  discountRate  Decimal       @default(0) @db.Decimal(5, 2)
+  status        StudentStatus @default(ACTIVE)
+  // 로그인 가능 여부를 결정하는 계정 상태 — 위 StudentStatus(수강 진행 상태: 진행/만료/홀딩)와는
+  // 별개 축이다. INACTIVE/SUSPENDED면 status와 무관하게 로그인이 차단된다.
+  accountStatus AccountStatus @default(ACTIVE)
+  joinedAt      DateTime      @default(now())
+  lastLoginAt   DateTime?
 
   // 프로필 상세 정보 — 레퍼런스 사이트(z01.htm 학생정보수정)의 필드를 대부분 반영.
   // 협력사 브랜딩(로고/공지)은 Agent 자체의 설정이라 여기 포함하지 않고, 포인트
@@ -111,11 +217,11 @@ model Student {
   address              String?
   landlinePhone        String?
   mobilePhone          String?
-  etcNote              String?           @db.Text
+  etcNote              String?          @db.Text
   parentName           String?
   parentContact        String?
   preferredClassMethod String?
-  smsOptIn             Boolean           @default(true)
+  smsOptIn             Boolean          @default(true)
   teamsId              String?
   kakaoId              String?
   email                String?
@@ -125,11 +231,11 @@ model Student {
   // 실제로 지우지 않고 deletedAt만 채운다. 학생 목록은 deletedAt: null만 보여준다.
   deletedAt DateTime?
 
-  enrollments       Enrollment[]
-  levelTests        LevelTest[]
-  classSessions     ClassSession[]
-  consultationNotes ConsultationNote[]
-  leaveRequests     LeaveRequest[]
+  enrollments        Enrollment[]
+  levelTests         LevelTest[]
+  classSessions      ClassSession[]
+  consultationNotes  ConsultationNote[]
+  leaveRequests      LeaveRequest[]
   monthlyEvaluations MonthlyEvaluation[]
 
   createdAt DateTime @default(now())
@@ -182,37 +288,40 @@ model Teacher {
   teamMembers    Teacher[]      @relation("TeamLead")
   email          String?
   approvalStatus ApprovalStatus @default(PENDING)
+  // 로그인 가능 여부를 결정하는 계정 상태 — 위 approvalStatus(채용 승인 워크플로우)와는
+  // 별개 축이다. deleteTeacher는 실제로 이 값을 INACTIVE로 바꾸는 소프트 비활성화다.
+  accountStatus  AccountStatus  @default(ACTIVE)
   joinedAt       DateTime       @default(now())
   lastLoginAt    DateTime?
 
   // 프로필 상세 정보 — 레퍼런스 사이트(z02.htm 강사정보수정)의 필드를 대부분 반영.
   // 사진/음성은 마케팅용 강사소개(Instructor)와는 별개로, LMS 내부에서 신원 확인 등
   // 운영 목적으로만 쓰는 참고용 데이터다.
-  teacherGrade     TeacherGrade @default(GENERAL)
-  sex              Sex?
-  age              Int?
-  schoolName       String?
-  major            String?
-  address          String?
+  teacherGrade      TeacherGrade @default(GENERAL)
+  sex               Sex?
+  age               Int?
+  schoolName        String?
+  major             String?
+  address           String?
   availableTimeText String?
-  availableHours   Int[] // 0~23, 근무 가능 시간대(시간 단위)
-  mobilePhone      String?
-  teamsId          String?
-  zoomUrl          String?
-  zoomPw           String?
-  tencentUrl       String?
-  experience       String?  @db.Text
-  selfIntroduction String?  @db.Text
-  photoUrl         String?  @db.Text
-  voiceUrl         String?  @db.Text
-  videoYoutubeCode String?
-  tesol            Boolean  @default(false)
-  priority         Int      @default(0)
+  availableHours    Int[] // 0~23, 근무 가능 시간대(시간 단위)
+  mobilePhone       String?
+  teamsId           String?
+  zoomUrl           String?
+  zoomPw            String?
+  tencentUrl        String?
+  experience        String?      @db.Text
+  selfIntroduction  String?      @db.Text
+  photoUrl          String?      @db.Text
+  voiceUrl          String?      @db.Text
+  videoYoutubeCode  String?
+  tesol             Boolean      @default(false)
+  priority          Int          @default(0)
 
-  rates         TeacherRate[]
-  enrollments   Enrollment[]
-  classSessions ClassSession[]
-  levelTests    LevelTest[]
+  rates              TeacherRate[]
+  enrollments        Enrollment[]
+  classSessions      ClassSession[]
+  levelTests         LevelTest[]
   monthlyEvaluations MonthlyEvaluation[]
 
   createdAt DateTime @default(now())
@@ -434,16 +543,16 @@ model LevelTest {
 
   // 리드 폼 전용 필드 — 메인 사이트 공개 신청 폼(src/components/modals/LevelTestModal.tsx)의
   // 입력값을 그대로 저장한다. studentId가 채워지면 더 이상 필요 없어지지만 이력으로 남긴다.
-  leadContactName     String?
-  leadContactPhone    String?
-  leadPreferredTimeUTC DateTime?
-  leadPreferredTimeZone String?
-  leadLessonFrequency String?
-  leadLessonDurationMin Int?
-  leadMeetingPlatform String?
+  leadContactName         String?
+  leadContactPhone        String?
+  leadPreferredTimeUTC    DateTime?
+  leadPreferredTimeZone   String?
+  leadLessonFrequency     String?
+  leadLessonDurationMin   Int?
+  leadMeetingPlatform     String?
   leadReferredTeacherName String?
-  leadStudentEnglishName String?
-  leadStudentAge       Int?
+  leadStudentEnglishName  String?
+  leadStudentAge          Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -460,28 +569,28 @@ model LevelTest {
 // ---------------------------------------------------------------------------
 
 model Instructor {
-  id             Int      @id @default(autoincrement())
-  siteId         Int
-  site           Site     @relation(fields: [siteId], references: [id])
-  slug           String   @unique
-  name           String
-  nameEn         String
-  country        String
-  flag           String
-  gradient       String
-  photoUrl       String?  @db.Text
-  audioSrc       String?  @db.Text
+  id                     Int      @id @default(autoincrement())
+  siteId                 Int
+  site                   Site     @relation(fields: [siteId], references: [id])
+  slug                   String   @unique
+  name                   String
+  nameEn                 String
+  country                String
+  flag                   String
+  gradient               String
+  photoUrl               String?  @db.Text
+  audioSrc               String?  @db.Text
   defaultMeetingPlatform String?
-  bio            String   @db.Text
-  career         String[]
-  availableDays  Int[]
-  availableHours String
-  classFeatures  String[]
-  specialties    String[]
-  levels         String[]
-  teachingStyle  String
-  published      Boolean  @default(true)
-  order          Int      @default(0)
+  bio                    String   @db.Text
+  career                 String[]
+  availableDays          Int[]
+  availableHours         String
+  classFeatures          String[]
+  specialties            String[]
+  levels                 String[]
+  teachingStyle          String
+  published              Boolean  @default(true)
+  order                  Int      @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -497,12 +606,12 @@ model Instructor {
 // ---------------------------------------------------------------------------
 
 model PricingDuration {
-  id       Int      @id @default(autoincrement())
+  id       Int          @id @default(autoincrement())
   siteId   Int
-  site     Site     @relation(fields: [siteId], references: [id])
+  site     Site         @relation(fields: [siteId], references: [id])
   code     String
-  hasBadge Boolean  @default(false)
-  order    Int      @default(0)
+  hasBadge Boolean      @default(false)
+  order    Int          @default(0)
   rows     PricingRow[]
 
   @@unique([siteId, code])

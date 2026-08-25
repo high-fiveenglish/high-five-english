@@ -1,9 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { destroySession } from "@/lib/auth";
+import { destroyBackofficeSession, requireBackofficeActor } from "@/lib/backofficeAuth";
+import { logAudit } from "@/lib/rbac";
 
 export async function logout() {
-  await destroySession();
+  const actor = await requireBackofficeActor();
+  await destroyBackofficeSession();
+  await logAudit({ actor, action: "LOGOUT" });
   redirect("/login");
 }

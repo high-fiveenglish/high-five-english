@@ -13,7 +13,9 @@ export default async function LevelTestsPage() {
       orderBy: { id: "desc" },
       include: { student: true, teacher: true },
     }),
-    prisma.teacher.findMany({ where: { siteId: DEFAULT_SITE_ID }, orderBy: { realName: "asc" } }),
+    // 신규 배정 시 선택 가능한 강사는 ACTIVE만 노출한다 — 이미 배정된 레벨테스트가
+    // INACTIVE/SUSPENDED 강사를 가리키는 경우는 아래에서 행 단위로 별도 처리한다.
+    prisma.teacher.findMany({ where: { siteId: DEFAULT_SITE_ID, accountStatus: "ACTIVE" }, orderBy: { realName: "asc" } }),
   ]);
 
   const teacherOptions = teachers.map((t) => ({ id: t.id, label: t.realName }));
@@ -72,7 +74,18 @@ export default async function LevelTestsPage() {
                   <td className="px-4 py-3 text-slate-500">{lt.appliedAt.toISOString().slice(0, 10)}</td>
                   <td className="px-4 py-3 text-slate-500">{schedule}</td>
                   <td className="px-4 py-3">
-                    <TeacherAssignSelect id={lt.id} teacherId={lt.teacherId} teachers={teacherOptions} />
+                    <TeacherAssignSelect
+                      id={lt.id}
+                      teacherId={lt.teacherId}
+                      teachers={
+                        // 현재 배정된 강사가 이미 비활성 상태라면, 선택 목록에서 사라져 값이
+                        // 깨져 보이지 않도록 그 강사만 예외적으로 옵션에 추가한다(재선택 가능
+                        // 여부와 무관하게 "지금 배정된 사람이 누구인지"는 항상 보여야 한다).
+                        lt.teacher && lt.teacher.accountStatus !== "ACTIVE"
+                          ? [...teacherOptions, { id: lt.teacher.id, label: `${lt.teacher.realName} (비활성)` }]
+                          : teacherOptions
+                      }
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <ProgressSelect id={lt.id} progressStatus={lt.progressStatus} />

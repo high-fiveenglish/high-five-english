@@ -1,8 +1,70 @@
+import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import type { RoleName } from "../src/generated/prisma/client";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
+
+// 권한 키는 resource.action 규칙을 따른다. ADMIN 행은 만들지 않는다 — ADMIN은
+// requirePermission()에서 이 테이블을 조회하지 않고 항상 전체 허용으로 처리된다.
+const PERMISSION_SEED: { key: string; description: string }[] = [
+  { key: "students.view", description: "학생 조회" },
+  { key: "students.create", description: "학생 등록" },
+  { key: "students.update", description: "학생 정보 수정" },
+  { key: "students.delete", description: "학생 삭제(소프트)" },
+  { key: "students.impersonate", description: "학생으로 로그인(임퍼소네이션)" },
+  { key: "teachers.view", description: "강사 조회" },
+  { key: "teachers.create", description: "강사 등록" },
+  { key: "teachers.update", description: "강사 정보 수정" },
+  { key: "teachers.delete", description: "강사 비활성화" },
+  { key: "schedules.view", description: "수업 일정 조회" },
+  { key: "schedules.create", description: "수업 등록" },
+  { key: "schedules.update", description: "수업 상태/일정 변경" },
+  { key: "schedules.delete", description: "수업 삭제(소프트)" },
+  { key: "level_tests.view", description: "레벨테스트 조회" },
+  { key: "level_tests.create", description: "레벨테스트 등록" },
+  { key: "level_tests.update", description: "레벨테스트 진행상태/강사배정 변경" },
+  { key: "level_tests.delete", description: "레벨테스트 삭제" },
+  { key: "enrollments.view", description: "수강 조회" },
+  { key: "enrollments.create", description: "수강 등록" },
+  { key: "enrollments.update", description: "수강 상태/결제상태 변경" },
+  { key: "enrollments.delete", description: "수강 삭제" },
+  { key: "evaluations.view", description: "학습평가서 조회" },
+  { key: "evaluations.update", description: "학습평가서 작성/수정" },
+  { key: "monthly_evaluations.view", description: "월평가서 조회" },
+  { key: "monthly_evaluations.create", description: "월평가서 작성" },
+  { key: "monthly_evaluations.update", description: "월평가서 수정" },
+  { key: "monthly_evaluations.delete", description: "월평가서 삭제" },
+  { key: "leave_requests.view", description: "연기신청 조회" },
+  { key: "leave_requests.create", description: "연기신청(본인 수업)" },
+  { key: "leave_requests.update", description: "연기 등록/적용(관리자)" },
+  { key: "leave_requests.revert", description: "연기 되돌리기" },
+  { key: "pricing.view", description: "가격표 조회" },
+  { key: "pricing.update", description: "가격표 수정" },
+  { key: "instructors.view", description: "강사소개(마케팅) 조회" },
+  { key: "instructors.create", description: "강사소개 등록" },
+  { key: "instructors.update", description: "강사소개 수정" },
+  { key: "instructors.delete", description: "강사소개 삭제" },
+  { key: "own_schedule.view", description: "본인 수업 일정 조회" },
+  { key: "own_evaluations.view", description: "본인 평가서 조회" },
+  { key: "own_evaluations.update", description: "본인 담당 수업 평가서 작성/수정" },
+];
+
+const ROLE_PERMISSION_SEED: Record<Exclude<RoleName, "ADMIN">, string[]> = {
+  MANAGER: [
+    "students.view", "students.create", "students.update",
+    "teachers.view", "teachers.create", "teachers.update",
+    "schedules.view", "schedules.create", "schedules.update", "schedules.delete",
+    "level_tests.view", "level_tests.create", "level_tests.update", "level_tests.delete",
+    "enrollments.view", "enrollments.create", "enrollments.update", "enrollments.delete",
+    "evaluations.view",
+    "monthly_evaluations.view",
+    "leave_requests.view", "leave_requests.update", "leave_requests.revert",
+  ],
+  TEACHER: ["own_schedule.view", "own_evaluations.view", "own_evaluations.update"],
+  STUDENT: ["own_schedule.view", "own_evaluations.view", "leave_requests.create"],
+};
 
 const INSTRUCTOR_SEED = [
   {
@@ -149,6 +211,45 @@ async function main() {
       update: {},
       create: { ...instructor, siteId: site.id },
     });
+  }
+
+  for (const p of PERMISSION_SEED) {
+    await prisma.permission.upsert({
+      where: { key: p.key },
+      update: { description: p.description },
+      create: p,
+    });
+  }
+
+  for (const [role, keys] of Object.entries(ROLE_PERMISSION_SEED) as [Exclude<RoleName, "ADMIN">, string[]][]) {
+    for (const key of keys) {
+      const permission = await prisma.permission.findUniqueOrThrow({ where: { key } });
+      await prisma.rolePermission.upsert({
+        where: { role_permissionId: { role, permissionId: permission.id } },
+        update: {},
+        create: { role, permissionId: permission.id },
+      });
+    }
+  }
+
+  // ADMIN 계정 시드 — 기존 admin/0000 로그인이 그대로 유지되도록 env var 값을 그대로
+  // 옮긴다. 이후 로그인 검증은 이 테이블을 기준으로 하고, ADMIN_ID/ADMIN_PASSWORD env
+  // var는 이 최초 시드 이후로는 쓰이지 않는다.
+  const adminId = process.env.ADMIN_ID;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (adminId && adminPassword) {
+    const existing = await prisma.adminUser.findUnique({ where: { loginId: adminId } });
+    if (!existing) {
+      await prisma.adminUser.create({
+        data: {
+          siteId: site.id,
+          loginId: adminId,
+          passwordHash: await bcrypt.hash(adminPassword, 10),
+          name: "관리자",
+          role: "ADMIN",
+        },
+      });
+    }
   }
 
   for (const duration of PRICING_SEED) {

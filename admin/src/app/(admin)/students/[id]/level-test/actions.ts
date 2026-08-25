@@ -3,22 +3,18 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { isAuthenticated } from "@/lib/auth";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { findTeacherScheduleConflict, LEVEL_TEST_DURATION_MIN } from "@/lib/scheduleConflict";
-
-async function requireAuth() {
-  if (!(await isAuthenticated())) {
-    throw new Error("인증되지 않은 요청입니다.");
-  }
-}
 
 export async function createLevelTestForStudent(
   studentId: number,
   _prevState: { error?: string } | undefined,
   formData: FormData,
 ) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "level_tests.create");
 
   const student = await prisma.student.findUnique({ where: { id: studentId } });
   if (!student || student.deletedAt) {
@@ -85,7 +81,7 @@ export async function createLevelTestForStudent(
     },
   });
 
-  await prisma.levelTest.create({
+  const levelTest = await prisma.levelTest.create({
     data: {
       siteId: DEFAULT_SITE_ID,
       studentId,
@@ -100,6 +96,7 @@ export async function createLevelTestForStudent(
       progressStatus: "신청",
     },
   });
+  await logAudit({ actor, action: "CREATE", targetType: "LevelTest", targetId: levelTest.id, description: `학생 ${studentId} 레벨테스트 등록` });
 
   revalidatePath("/students");
   revalidatePath("/level-tests");
@@ -115,11 +112,12 @@ export type TeacherAvailability = {
 // "찾아보기" — 선택한 날짜 기준으로 각 강사의 등록된 근무가능 시간대 중 실제로 비어있는
 // 시간만 골라 보여준다(기존 강사 데이터 + 실시간 충돌검사를 그대로 재사용).
 export async function checkTeacherAvailability(dateStr: string): Promise<TeacherAvailability[]> {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "level_tests.view");
   if (!dateStr) return [];
 
   const teachers = await prisma.teacher.findMany({
-    where: { siteId: DEFAULT_SITE_ID, approvalStatus: "APPROVED" },
+    where: { siteId: DEFAULT_SITE_ID, approvalStatus: "APPROVED", accountStatus: "ACTIVE" },
     orderBy: { realName: "asc" },
   });
 

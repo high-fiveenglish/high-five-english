@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireTeacher } from "@/lib/teacherAuth";
+import { requirePermission, resolveRolePermissions, logAudit } from "@/lib/rbac";
 
 const MAX_LENGTH = 2000;
 
@@ -13,6 +14,8 @@ export async function saveEvaluation(
   formData: FormData,
 ) {
   const teacher = await requireTeacher();
+  const actor = { role: "TEACHER" as const, id: teacher.id, name: teacher.realName, permissions: await resolveRolePermissions("TEACHER") };
+  requirePermission(actor, "own_evaluations.update");
 
   const content = String(formData.get("content") ?? "").trim();
   if (!content) {
@@ -33,10 +36,17 @@ export async function saveEvaluation(
     return { error: "완료된 수업만 평가서를 작성할 수 있습니다." };
   }
 
+  const existing = await prisma.lessonEvaluation.findUnique({ where: { classSessionId: sessionId } });
   await prisma.lessonEvaluation.upsert({
     where: { classSessionId: sessionId },
     update: { content },
     create: { classSessionId: sessionId, content },
+  });
+  await logAudit({
+    actor,
+    action: existing ? "EVALUATION_UPDATED" : "EVALUATION_CREATED",
+    targetType: "LessonEvaluation",
+    targetId: sessionId,
   });
 
   revalidatePath("/teacher/sessions");

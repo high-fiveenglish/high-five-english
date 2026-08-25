@@ -3,19 +3,15 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { isAuthenticated } from "@/lib/auth";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 
 const MAX_LENGTH = 4000;
 
-async function requireAuth() {
-  if (!(await isAuthenticated())) {
-    throw new Error("인증되지 않은 요청입니다.");
-  }
-}
-
 export async function createMonthlyEvaluation(_prevState: { error?: string } | undefined, formData: FormData) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "monthly_evaluations.create");
 
   const studentId = Number(formData.get("studentId"));
   const yearMonth = String(formData.get("yearMonth") ?? "").trim();
@@ -29,7 +25,7 @@ export async function createMonthlyEvaluation(_prevState: { error?: string } | u
     return { error: `${MAX_LENGTH}자를 초과했습니다. (현재 ${content.length}자)` };
   }
 
-  await prisma.monthlyEvaluation.upsert({
+  const evaluation = await prisma.monthlyEvaluation.upsert({
     where: { studentId_yearMonth: { studentId, yearMonth } },
     update: { content, teacherId: teacherIdRaw ? Number(teacherIdRaw) : null },
     create: {
@@ -40,6 +36,7 @@ export async function createMonthlyEvaluation(_prevState: { error?: string } | u
       teacherId: teacherIdRaw ? Number(teacherIdRaw) : null,
     },
   });
+  await logAudit({ actor, action: "CREATE", targetType: "MonthlyEvaluation", targetId: evaluation.id });
 
   revalidatePath("/monthly-evaluations");
   redirect("/monthly-evaluations");
@@ -50,7 +47,8 @@ export async function updateMonthlyEvaluation(
   _prevState: { error?: string } | undefined,
   formData: FormData,
 ) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "monthly_evaluations.update");
 
   const content = String(formData.get("content") ?? "").trim();
   if (!content) {
@@ -61,6 +59,7 @@ export async function updateMonthlyEvaluation(
   }
 
   await prisma.monthlyEvaluation.update({ where: { id }, data: { content } });
+  await logAudit({ actor, action: "UPDATE", targetType: "MonthlyEvaluation", targetId: id });
 
   revalidatePath("/monthly-evaluations");
   revalidatePath(`/monthly-evaluations/${id}`);
@@ -68,7 +67,9 @@ export async function updateMonthlyEvaluation(
 }
 
 export async function deleteMonthlyEvaluation(id: number) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "monthly_evaluations.delete");
   await prisma.monthlyEvaluation.delete({ where: { id } });
+  await logAudit({ actor, action: "DELETE", targetType: "MonthlyEvaluation", targetId: id });
   revalidatePath("/monthly-evaluations");
 }

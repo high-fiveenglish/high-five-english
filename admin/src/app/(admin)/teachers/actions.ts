@@ -4,18 +4,14 @@ import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { isAuthenticated } from "@/lib/auth";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
-import type { ApprovalStatus, Sex, TeacherGrade } from "@/generated/prisma/client";
-
-async function requireAuth() {
-  if (!(await isAuthenticated())) {
-    throw new Error("인증되지 않은 요청입니다.");
-  }
-}
+import type { AccountStatus, ApprovalStatus, Sex, TeacherGrade } from "@/generated/prisma/client";
 
 export async function createTeacher(_prevState: { error?: string } | undefined, formData: FormData) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "teachers.create");
 
   const realName = String(formData.get("realName") ?? "").trim();
   const nickname = String(formData.get("nickname") ?? "").trim();
@@ -36,7 +32,7 @@ export async function createTeacher(_prevState: { error?: string } | undefined, 
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  await prisma.teacher.create({
+  const teacher = await prisma.teacher.create({
     data: {
       siteId: DEFAULT_SITE_ID,
       realName,
@@ -52,13 +48,15 @@ export async function createTeacher(_prevState: { error?: string } | undefined, 
         : undefined,
     },
   });
+  await logAudit({ actor, action: "ACCOUNT_CREATED", targetType: "Teacher", targetId: teacher.id, description: `강사 등록: ${realName}` });
 
   revalidatePath("/teachers");
   redirect("/teachers");
 }
 
 export async function updateTeacher(id: number, _prevState: { error?: string } | undefined, formData: FormData) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "teachers.update");
 
   const realName = String(formData.get("realName") ?? "").trim();
   const nickname = String(formData.get("nickname") ?? "").trim();
@@ -129,14 +127,33 @@ export async function updateTeacher(id: number, _prevState: { error?: string } |
         : {}),
     },
   });
+  await logAudit({ actor, action: "UPDATE", targetType: "Teacher", targetId: id, description: newPassword ? "강사 정보 수정(비밀번호 변경 포함)" : "강사 정보 수정" });
 
   revalidatePath("/teachers");
   revalidatePath(`/teachers/${id}`);
   redirect("/teachers");
 }
 
+// 수업/평가/급여 이력 등 연결 데이터가 있을 수 있어 실제로 지우지 않고 accountStatus를
+// INACTIVE로 바꾸는 소프트 비활성화로 처리한다(하드 삭제 금지 — 이전에는 prisma.teacher.delete였음).
 export async function deleteTeacher(id: number) {
-  await requireAuth();
-  await prisma.teacher.delete({ where: { id } });
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "teachers.delete");
+  await prisma.teacher.update({ where: { id }, data: { accountStatus: "INACTIVE" } });
+  await logAudit({ actor, action: "ACCOUNT_DISABLED", targetType: "Teacher", targetId: id, description: "강사 비활성화" });
+  revalidatePath("/teachers");
+}
+
+export async function updateTeacherAccountStatus(id: number, accountStatus: AccountStatus) {
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "teachers.update");
+  await prisma.teacher.update({ where: { id }, data: { accountStatus } });
+  await logAudit({
+    actor,
+    action: accountStatus === "ACTIVE" ? "UPDATE" : "ACCOUNT_DISABLED",
+    targetType: "Teacher",
+    targetId: id,
+    description: `계정 상태 변경: ${accountStatus}`,
+  });
   revalidatePath("/teachers");
 }

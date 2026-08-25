@@ -3,24 +3,8 @@ import type { NextRequest } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 
 const ADMIN_COOKIE = "admin_session";
-const ADMIN_TOKEN_PAYLOAD = "hifive-admin-session";
 const TEACHER_COOKIE = "teacher_session";
 const STUDENT_COOKIE = "student_session";
-
-function expectedAdminToken(): string | null {
-  const secret = process.env.ADMIN_SESSION_SECRET;
-  if (!secret) return null;
-  return createHmac("sha256", secret).update(ADMIN_TOKEN_PAYLOAD).digest("hex");
-}
-
-function isValidAdminSession(request: NextRequest): boolean {
-  const expected = expectedAdminToken();
-  const value = request.cookies.get(ADMIN_COOKIE)?.value;
-  if (!expected || !value) return false;
-  const a = Buffer.from(value);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
 
 function isValidRoleSession(request: NextRequest, cookieName: string, rolePrefix: string): boolean {
   const secret = process.env.ADMIN_SESSION_SECRET;
@@ -54,7 +38,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/student/login", request.url));
   }
 
-  if (isValidAdminSession(request)) {
+  if (isValidRoleSession(request, ADMIN_COOKIE, "admin")) {
     return NextResponse.next();
   }
   return NextResponse.redirect(new URL("/login", request.url));

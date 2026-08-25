@@ -17,7 +17,7 @@ function sign(teacherId: number): string {
 
 export async function verifyTeacherLogin(loginId: string, password: string): Promise<number | null> {
   const teacher = await prisma.teacher.findUnique({ where: { loginId } });
-  if (!teacher) return null;
+  if (!teacher || teacher.accountStatus !== "ACTIVE") return null;
   const ok = await bcrypt.compare(password, teacher.passwordHash);
   return ok ? teacher.id : null;
 }
@@ -67,12 +67,14 @@ export async function getTeacherId(): Promise<number | null> {
 // 한 번에 확인하는 헬퍼 — proxy.ts는 서명만 검증하고 DB는 안 보므로(무상태 검증),
 // 탈퇴/비활성 처리된 강사가 예전 쿠키로 계속 접근하는 걸 막으려면 실제 사용 지점에서
 // DB까지 다시 확인해야 한다.
+// status를 매 요청마다 다시 확인한다 — 관리자가 계정을 SUSPENDED/INACTIVE로 바꾸면
+// 이 강사가 들고 있는 서명된 쿠키가 여전히 유효해도 다음 요청부터 즉시 차단되어야 한다.
 export async function requireTeacher() {
   const teacherId = await getTeacherId();
   if (!teacherId) redirect("/teacher/login");
 
   const teacher = await prisma.teacher.findUnique({ where: { id: teacherId } });
-  if (!teacher) redirect("/teacher/login");
+  if (!teacher || teacher.accountStatus !== "ACTIVE") redirect("/teacher/login");
 
   return teacher;
 }

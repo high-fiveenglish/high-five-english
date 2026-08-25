@@ -3,18 +3,14 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { isAuthenticated } from "@/lib/auth";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import type { EnrollmentStatus, PaymentStatus } from "@/generated/prisma/client";
 
-async function requireAuth() {
-  if (!(await isAuthenticated())) {
-    throw new Error("인증되지 않은 요청입니다.");
-  }
-}
-
 export async function createEnrollment(_prevState: { error?: string } | undefined, formData: FormData) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "enrollments.create");
 
   const studentId = Number(formData.get("studentId"));
   const teacherIdRaw = String(formData.get("teacherId") ?? "");
@@ -36,7 +32,7 @@ export async function createEnrollment(_prevState: { error?: string } | undefine
     return { error: "필수 항목을 모두 입력해주세요." };
   }
 
-  await prisma.enrollment.create({
+  const enrollment = await prisma.enrollment.create({
     data: {
       siteId: DEFAULT_SITE_ID,
       studentId,
@@ -56,6 +52,7 @@ export async function createEnrollment(_prevState: { error?: string } | undefine
       paymentStatus: "UNPAID",
     },
   });
+  await logAudit({ actor, action: "CREATE", targetType: "Enrollment", targetId: enrollment.id });
 
   revalidatePath("/enrollments");
   revalidatePath("/students");
@@ -63,19 +60,25 @@ export async function createEnrollment(_prevState: { error?: string } | undefine
 }
 
 export async function updateEnrollmentStatus(id: number, status: EnrollmentStatus) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "enrollments.update");
   await prisma.enrollment.update({ where: { id }, data: { status } });
+  await logAudit({ actor, action: "UPDATE", targetType: "Enrollment", targetId: id, description: `상태 변경: ${status}` });
   revalidatePath("/enrollments");
 }
 
 export async function updateEnrollmentPaymentStatus(id: number, paymentStatus: PaymentStatus | null) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "enrollments.update");
   await prisma.enrollment.update({ where: { id }, data: { paymentStatus } });
+  await logAudit({ actor, action: "UPDATE", targetType: "Enrollment", targetId: id, description: `결제상태 변경: ${paymentStatus ?? "미설정"}` });
   revalidatePath("/enrollments");
 }
 
 export async function deleteEnrollment(id: number) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "enrollments.delete");
   await prisma.enrollment.delete({ where: { id } });
+  await logAudit({ actor, action: "DELETE", targetType: "Enrollment", targetId: id });
   revalidatePath("/enrollments");
 }

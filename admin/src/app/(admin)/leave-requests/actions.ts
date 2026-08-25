@@ -3,22 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { isAuthenticated } from "@/lib/auth";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 
 const EXTENDED_DAYS = 1;
-
-async function requireAuth() {
-  if (!(await isAuthenticated())) {
-    throw new Error("인증되지 않은 요청입니다.");
-  }
-}
 
 export async function createLeaveRequestAdmin(
   _prevState: { error?: string } | undefined,
   formData: FormData,
 ) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "leave_requests.update");
 
   const sessionId = Number(formData.get("classSessionId"));
   const reason = String(formData.get("reason") ?? "").trim();
@@ -43,7 +39,7 @@ export async function createLeaveRequestAdmin(
   const newEndDate = new Date(enrollment.endDate);
   newEndDate.setDate(newEndDate.getDate() + EXTENDED_DAYS);
 
-  await prisma.$transaction([
+  const [, , leaveRequest] = await prisma.$transaction([
     prisma.classSession.update({ where: { id: sessionId }, data: { status: "LEAVE" } }),
     prisma.enrollment.update({ where: { id: enrollment.id }, data: { endDate: newEndDate } }),
     prisma.leaveRequest.create({
@@ -57,13 +53,15 @@ export async function createLeaveRequestAdmin(
       },
     }),
   ]);
+  await logAudit({ actor, action: "LEAVE_REQUESTED", targetType: "LeaveRequest", targetId: leaveRequest.id, description: "관리자가 연기 생성·적용" });
 
   revalidatePath("/leave-requests");
   redirect("/leave-requests");
 }
 
 export async function revertLeaveRequest(id: number) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "leave_requests.revert");
 
   const leaveRequest = await prisma.leaveRequest.findUnique({ where: { id } });
   if (!leaveRequest) return;
@@ -79,6 +77,7 @@ export async function revertLeaveRequest(id: number) {
     prisma.enrollment.update({ where: { id: enrollment.id }, data: { endDate: restoredEndDate } }),
     prisma.leaveRequest.delete({ where: { id } }),
   ]);
+  await logAudit({ actor, action: "DELETE", targetType: "LeaveRequest", targetId: id, description: "연기 되돌리기" });
 
   revalidatePath("/leave-requests");
 }

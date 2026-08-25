@@ -3,18 +3,14 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { isAuthenticated } from "@/lib/auth";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { findTeacherScheduleConflict, LEVEL_TEST_DURATION_MIN } from "@/lib/scheduleConflict";
 
-async function requireAuth() {
-  if (!(await isAuthenticated())) {
-    throw new Error("인증되지 않은 요청입니다.");
-  }
-}
-
 export async function createLevelTest(_prevState: { error?: string } | undefined, formData: FormData) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "level_tests.create");
 
   const studentId = Number(formData.get("studentId"));
   const subject = String(formData.get("subject") ?? "").trim();
@@ -25,7 +21,7 @@ export async function createLevelTest(_prevState: { error?: string } | undefined
     return { error: "학생을 선택해주세요." };
   }
 
-  await prisma.levelTest.create({
+  const levelTest = await prisma.levelTest.create({
     data: {
       siteId: DEFAULT_SITE_ID,
       studentId,
@@ -35,19 +31,23 @@ export async function createLevelTest(_prevState: { error?: string } | undefined
       progressStatus: "신청",
     },
   });
+  await logAudit({ actor, action: "CREATE", targetType: "LevelTest", targetId: levelTest.id });
 
   revalidatePath("/level-tests");
   redirect("/level-tests");
 }
 
 export async function updateLevelTestProgress(id: number, progressStatus: string) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "level_tests.update");
   await prisma.levelTest.update({ where: { id }, data: { progressStatus } });
+  await logAudit({ actor, action: "UPDATE", targetType: "LevelTest", targetId: id, description: `진행상태 변경: ${progressStatus}` });
   revalidatePath("/level-tests");
 }
 
 export async function assignLevelTestTeacher(id: number, teacherId: number | null): Promise<{ error?: string }> {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "level_tests.update");
 
   if (teacherId) {
     const levelTest = await prisma.levelTest.findUnique({ where: { id } });
@@ -65,12 +65,15 @@ export async function assignLevelTestTeacher(id: number, teacherId: number | nul
   }
 
   await prisma.levelTest.update({ where: { id }, data: { teacherId } });
+  await logAudit({ actor, action: "UPDATE", targetType: "LevelTest", targetId: id, description: teacherId ? `강사 배정: ${teacherId}` : "강사 배정 해제" });
   revalidatePath("/level-tests");
   return {};
 }
 
 export async function deleteLevelTest(id: number) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "level_tests.delete");
   await prisma.levelTest.delete({ where: { id } });
+  await logAudit({ actor, action: "DELETE", targetType: "LevelTest", targetId: id });
   revalidatePath("/level-tests");
 }

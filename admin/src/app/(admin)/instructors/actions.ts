@@ -3,14 +3,9 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { isAuthenticated } from "@/lib/auth";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
-
-async function requireAuth() {
-  if (!(await isAuthenticated())) {
-    throw new Error("인증되지 않은 요청입니다.");
-  }
-}
 
 function linesToArray(raw: string): string[] {
   return raw
@@ -47,7 +42,8 @@ function readInstructorForm(formData: FormData) {
 }
 
 export async function createInstructor(_prevState: { error?: string } | undefined, formData: FormData) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "instructors.create");
   const data = readInstructorForm(formData);
 
   if (!data.name || !data.nameEn || !data.bio) {
@@ -59,7 +55,7 @@ export async function createInstructor(_prevState: { error?: string } | undefine
     _max: { order: true },
   });
 
-  await prisma.instructor.create({
+  const instructor = await prisma.instructor.create({
     data: {
       ...data,
       slug: slugify(data.nameEn),
@@ -67,13 +63,15 @@ export async function createInstructor(_prevState: { error?: string } | undefine
       order: (maxOrder._max.order ?? 0) + 1,
     },
   });
+  await logAudit({ actor, action: "CREATE", targetType: "Instructor", targetId: instructor.id });
 
   revalidatePath("/instructors");
   redirect("/instructors");
 }
 
 export async function updateInstructor(id: number, _prevState: { error?: string } | undefined, formData: FormData) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "instructors.update");
   const data = readInstructorForm(formData);
 
   if (!data.name || !data.nameEn || !data.bio) {
@@ -81,6 +79,7 @@ export async function updateInstructor(id: number, _prevState: { error?: string 
   }
 
   await prisma.instructor.update({ where: { id }, data });
+  await logAudit({ actor, action: "UPDATE", targetType: "Instructor", targetId: id });
 
   revalidatePath("/instructors");
   revalidatePath(`/instructors/${id}`);
@@ -88,13 +87,16 @@ export async function updateInstructor(id: number, _prevState: { error?: string 
 }
 
 export async function deleteInstructor(id: number) {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "instructors.delete");
   await prisma.instructor.delete({ where: { id } });
+  await logAudit({ actor, action: "DELETE", targetType: "Instructor", targetId: id });
   revalidatePath("/instructors");
 }
 
 export async function moveInstructor(id: number, direction: "up" | "down") {
-  await requireAuth();
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "instructors.update");
   const all = await prisma.instructor.findMany({
     where: { siteId: DEFAULT_SITE_ID },
     orderBy: { order: "asc" },
@@ -109,5 +111,6 @@ export async function moveInstructor(id: number, direction: "up" | "down") {
     prisma.instructor.update({ where: { id: a.id }, data: { order: b.order } }),
     prisma.instructor.update({ where: { id: b.id }, data: { order: a.order } }),
   ]);
+  await logAudit({ actor, action: "UPDATE", targetType: "Instructor", targetId: id, description: `순서 변경(${direction})` });
   revalidatePath("/instructors");
 }

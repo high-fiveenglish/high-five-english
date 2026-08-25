@@ -15,7 +15,7 @@ export default async function StudentLevelTestPage({
   const [student, teachers, previousLevelTest] = await Promise.all([
     prisma.student.findUnique({ where: { id: studentId } }),
     prisma.teacher.findMany({
-      where: { siteId: DEFAULT_SITE_ID, approvalStatus: "APPROVED" },
+      where: { siteId: DEFAULT_SITE_ID, approvalStatus: "APPROVED", accountStatus: "ACTIVE" },
       orderBy: { realName: "asc" },
     }),
     prisma.levelTest.findFirst({
