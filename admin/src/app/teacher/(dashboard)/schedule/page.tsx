@@ -46,8 +46,8 @@ export default async function TeacherSchedulePage() {
       />
 
       <h2 className="mb-3 mt-8 text-sm font-semibold text-slate-700">Level Test</h2>
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+        <table className="w-full min-w-[600px] text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
               <th className="px-4 py-3">학생</th>

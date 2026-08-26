@@ -17,7 +17,7 @@ export default async function TeacherBulletinDetailPage({ params }: { params: Pr
     <div>
       <h1 className="mb-1 text-xl font-bold text-slate-900">{bulletin.title}</h1>
       <p className="mb-6 text-xs text-slate-500">{fmtDateTime(bulletin.createdAt)}</p>
-      <div className="whitespace-pre-wrap rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-700">
+      <div className="whitespace-pre-wrap break-words rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-700">
         {bulletin.content}
       </div>
     </div>
