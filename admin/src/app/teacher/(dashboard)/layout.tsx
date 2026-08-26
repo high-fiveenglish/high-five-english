@@ -15,8 +15,17 @@ export default async function TeacherDashboardLayout({ children }: { children: R
             <Link href="/teacher" className="hover:text-slate-900">
               홈
             </Link>
+            <Link href="/teacher/schedule" className="hover:text-slate-900">
+              Schedule
+            </Link>
             <Link href="/teacher/sessions" className="hover:text-slate-900">
-              내 수업
+              My Classes
+            </Link>
+            <Link href="/teacher/hold" className="hover:text-slate-900">
+              Hold Management
+            </Link>
+            <Link href="/teacher/bulletins" className="hover:text-slate-900">
+              Bulletin Board
             </Link>
           </nav>
         </div>

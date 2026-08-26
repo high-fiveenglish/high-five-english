@@ -24,17 +24,18 @@ export default async function TeacherSessionsPage({
   const sessions = await prisma.classSession.findMany({
     where: {
       teacherId: teacher.id,
+      deletedAt: null,
       ...(filter === "unwritten" ? { status: "COMPLETED", evaluation: null } : {}),
     },
     orderBy: { scheduledAt: "desc" },
-    include: { student: true, evaluation: true },
+    include: { student: true, evaluation: true, enrollment: true },
     take: 100,
   });
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">내 수업</h1>
+        <h1 className="text-xl font-bold text-slate-900">My Classes</h1>
         <div className="flex gap-2 text-sm">
           <Link
             href="/teacher/sessions"
@@ -51,13 +52,17 @@ export default async function TeacherSessionsPage({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+        <table className="w-full min-w-[1000px] text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
               <th className="px-4 py-3">수업 일시</th>
               <th className="px-4 py-3">학생</th>
               <th className="px-4 py-3">시간(분)</th>
+              <th className="px-4 py-3">수업 타입</th>
+              <th className="px-4 py-3">수업 방식</th>
+              <th className="px-4 py-3">교재</th>
+              <th className="px-4 py-3">진도</th>
               <th className="px-4 py-3">상태</th>
               <th className="px-4 py-3">평가서</th>
               <th className="px-4 py-3" />
@@ -69,6 +74,14 @@ export default async function TeacherSessionsPage({
                 <td className="px-4 py-3 text-slate-900">{fmtDateTime(s.scheduledAt)}</td>
                 <td className="px-4 py-3 text-slate-600">{s.student.name}</td>
                 <td className="px-4 py-3 text-slate-600">{s.durationMin}</td>
+                <td className="px-4 py-3 text-slate-600">{s.enrollment.classType}</td>
+                <td className="px-4 py-3 text-slate-600">{s.enrollment.classMethod}</td>
+                <td className="max-w-[140px] truncate px-4 py-3 text-slate-600" title={s.enrollment.textbookName ?? undefined}>
+                  {s.enrollment.textbookName ?? "-"}
+                </td>
+                <td className="max-w-[160px] truncate px-4 py-3 text-slate-500" title={s.progressNote ?? undefined}>
+                  {s.progressNote ?? "기록 없음"}
+                </td>
                 <td className="px-4 py-3 text-slate-600">{STATUS_LABEL[s.status]}</td>
                 <td className="px-4 py-3">
                   {s.evaluation ? (
@@ -94,7 +107,7 @@ export default async function TeacherSessionsPage({
             ))}
             {sessions.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={10} className="px-4 py-10 text-center text-slate-400">
                   해당하는 수업이 없습니다.
                 </td>
               </tr>

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireStudent } from "@/lib/studentAuth";
 import { requirePermission, resolveRolePermissions, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
+import { applyClassLeave } from "@/lib/leaveApply";
 
 const EXTENDED_DAYS = 1;
 
@@ -29,13 +30,16 @@ export async function requestLeave(sessionId: number, reason: string): Promise<{
     return { error: "연결된 수강신청 정보를 찾을 수 없습니다." };
   }
 
-  const newEndDate = new Date(enrollment.endDate);
-  newEndDate.setDate(newEndDate.getDate() + EXTENDED_DAYS);
-
-  const [, , leaveRequest] = await prisma.$transaction([
-    prisma.classSession.update({ where: { id: sessionId }, data: { status: "LEAVE" } }),
-    prisma.enrollment.update({ where: { id: enrollment.id }, data: { endDate: newEndDate } }),
-    prisma.leaveRequest.create({
+  // 학생 셀프 신청은 기존과 동일하게 즉시 확정(APPROVED)된다 — Teacher Hold만
+  // 승인 대기(PENDING)를 거친다.
+  const leaveRequest = await prisma.$transaction(async (tx) => {
+    await applyClassLeave(tx, {
+      classSessionId: sessionId,
+      enrollmentId: enrollment.id,
+      currentEndDate: enrollment.endDate,
+      extendedDays: EXTENDED_DAYS,
+    });
+    return tx.leaveRequest.create({
       data: {
         siteId: DEFAULT_SITE_ID,
         classSessionId: sessionId,
@@ -43,9 +47,13 @@ export async function requestLeave(sessionId: number, reason: string): Promise<{
         studentId: student.id,
         reason: reason.trim() || null,
         extendedDays: EXTENDED_DAYS,
+        status: "APPROVED",
+        requestedByRole: "STUDENT",
+        approvedById: null,
+        approvedAt: new Date(),
       },
-    }),
-  ]);
+    });
+  });
   await logAudit({ actor, action: "LEAVE_REQUESTED", targetType: "LeaveRequest", targetId: leaveRequest.id });
 
   revalidatePath("/student/sessions");

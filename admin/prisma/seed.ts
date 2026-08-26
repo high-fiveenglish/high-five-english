@@ -49,6 +49,12 @@ const PERMISSION_SEED: { key: string; description: string }[] = [
   { key: "own_schedule.view", description: "본인 수업 일정 조회" },
   { key: "own_evaluations.view", description: "본인 평가서 조회" },
   { key: "own_evaluations.update", description: "본인 담당 수업 평가서 작성/수정" },
+  { key: "own_leave_requests.view", description: "본인 Hold 신청 내역 조회" },
+  { key: "own_leave_requests.create", description: "본인 담당 수업 Hold 신청" },
+  { key: "bulletins.view", description: "공지사항 조회" },
+  { key: "bulletins.create", description: "공지사항 작성" },
+  { key: "bulletins.update", description: "공지사항 수정" },
+  { key: "bulletins.delete", description: "공지사항 삭제" },
 ];
 
 const ROLE_PERMISSION_SEED: Record<Exclude<RoleName, "ADMIN">, string[]> = {
@@ -61,8 +67,12 @@ const ROLE_PERMISSION_SEED: Record<Exclude<RoleName, "ADMIN">, string[]> = {
     "evaluations.view",
     "monthly_evaluations.view",
     "leave_requests.view", "leave_requests.update", "leave_requests.revert",
+    "bulletins.view",
   ],
-  TEACHER: ["own_schedule.view", "own_evaluations.view", "own_evaluations.update"],
+  TEACHER: [
+    "own_schedule.view", "own_evaluations.view", "own_evaluations.update",
+    "own_leave_requests.view", "own_leave_requests.create",
+  ],
   STUDENT: ["own_schedule.view", "own_evaluations.view", "leave_requests.create"],
 };
 

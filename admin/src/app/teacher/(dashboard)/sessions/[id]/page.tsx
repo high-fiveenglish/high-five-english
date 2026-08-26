@@ -16,7 +16,7 @@ export default async function SessionEvaluationPage({
 
   const session = await prisma.classSession.findUnique({
     where: { id: Number(id) },
-    include: { student: true, evaluation: true },
+    include: { student: true, evaluation: true, enrollment: true },
   });
 
   if (!session || session.teacherId !== teacher.id) notFound();
@@ -24,8 +24,13 @@ export default async function SessionEvaluationPage({
   return (
     <div>
       <h1 className="mb-1 text-xl font-bold text-slate-900">일일평가서 작성</h1>
-      <p className="mb-6 text-sm text-slate-500">
-        {session.student.name} 학생 · {fmtDateTime(session.scheduledAt)} · {session.durationMin}분 수업
+      <p className="mb-1 text-sm text-slate-500">
+        {session.student.name} 학생 · {fmtDateTime(session.scheduledAt)} · {session.durationMin}분 수업 ·{" "}
+        {session.enrollment.classType} · {session.enrollment.classMethod}
+        {session.enrollment.textbookName ? ` · ${session.enrollment.textbookName}` : ""}
+      </p>
+      <p className="mb-6 whitespace-pre-wrap text-sm text-slate-500">
+        <span className="font-semibold text-slate-600">수업 진도:</span> {session.progressNote ?? "기록 없음"}
       </p>
 
       {session.status !== "COMPLETED" ? (

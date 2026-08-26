@@ -136,6 +136,7 @@ model Site {
   pricingDurations   PricingDuration[]
   leaveRequests      LeaveRequest[]
   monthlyEvaluations MonthlyEvaluation[]
+  bulletins          Bulletin[]
 
   @@map("sites")
 }
@@ -500,11 +501,38 @@ model LeaveRequest {
   reason         String?
   extendedDays   Int          @default(1)
 
+  // Teacher Hold 승인 워크플로우 — Student/Admin 신청은 기존처럼 즉시 APPROVED로
+  // 생성되어 그대로 적용되고(기존 데이터는 전부 이 케이스), Teacher 신청만 PENDING으로
+  // 생성되어 ClassSession/Enrollment를 건드리지 않다가 관리자 승인 시점에 반영된다.
+  status          ApprovalStatus @default(APPROVED)
+  requestedByRole RoleName       @default(STUDENT)
+  approvedById    Int?
+  approvedAt      DateTime?
+
   createdAt DateTime @default(now())
 
   @@index([siteId])
   @@index([studentId])
   @@map("leave_requests")
+}
+
+// ---------------------------------------------------------------------------
+// 게시판 — 관리자가 작성하는 공지, 강사는 읽기 전용으로 조회한다.
+// ---------------------------------------------------------------------------
+
+model Bulletin {
+  id            Int      @id @default(autoincrement())
+  siteId        Int
+  site          Site     @relation(fields: [siteId], references: [id])
+  title         String
+  content       String   @db.Text
+  authorAdminId Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
+  @@map("bulletins")
 }
 
 // ---------------------------------------------------------------------------

@@ -44,6 +44,7 @@ const NAV_GROUPS = [
     items: [
       { href: "/instructors", label: "강사소개 관리", permission: "instructors.view" },
       { href: "/pricing", label: "가격표 관리", permission: "pricing.view" },
+      { href: "/bulletins", label: "공지사항 관리", permission: "bulletins.view" },
     ],
   },
 ] as const;
