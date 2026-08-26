@@ -7,6 +7,7 @@ import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { findTeacherScheduleConflict } from "@/lib/scheduleConflict";
+import { parseAppDateTime } from "@/lib/appTime";
 import type { SessionStatus } from "@/generated/prisma/client";
 
 export async function createClassSession(_prevState: { error?: string } | undefined, formData: FormData) {
@@ -28,7 +29,7 @@ export async function createClassSession(_prevState: { error?: string } | undefi
 
   const conflict = await findTeacherScheduleConflict({
     teacherId: enrollment.teacherId,
-    start: new Date(scheduledAt),
+    start: parseAppDateTime(scheduledAt),
     durationMin,
   });
   if (conflict) {
@@ -41,7 +42,7 @@ export async function createClassSession(_prevState: { error?: string } | undefi
       enrollmentId,
       studentId: enrollment.studentId,
       teacherId: enrollment.teacherId,
-      scheduledAt: new Date(scheduledAt),
+      scheduledAt: parseAppDateTime(scheduledAt),
       durationMin,
       status: "SCHEDULED",
     },

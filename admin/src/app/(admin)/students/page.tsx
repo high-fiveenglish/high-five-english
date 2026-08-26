@@ -10,10 +10,9 @@ import { ImpersonateButton } from "./ImpersonateButton";
 import { StudentDeleteButton } from "./StudentDeleteButton";
 import { RestoreStudentButton } from "./RestoreStudentButton";
 import { AccountStatusSelect } from "./AccountStatusSelect";
+import { formatAppDateTime } from "@/lib/appTime";
 
-function fmtDateTime(d: Date) {
-  return d.toISOString().slice(0, 16).replace("T", " ");
-}
+const fmtDateTime = formatAppDateTime;
 
 const NOTICE_LABEL: Record<string, string> = {
   "level-test-created": "레벨테스트가 등록되었습니다.",

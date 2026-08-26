@@ -3,10 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { StudentEditForm } from "./StudentEditForm";
 import { ConsultationNotes } from "./ConsultationNotes";
+import { formatAppDateTime } from "@/lib/appTime";
 
-function fmtDateTime(d: Date) {
-  return d.toISOString().slice(0, 16).replace("T", " ");
-}
+const fmtDateTime = formatAppDateTime;
 
 export default async function EditStudentPage({
   params,

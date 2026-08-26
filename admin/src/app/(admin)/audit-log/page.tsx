@@ -1,13 +1,12 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { formatAppDateTimeSeconds } from "@/lib/appTime";
 import type { AuditAction, RoleName } from "@/generated/prisma/client";
 
 const PAGE_SIZE = 50;
 
-function fmt(d: Date) {
-  return d.toISOString().slice(0, 19).replace("T", " ");
-}
+const fmt = formatAppDateTimeSeconds;
 
 export default async function AuditLogPage({
   searchParams,

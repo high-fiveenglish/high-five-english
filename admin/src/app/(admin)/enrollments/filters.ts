@@ -1,3 +1,4 @@
+import { appDayStart } from "@/lib/appTime";
 import type { Prisma } from "@/generated/prisma/client";
 
 export type EnrollmentFilterKey =
@@ -25,11 +26,9 @@ export const FILTER_TABS: { key: EnrollmentFilterKey; label: string }[] = [
   { key: "paymentFailed", label: "결제 실패" },
 ];
 
+// "오늘"은 서버 프로세스의 로컬 시간이 아니라 Asia/Seoul 기준으로 계산한다.
 function dayStart(offsetDays: number): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + offsetDays);
-  return d;
+  return appDayStart(new Date(), offsetDays);
 }
 
 export function buildEnrollmentWhere(filter: string | undefined): Prisma.EnrollmentWhereInput {

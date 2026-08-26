@@ -5,6 +5,7 @@ import { DeleteButton } from "../DeleteButton";
 import { deleteLevelTest } from "./actions";
 import { ProgressSelect } from "./ProgressSelect";
 import { TeacherAssignSelect } from "./TeacherAssignSelect";
+import { formatAppDateTime } from "@/lib/appTime";
 
 export default async function LevelTestsPage() {
   const [levelTests, teachers] = await Promise.all([
@@ -53,9 +54,9 @@ export default async function LevelTestsPage() {
               const name = lt.student?.name ?? lt.leadStudentEnglishName ?? "-";
               const method = lt.classMethod ?? lt.leadMeetingPlatform ?? "-";
               const schedule = lt.scheduledTestDate
-                ? lt.scheduledTestDate.toISOString().slice(0, 16).replace("T", " ")
+                ? formatAppDateTime(lt.scheduledTestDate)
                 : lt.leadPreferredTimeUTC
-                  ? `${lt.leadPreferredTimeUTC.toISOString().slice(0, 16).replace("T", " ")} (희망)`
+                  ? `${formatAppDateTime(lt.leadPreferredTimeUTC)} (희망)`
                   : "-";
               return (
                 <tr key={lt.id} className="border-b border-slate-100 last:border-0">

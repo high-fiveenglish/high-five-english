@@ -1,10 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { requireStudent } from "@/lib/studentAuth";
+import { formatAppDateTime } from "@/lib/appTime";
 import { LeaveRequestButton } from "./LeaveRequestButton";
 
-function fmtDateTime(d: Date) {
-  return d.toISOString().slice(0, 16).replace("T", " ");
-}
+const fmtDateTime = formatAppDateTime;
 
 const STATUS_LABEL: Record<string, string> = {
   SCHEDULED: "예정",

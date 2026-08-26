@@ -1,9 +1,8 @@
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { findAllOverlappingSessions } from "@/lib/scheduleConflict";
+import { formatAppDateTime } from "@/lib/appTime";
 
-function fmtDateTime(d: Date) {
-  return d.toISOString().slice(0, 16).replace("T", " ");
-}
+const fmtDateTime = formatAppDateTime;
 
 export default async function OverlappingSessionsPage() {
   const pairs = await findAllOverlappingSessions(DEFAULT_SITE_ID);

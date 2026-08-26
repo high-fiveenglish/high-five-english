@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireTeacher } from "@/lib/teacherAuth";
+import { formatAppDateTime } from "@/lib/appTime";
 
-function fmtDateTime(d: Date) {
-  return d.toISOString().slice(0, 16).replace("T", " ");
-}
+const fmtDateTime = formatAppDateTime;
 
 const STATUS_LABEL: Record<string, string> = {
   SCHEDULED: "예정",

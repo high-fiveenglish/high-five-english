@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { formatAppDateTime } from "./appTime";
 
 // 레벨테스트에는 별도 소요시간 필드가 없어 충돌 판정용으로 고정값을 쓴다.
 export const LEVEL_TEST_DURATION_MIN = 30;
@@ -8,9 +9,7 @@ export type ScheduleConflict = {
   label: string;
 };
 
-function fmt(d: Date) {
-  return d.toISOString().slice(0, 16).replace("T", " ");
-}
+const fmt = formatAppDateTime;
 
 function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number) {
   return aStart < bEnd && bStart < aEnd;

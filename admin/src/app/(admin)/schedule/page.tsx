@@ -4,10 +4,9 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { DeleteButton } from "../DeleteButton";
 import { deleteClassSession } from "./actions";
 import { SessionStatusSelect } from "./SessionStatusSelect";
+import { formatAppDateTime } from "@/lib/appTime";
 
-function fmtDateTime(d: Date) {
-  return d.toISOString().slice(0, 16).replace("T", " ");
-}
+const fmtDateTime = formatAppDateTime;
 
 export default async function SchedulePage({
   searchParams,
@@ -16,11 +15,13 @@ export default async function SchedulePage({
 }) {
   const { from, to } = await searchParams;
 
+  // 절대 밀리초 연산이라 서버 프로세스의 TZ 설정과 무관하게 항상 "지금부터 정확히
+  // N일"이다(setDate/getDate 같은 로컬 달력 연산 대신 사용 — 한국은 서머타임이
+  // 없어 이 둘은 원래도 같은 결과였지만, 서버-로컬 의존을 완전히 없애기 위해 바꿨다).
   const today = new Date();
-  const defaultFrom = new Date(today);
-  defaultFrom.setDate(defaultFrom.getDate() - 7);
-  const defaultTo = new Date(today);
-  defaultTo.setDate(defaultTo.getDate() + 14);
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const defaultFrom = new Date(today.getTime() - 7 * DAY_MS);
+  const defaultTo = new Date(today.getTime() + 14 * DAY_MS);
 
   const rangeFrom = from ? new Date(from) : defaultFrom;
   const rangeTo = to ? new Date(to) : defaultTo;

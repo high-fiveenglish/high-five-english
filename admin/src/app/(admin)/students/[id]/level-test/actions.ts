@@ -7,6 +7,7 @@ import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { findTeacherScheduleConflict, LEVEL_TEST_DURATION_MIN } from "@/lib/scheduleConflict";
+import { parseAppDateTime } from "@/lib/appTime";
 
 export async function createLevelTestForStudent(
   studentId: number,
@@ -53,7 +54,7 @@ export async function createLevelTestForStudent(
 
   let scheduledTestDate: Date | null = null;
   if (testDate) {
-    scheduledTestDate = new Date(`${testDate}T${testTime || "00:00"}:00`);
+    scheduledTestDate = parseAppDateTime(`${testDate}T${testTime || "00:00"}`);
   }
 
   const teacherId = teacherIdRaw ? Number(teacherIdRaw) : null;
@@ -126,8 +127,7 @@ export async function checkTeacherAvailability(dateStr: string): Promise<Teacher
     const sortedHours = [...t.availableHours].sort((a, b) => a - b);
     const hours: { hour: number; free: boolean }[] = [];
     for (const h of sortedHours) {
-      const start = new Date(`${dateStr}T00:00:00`);
-      start.setHours(h, 0, 0, 0);
+      const start = parseAppDateTime(`${dateStr}T${String(h).padStart(2, "0")}:00`);
       const conflict = await findTeacherScheduleConflict({
         teacherId: t.id,
         start,

@@ -1,11 +1,10 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireTeacher } from "@/lib/teacherAuth";
+import { formatAppDateTime } from "@/lib/appTime";
 import { EvaluationForm } from "./EvaluationForm";
 
-function fmtDateTime(d: Date) {
-  return d.toISOString().slice(0, 16).replace("T", " ");
-}
+const fmtDateTime = formatAppDateTime;
 
 export default async function SessionEvaluationPage({
   params,

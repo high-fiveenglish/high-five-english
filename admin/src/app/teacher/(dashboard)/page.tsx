@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireTeacher } from "@/lib/teacherAuth";
+import { appDayStart, appDayEnd } from "@/lib/appTime";
 
 export default async function TeacherHomePage() {
   const teacher = await requireTeacher();
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date(todayStart);
-  todayEnd.setDate(todayEnd.getDate() + 1);
+  // "오늘"은 서버 프로세스의 로컬 시간이 아니라 Asia/Seoul 기준으로 계산한다.
+  const todayStart = appDayStart();
+  const todayEnd = appDayEnd();
 
   const [todaySessions, unwrittenCount] = await Promise.all([
     prisma.classSession.count({

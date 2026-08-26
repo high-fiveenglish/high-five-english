@@ -2,10 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { restoreClassSession } from "../schedule/actions";
 import { RestoreButton } from "./RestoreButton";
+import { formatAppDateTime } from "@/lib/appTime";
 
-function fmtDateTime(d: Date) {
-  return d.toISOString().slice(0, 16).replace("T", " ");
-}
+const fmtDateTime = formatAppDateTime;
 
 export default async function DeletedSessionsPage() {
   const sessions = await prisma.classSession.findMany({

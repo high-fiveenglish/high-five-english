@@ -5,6 +5,7 @@ import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { RoleSelect } from "./RoleSelect";
 import { StatusSelect } from "./StatusSelect";
+import { formatAppDateTime } from "@/lib/appTime";
 
 export default async function AccountsPage() {
   const actor = await requireBackofficeActor();
@@ -50,7 +51,7 @@ export default async function AccountsPage() {
                   <StatusSelect id={a.id} status={a.status} />
                 </td>
                 <td className="px-4 py-3 text-slate-500">
-                  {a.lastLoginAt ? a.lastLoginAt.toISOString().slice(0, 16).replace("T", " ") : "-"}
+                  {a.lastLoginAt ? formatAppDateTime(a.lastLoginAt) : "-"}
                 </td>
               </tr>
             ))}

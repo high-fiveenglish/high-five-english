@@ -7,6 +7,7 @@ import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { findTeacherScheduleConflict, LEVEL_TEST_DURATION_MIN } from "@/lib/scheduleConflict";
+import { parseAppDateTime } from "@/lib/appTime";
 
 export async function createLevelTest(_prevState: { error?: string } | undefined, formData: FormData) {
   const actor = await requireBackofficeActor();
@@ -27,7 +28,7 @@ export async function createLevelTest(_prevState: { error?: string } | undefined
       studentId,
       subject: subject || null,
       classMethod: classMethod || null,
-      scheduledTestDate: scheduledTestDate ? new Date(scheduledTestDate) : null,
+      scheduledTestDate: scheduledTestDate ? parseAppDateTime(scheduledTestDate) : null,
       progressStatus: "신청",
     },
   });
