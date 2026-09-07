@@ -87,7 +87,6 @@ const ALL_NAMESPACES = [
   "textbooks",
   "courses",
   "legal",
-  "notices",
   "reviews",
   "classroom",
   "admin",

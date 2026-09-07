@@ -110,6 +110,12 @@
     },
     "cta": "Đăng ký kiểm tra trình độ miễn phí ngay"
   },
+  "notices": {
+    "eyebrow": "Hỗ trợ khách hàng · Thông báo",
+    "title": "Thông báo",
+    "description": "Xem tin tức và thông báo mới nhất từ HiFive English.",
+    "empty": "Chưa có thông báo nào."
+  },
   "reviews": {
     "eyebrow": "Hỗ trợ khách hàng · Đánh giá học viên",
     "title": "Minh chứng bằng đánh giá, không phải quảng cáo",

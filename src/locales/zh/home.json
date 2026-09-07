@@ -110,6 +110,12 @@
     },
     "cta": "立即申请免费水平测试"
   },
+  "notices": {
+    "eyebrow": "客户中心 · 公告",
+    "title": "公告",
+    "description": "请查看HiFive English的最新消息和通知事项。",
+    "empty": "暂无公告。"
+  },
   "reviews": {
     "eyebrow": "客户中心 · 学员评价",
     "title": "不靠广告，用评价证明实力",

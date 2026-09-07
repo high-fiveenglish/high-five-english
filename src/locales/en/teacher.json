@@ -5,18 +5,73 @@
   "meeting_links_desc": "Register these once and they'll automatically be used for every class with a student on that platform.",
   "link_placeholder": "{{platform}} join link",
   "save": "Save",
-  "my_students_title": "My Students ({{count}})",
-  "no_students": "You have no students yet.",
-  "remaining_lessons": "{{count}} remaining",
-  "upcoming_lessons_title": "Upcoming Classes",
+  "tabs": {
+    "schedule": "Schedule",
+    "bulletin_board": "Bulletin Board"
+  },
+  "bulletin": {
+    "loading": "Loading...",
+    "empty": "No notices yet."
+  },
+  "calendar": {
+    "title": "Class Calendar",
+    "prev_month": "Previous month",
+    "next_month": "Next month",
+    "month_label": "{{year}}.{{month}}",
+    "closure_legend": "Academy-wide closure day"
+  },
+  "selected_date_title": "Classes on {{date}}",
   "table_headers": {
-    "date": "Date",
     "time": "Time",
     "student": "Student",
+    "route": "Route",
+    "topic": "Previous Progress",
+    "textbook": "Today's Progress",
+    "platform": "Platform",
+    "evaluation": "Evaluation",
     "attendance": "Attendance",
-    "enter": "Enter"
+    "hold": "Hold"
   },
-  "no_lessons": "No upcoming classes.",
+  "no_lessons_selected": "No classes on this date.",
   "enter_class": "Enter Class",
-  "link_pending": "Link not ready yet"
+  "link_pending": "Link not ready yet",
+  "minutes": "{{count}} min",
+  "progress_pending": "Not recorded",
+  "progress_start": "(before start)",
+  "evaluation_status": {
+    "not_started": "Not started",
+    "in_progress": "In progress",
+    "completed": "Completed"
+  },
+  "hold_button": "Hold",
+  "hold_unavailable": "-",
+  "hold_modal": {
+    "title": "Hold Class",
+    "confirm_question": "Place this class on hold?",
+    "description": "Holding marks this class as a teacher absence. It won't count against the student's remaining lessons, and a new class is automatically scheduled for the next available date matching the weekly pattern.",
+    "reason_label": "Reason (required)",
+    "reason_placeholder": "e.g. Unable to teach due to a personal matter.",
+    "cancel": "Cancel",
+    "confirm": "Hold",
+    "submitting": "Processing...",
+    "success_title": "This class has been placed on hold.",
+    "new_date_label": "New class date",
+    "confirm_ok": "OK"
+  },
+  "eval_entry_modal": {
+    "title": "Class Evaluation (Quick)",
+    "attended": "Attended",
+    "absent": "Absent",
+    "level_label": "Current Level",
+    "progress_label": "Today's Progress (textbook · page)",
+    "progress_placeholder": "e.g. Touchstone 1 · Unit 5 p.32",
+    "comment_label": "Teacher's Comments",
+    "comment_placeholder": "e.g.\n📘 Today's Lesson\n\n📝 What We Covered\n\n💬 Key Expressions Learned\n\n✅ A Few Things to Polish\n❌ ...\n✅ ...\n\n🌟 What You Did Really Well",
+    "comment_char_suffix": " chars",
+    "cancel": "Cancel",
+    "save": "Save",
+    "submitting": "Saving...",
+    "success_title": "Saved.",
+    "confirm_ok": "OK"
+  }
 }

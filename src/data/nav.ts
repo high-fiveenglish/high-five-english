@@ -62,7 +62,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     labelKey: "nav.customer_center",
     children: [
-      { labelKey: "nav.notice", href: "/notice" },
+      { labelKey: "nav.notice", href: "/", scrollTo: "notices" },
       { labelKey: "nav.reviews", href: "/", scrollTo: "reviews" },
       { labelKey: "nav.counsel", href: "/counsel" },
     ],

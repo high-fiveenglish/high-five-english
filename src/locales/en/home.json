@@ -110,6 +110,12 @@
     },
     "cta": "Request Your Free Level Test Now"
   },
+  "notices": {
+    "eyebrow": "Support · Notices",
+    "title": "Notices",
+    "description": "Check the latest news and announcements from HiFive English.",
+    "empty": "No notices yet."
+  },
   "reviews": {
     "eyebrow": "Support · Reviews",
     "title": "Proven by Reviews, Not Ads",

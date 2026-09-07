@@ -5,18 +5,73 @@
   "meeting_links_desc": "한 번 등록하면 이 플랫폼을 사용하는 내 담당 학생 전원의 수업에 자동으로 연결됩니다.",
   "link_placeholder": "{{platform}} 참여 링크",
   "save": "저장",
-  "my_students_title": "담당 학생 ({{count}}명)",
-  "no_students": "담당 학생이 없습니다.",
-  "remaining_lessons": "잔여 {{count}}회",
-  "upcoming_lessons_title": "예정된 수업",
+  "tabs": {
+    "schedule": "Schedule",
+    "bulletin_board": "Bulletin Board"
+  },
+  "bulletin": {
+    "loading": "불러오는 중입니다...",
+    "empty": "등록된 공지사항이 없습니다."
+  },
+  "calendar": {
+    "title": "수업 달력",
+    "prev_month": "이전 달",
+    "next_month": "다음 달",
+    "month_label": "{{year}}.{{month}}",
+    "closure_legend": "화상영어 전체 휴강일"
+  },
+  "selected_date_title": "{{date}} 수업",
   "table_headers": {
-    "date": "날짜",
     "time": "시간",
     "student": "학생",
+    "route": "경로",
+    "topic": "직전 진도",
+    "textbook": "오늘 진도",
+    "platform": "화상플랫폼",
+    "evaluation": "평가",
     "attendance": "출결상태",
-    "enter": "입장"
+    "hold": "Hold"
   },
-  "no_lessons": "예정된 수업이 없습니다.",
+  "no_lessons_selected": "선택한 날짜에 수업이 없습니다.",
   "enter_class": "수업 입장",
-  "link_pending": "입장 링크 준비 중"
+  "link_pending": "입장 링크 준비 중",
+  "minutes": "{{count}}분",
+  "progress_pending": "미작성",
+  "progress_start": "시작 전",
+  "evaluation_status": {
+    "not_started": "미작성",
+    "in_progress": "작성 중",
+    "completed": "작성 완료"
+  },
+  "hold_button": "Hold",
+  "hold_unavailable": "-",
+  "hold_modal": {
+    "title": "수업 Hold",
+    "confirm_question": "이 수업을 Hold 처리하시겠습니까?",
+    "description": "Hold 처리하면 이 수업은 강사결석으로 표시되고, 수강 횟수 차감 없이 요일 패턴에 맞는 다음 가능한 날짜로 자동 배정됩니다.",
+    "reason_label": "사유 (필수)",
+    "reason_placeholder": "예: 개인 사정으로 수업 진행이 어렵습니다.",
+    "cancel": "취소",
+    "confirm": "Hold 처리",
+    "submitting": "처리 중...",
+    "success_title": "수업이 Hold 처리되었습니다.",
+    "new_date_label": "새 수업일",
+    "confirm_ok": "확인"
+  },
+  "eval_entry_modal": {
+    "title": "수업 평가 (간이)",
+    "attended": "출석",
+    "absent": "결석",
+    "level_label": "현재 레벨",
+    "progress_label": "오늘 진도 (교재 · 페이지)",
+    "progress_placeholder": "예: Touchstone 1 · Unit 5 p.32",
+    "comment_label": "강사 코멘트",
+    "comment_placeholder": "예)\n📘 오늘의 수업\n\n📝 오늘의 학습 내용\n\n💬 오늘 배운 주요 표현\n\n✅ 조금만 다듬으면 더 좋아지는 부분\n❌ ...\n✅ ...\n\n🌟 오늘 정말 잘한 점",
+    "comment_char_suffix": "자",
+    "cancel": "취소",
+    "save": "저장",
+    "submitting": "저장 중...",
+    "success_title": "저장되었습니다.",
+    "confirm_ok": "확인"
+  }
 }

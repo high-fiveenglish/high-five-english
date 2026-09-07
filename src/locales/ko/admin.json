@@ -47,7 +47,7 @@
       "meetingLinks": "화상회의 링크 관리",
       "payments": "결제 관리",
       "siteSettings": "사이트 설정",
-      "notices": "공지사항 관리",
+      "notices": "강사 공지사항 관리",
       "reviews": "수강후기 관리",
       "levelTest": "레벨테스트 신청 관리",
       "pricing": "수강료 관리"
@@ -100,7 +100,8 @@
     "link_reschedule": "수업 연기 신청 내역 보기",
     "link_meeting_settings": "화상회의 프로그램 설정",
     "link_accounts": "계정 및 권한 관리",
-    "link_notices": "공지사항 관리",
+    "link_notices": "강사 공지사항 관리",
+    "link_home_notices": "학생 공지사항 관리",
     "link_reviews": "수강후기 관리",
     "link_level_test": "레벨테스트 신청 내역 보기",
     "link_pricing": "수강료 관리",
@@ -108,7 +109,8 @@
     "link_consult_channels": "1:1 상담 채널 관리"
   },
   "notices": {
-    "admin_title": "공지사항 관리",
+    "admin_title": "강사 공지사항 관리",
+    "admin_description": "여기서 작성한 공지는 강사 페이지의 Bulletin Board에만 표시됩니다. 학생 및 방문객은 볼 수 없습니다.",
     "table_headers": { "title": "제목", "author": "작성자", "created_at": "작성일시", "status": "상태", "actions": "관리" },
     "no_rows": "등록된 공지사항이 없습니다.",
     "new_button": "새 공지사항 작성",
@@ -123,6 +125,10 @@
     "status_published": "공개",
     "status_hidden": "비공개",
     "delete_button": "삭제"
+  },
+  "homeNotices": {
+    "admin_title": "학생 공지사항 관리",
+    "admin_description": "여기서 작성한 공지는 홈페이지의 공지사항 섹션에 표시되어 학생 및 방문객 누구나 볼 수 있습니다. 읽기 전용이며, 학생이 직접 작성할 수는 없습니다."
   },
   "reviews": {
     "admin_title": "수강후기 관리",

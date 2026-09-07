@@ -5,7 +5,23 @@
 // same layering as src/lib/auth/types.ts and src/lib/scheduling/types.ts.
 import type { MeetingPlatformId } from "../../data/meetingPlatforms";
 
+/** A teacher-only bulletin — read via noticeService.listNoticesForTeacher, which
+ * requires an authenticated teacher actor. Never shown to students or guests. */
 export interface Notice {
+  id: string;
+  title: string;
+  content: string;
+  authorAccountId: string;
+  authorName: string;
+  published: boolean;
+  createdAt: string; // ISO datetime
+  updatedAt: string; // ISO datetime
+}
+
+/** A public, student/visitor-facing announcement shown as a card in the homepage's
+ * Notices section (see HomeNoticesSection) — read-only for students, admin-authored via
+ * homeNoticeService. Distinct from Notice above, which is teacher-only. */
+export interface HomeNotice {
   id: string;
   title: string;
   content: string;

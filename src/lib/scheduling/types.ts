@@ -1,4 +1,5 @@
 import type { MeetingPlatformId } from "../../data/meetingPlatforms";
+import type { CEFRLevel } from "../../data/textbookCatalog";
 
 /** Calendar date, e.g. "2026-08-25" */
 export type ISODate = string;
@@ -49,6 +50,10 @@ export interface Enrollment {
   courseId: string;
   teacherId: string;
   textbookId: string;
+  /** Which agent/branch this enrollment was booked through, e.g. "main" for direct
+   * sign-ups or an agent code for a partner-referred student. Display-only in this
+   * mock system — there's no agent management feature here to edit it. */
+  route: string;
   startDate: ISODate;
   /** Always derived from `lessons` via recomputeEnrollmentEndDate — never set directly. */
   endDate: ISODate;
@@ -62,6 +67,10 @@ export interface Enrollment {
    * creation (optionally pre-filled from the teacher's default) and shown as-is to
    * the student — never recomputed at read time. */
   meetingPlatform: MeetingPlatformId;
+  /** Fixed by the student's level test result at signup, but editable afterward
+   * (currently by the teacher, from the class list evaluation entry — see
+   * teacherService.updateEnrollmentLevel) as monthly evaluations reassess progress. */
+  currentLevel: CEFRLevel;
 }
 
 export interface Lesson {
@@ -78,6 +87,16 @@ export interface Lesson {
   /** The join link for this specific class session, set by an admin/teacher ahead of
    * time. Undefined until registered — the "수업 입장" button stays disabled until then. */
   meetingUrl?: string;
+  /** Textbook/page progress reached as of this specific lesson — recorded when the
+   * teacher marks this lesson's outcome (see teacherService.submitLessonOutcome).
+   * Undefined until that lesson has actually happened and been recorded. The next
+   * lesson's "직전 진도" is derived by walking back through the same enrollment's
+   * lessons to the most recent one that has this set. */
+  progress?: string;
+  /** The teacher's free-form written feedback for this specific lesson, recorded
+   * alongside `progress` in the same quick "Evaluation" entry. Shown to the student on
+   * this lesson once set. */
+  teacherComment?: string;
 }
 
 export interface DailyEvaluation {

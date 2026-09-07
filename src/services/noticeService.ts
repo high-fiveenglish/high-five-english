@@ -1,12 +1,11 @@
-// Notice board mock service layer — same "requirePermission first" pattern as
-// adminService.ts. listPublicNotices takes no actor at all (guests can read published
-// notices); every write function requires the "notices" permission, which
-// general_manager always has and general_admin only has if granted (see
-// AdminAccountsPage's permission checkboxes, driven by ALL_PERMISSION_KEYS).
+// Teacher notice board mock service layer — same "requirePermission first" pattern as
+// adminService.ts for admin writes. These notices are teacher-only: students and guests
+// must never be able to read them, so there is no unauthenticated/public read path here
+// (see listNoticesForTeacher, which requires an authenticated teacher actor).
 import type { Notice } from "../lib/community/types";
 import type { Actor, ServiceResult } from "../lib/auth/types";
 import { errResult, okResult } from "../lib/auth/types";
-import { requirePermission } from "../lib/auth/permissions";
+import { requirePermission, requireRole } from "../lib/auth/permissions";
 import { ACCOUNTS } from "../data/accounts";
 import { store } from "./store";
 
@@ -18,14 +17,14 @@ function nextNoticeId(): string {
   return `notice-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 }
 
-export async function listPublicNotices(): Promise<Notice[]> {
-  return [...store.notices]
-    .filter((n) => n.published)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
-
-export async function getPublicNotice(id: string): Promise<Notice | null> {
-  return store.notices.find((n) => n.id === id && n.published) ?? null;
+export async function listNoticesForTeacher(actor: Actor): Promise<ServiceResult<Notice[]>> {
+  const guard = requireRole(actor, ["teacher"]);
+  if (!guard.ok) return guard;
+  return okResult(
+    [...store.notices]
+      .filter((n) => n.published)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+  );
 }
 
 export async function listAllNotices(actor: Actor | null): Promise<ServiceResult<Notice[]>> {

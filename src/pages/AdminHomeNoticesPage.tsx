@@ -4,25 +4,25 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Container } from "../components/ui/Container";
 import { SectionHeading } from "../components/ui/SectionHeading";
 import { RouteGuard } from "../components/auth/RouteGuard";
-import { AdminNoticeFormModal } from "../components/modals/AdminNoticeFormModal";
+import { AdminHomeNoticeFormModal } from "../components/modals/AdminHomeNoticeFormModal";
 import { useAuth } from "../context/AuthContext";
-import { listAllNotices, deleteNotice } from "../services/noticeService";
-import type { Notice } from "../lib/community/types";
+import { listAllHomeNotices, deleteHomeNotice } from "../services/homeNoticeService";
+import type { HomeNotice } from "../lib/community/types";
 
 function formatDateTime(iso: string) {
   return iso.slice(0, 16).replace("T", " ");
 }
 
-function AdminNoticesContent() {
+function AdminHomeNoticesContent() {
   const { actor } = useAuth();
   const { t } = useTranslation("admin");
-  const [notices, setNotices] = useState<Notice[]>([]);
+  const [notices, setNotices] = useState<HomeNotice[]>([]);
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<Notice | null>(null);
+  const [editing, setEditing] = useState<HomeNotice | null>(null);
 
   const load = () => {
     if (!actor) return;
-    listAllNotices(actor).then((res) => {
+    listAllHomeNotices(actor).then((res) => {
       if (res.ok) setNotices(res.value);
     });
   };
@@ -33,13 +33,13 @@ function AdminNoticesContent() {
     setEditing(null);
     setFormOpen(true);
   };
-  const openEdit = (n: Notice) => {
+  const openEdit = (n: HomeNotice) => {
     setEditing(n);
     setFormOpen(true);
   };
   const handleDelete = async (id: string) => {
     if (!actor) return;
-    await deleteNotice(actor, id);
+    await deleteHomeNotice(actor, id);
     load();
   };
 
@@ -48,8 +48,8 @@ function AdminNoticesContent() {
       <Container className="max-w-5xl">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <SectionHeading eyebrow={t("eyebrow")} title={t("notices.admin_title")} align="left" />
-            <p className="mt-1 text-sm text-slate-500">{t("notices.admin_description")}</p>
+            <SectionHeading eyebrow={t("eyebrow")} title={t("homeNotices.admin_title")} align="left" />
+            <p className="mt-1 text-sm text-slate-500">{t("homeNotices.admin_description")}</p>
           </div>
           <button
             onClick={openCreate}
@@ -124,7 +124,7 @@ function AdminNoticesContent() {
         </div>
       </Container>
 
-      <AdminNoticeFormModal
+      <AdminHomeNoticeFormModal
         open={formOpen}
         notice={editing}
         onClose={() => setFormOpen(false)}
@@ -134,14 +134,14 @@ function AdminNoticesContent() {
   );
 }
 
-export function AdminNoticesPage({ onOpenLogin }: { onOpenLogin: () => void }) {
+export function AdminHomeNoticesPage({ onOpenLogin }: { onOpenLogin: () => void }) {
   return (
     <RouteGuard
       allow={["general_manager", "general_admin"]}
-      requirePermission="notices"
+      requirePermission="homeNotices"
       onOpenLogin={onOpenLogin}
     >
-      <AdminNoticesContent />
+      <AdminHomeNoticesContent />
     </RouteGuard>
   );
 }

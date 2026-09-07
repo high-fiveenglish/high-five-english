@@ -7,6 +7,7 @@
 import i18n from "../i18n/config";
 import { INSTRUCTORS } from "./instructors";
 import type { MeetingPlatformId } from "./meetingPlatforms";
+import type { CEFRLevel } from "./textbookCatalog";
 import {
   extendSchedule,
   generateInitialSchedule,
@@ -41,8 +42,9 @@ export type ClassroomStudent = {
   id: string;
   name: string;
   /** The name shown on the student's behalf wherever displaying their legal Korean
-   * name isn't appropriate (e.g. a public review) — see findStudentEnglishName. */
-  englishName: string;
+   * name isn't appropriate (e.g. a public review) — see findStudentEnglishName. If
+   * unset, findStudentEnglishName falls back to romanizing `name`. */
+  englishName?: string;
 };
 
 export type LevelTestResult = {
@@ -137,6 +139,30 @@ interface EnrollmentBlueprint {
   classTime: string;
   totalLessons: number;
   meetingPlatform: MeetingPlatformId;
+  route: string;
+  currentLevel: CEFRLevel;
+}
+
+// Seeded page-progress trail for already-happened lessons only — a future/still-scheduled
+// lesson genuinely has no progress yet, so it's left unset (see withProgress below).
+const PROGRESS_LOG = [
+  `${DEMO_TEXTBOOK.title} · Unit 4 p.32`,
+  `${DEMO_TEXTBOOK.title} · Unit 4 p.38`,
+  `${DEMO_TEXTBOOK.title} · Unit 5 p.6`,
+  `${DEMO_TEXTBOOK.title} · Unit 5 p.14`,
+  `${DEMO_TEXTBOOK.title} · Unit 5 p.22`,
+  `${DEMO_TEXTBOOK.title} · Unit 5 p.29`,
+];
+
+function withProgress(lessons: Lesson[]): Lesson[] {
+  const sorted = [...lessons].sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+  let i = 0;
+  return sorted.map((lesson) => {
+    // Only an actually-attended lesson advances progress — an absence, a hold, or a
+    // still-scheduled lesson has nothing to record (matches submitLessonOutcome).
+    if (lesson.status !== "completed") return lesson;
+    return { ...lesson, progress: PROGRESS_LOG[i++ % PROGRESS_LOG.length] };
+  });
 }
 
 const BLUEPRINTS: EnrollmentBlueprint[] = [
@@ -149,6 +175,8 @@ const BLUEPRINTS: EnrollmentBlueprint[] = [
     classTime: "19:00",
     totalLessons: 24,
     meetingPlatform: "zoom",
+    route: "main",
+    currentLevel: "b1",
   },
   {
     enrollmentId: "enrollment-2",
@@ -159,6 +187,8 @@ const BLUEPRINTS: EnrollmentBlueprint[] = [
     classTime: "20:00",
     totalLessons: 16,
     meetingPlatform: "zoom",
+    route: "mnmenglish",
+    currentLevel: "a2",
   },
   {
     enrollmentId: "enrollment-3",
@@ -169,6 +199,8 @@ const BLUEPRINTS: EnrollmentBlueprint[] = [
     classTime: "17:00",
     totalLessons: 16,
     meetingPlatform: "voov",
+    route: "main",
+    currentLevel: "b2",
   },
   {
     enrollmentId: "enrollment-4",
@@ -179,6 +211,8 @@ const BLUEPRINTS: EnrollmentBlueprint[] = [
     classTime: "18:00",
     totalLessons: 20,
     meetingPlatform: "voov",
+    route: "synergyenglish",
+    currentLevel: "pre-a1",
   },
   {
     enrollmentId: "enrollment-5",
@@ -189,6 +223,8 @@ const BLUEPRINTS: EnrollmentBlueprint[] = [
     classTime: "21:00",
     totalLessons: 16,
     meetingPlatform: "teams",
+    route: "main",
+    currentLevel: "b2plus",
   },
   {
     enrollmentId: "enrollment-6",
@@ -199,6 +235,8 @@ const BLUEPRINTS: EnrollmentBlueprint[] = [
     classTime: "09:00",
     totalLessons: 16,
     meetingPlatform: "teams",
+    route: "mnmenglish",
+    currentLevel: "a1",
   },
 ];
 
@@ -218,6 +256,8 @@ function draftFor(bp: EnrollmentBlueprint): Enrollment {
     classTime: bp.classTime,
     status: "active",
     meetingPlatform: bp.meetingPlatform,
+    route: bp.route,
+    currentLevel: bp.currentLevel,
   };
 }
 
@@ -367,7 +407,7 @@ function buildFlagshipSeed(bp: EnrollmentBlueprint): {
     });
   }
 
-  return { enrollment, lessons, evaluations, rescheduleRequests };
+  return { enrollment, lessons: withProgress(lessons), evaluations, rescheduleRequests };
 }
 
 /** Every other enrollment: a real generated schedule plus a realism pass (past scheduled
@@ -431,7 +471,7 @@ function buildStandardSeed(bp: EnrollmentBlueprint): {
     }
   }
 
-  return { enrollment, lessons, evaluations, rescheduleRequests };
+  return { enrollment, lessons: withProgress(lessons), evaluations, rescheduleRequests };
 }
 
 function buildSeed(): {

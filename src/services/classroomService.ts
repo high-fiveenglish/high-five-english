@@ -13,6 +13,7 @@ import {
 import { INSTRUCTORS, type Instructor } from "../data/instructors";
 import { MEETING_PLATFORMS, type MeetingPlatformId } from "../data/meetingPlatforms";
 import { computeBlockedDates, extendSchedule } from "../lib/scheduling/engine";
+import { romanizeKoreanName } from "../lib/textUtils/romanizeKorean";
 import type {
   ClosureDate,
   DailyEvaluation,
@@ -159,7 +160,7 @@ export async function requestReschedule(
   return okResult(result.value.rescheduleRequest);
 }
 
-function enrollmentsLessonsForTeacher(teacherId: string): Lesson[] {
+export function enrollmentsLessonsForTeacher(teacherId: string): Lesson[] {
   const enrollmentIds = new Set(
     store.enrollments.filter((e) => e.teacherId === teacherId).map((e) => e.id),
   );
@@ -177,5 +178,7 @@ export function findStudentName(studentId: string): string {
 }
 
 export function findStudentEnglishName(studentId: string): string {
-  return STUDENTS.find((s) => s.id === studentId)?.englishName ?? studentId;
+  const student = STUDENTS.find((s) => s.id === studentId);
+  if (!student) return studentId;
+  return student.englishName ?? romanizeKoreanName(student.name);
 }

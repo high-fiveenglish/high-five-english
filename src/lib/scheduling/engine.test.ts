@@ -31,6 +31,8 @@ function makeEnrollment(overrides: Partial<Enrollment> = {}): Enrollment {
     classTime: "19:00",
     status: "active",
     meetingPlatform: "zoom",
+    route: "main",
+    currentLevel: "b1",
     ...overrides,
   };
 }

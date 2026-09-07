@@ -20,6 +20,7 @@ export type PermissionKey =
   | "payments"
   | "siteSettings"
   | "notices"
+  | "homeNotices"
   | "reviews"
   | "levelTest"
   | "pricing";
@@ -36,7 +37,8 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   meetingLinks: "화상회의 링크 관리",
   payments: "결제 관리",
   siteSettings: "사이트 설정",
-  notices: "공지사항 관리",
+  notices: "강사 공지사항 관리",
+  homeNotices: "학생 공지사항 관리",
   reviews: "수강후기 관리",
   levelTest: "레벨테스트 신청 관리",
   pricing: "수강료 관리",

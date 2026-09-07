@@ -11,6 +11,7 @@ import {
 import { MEETING_PLATFORMS, type MeetingPlatformId } from "../data/meetingPlatforms";
 import { DEFAULT_ENTRY_WINDOW, type EntryWindowSettings } from "../data/siteSettings";
 import { SEED_NOTICES } from "../data/noticesSeed";
+import { SEED_HOME_NOTICES } from "../data/homeNoticesSeed";
 import { SEED_STUDENT_REVIEWS } from "../data/reviewsSeed";
 import { PRICING_SEED, type PricingDuration } from "../data/pricing";
 import { SEED_CONSULT_CHANNELS } from "../data/consultChannelsSeed";
@@ -26,6 +27,7 @@ import type {
 import type { PermissionKey } from "../lib/auth/types";
 import type {
   ConsultChannel,
+  HomeNotice,
   LevelTestRequest,
   Notice,
   StudentReview,
@@ -56,6 +58,7 @@ export const store = {
   // overlays Account.preferredLanguage rather than mutating the static ACCOUNTS array.
   preferredLanguageOverrides: {} as Record<string, string>,
   notices: [...SEED_NOTICES] as Notice[],
+  homeNotices: [...SEED_HOME_NOTICES] as HomeNotice[],
   studentReviews: [...SEED_STUDENT_REVIEWS] as StudentReview[],
   levelTestRequests: [] as LevelTestRequest[],
   // Deep-cloned (not just spread) since each row's price25/price50 are themselves nested

@@ -47,7 +47,7 @@
       "meetingLinks": "Meeting Links",
       "payments": "Payments",
       "siteSettings": "Settings",
-      "notices": "Notices",
+      "notices": "Teacher Notices",
       "reviews": "Reviews",
       "levelTest": "Level Test Requests",
       "pricing": "Pricing"
@@ -100,7 +100,8 @@
     "link_reschedule": "View Reschedule Requests",
     "link_meeting_settings": "Video Meeting Settings",
     "link_accounts": "Accounts & Permissions",
-    "link_notices": "Manage Notices",
+    "link_notices": "Manage Teacher Notices",
+    "link_home_notices": "Manage Student Notices",
     "link_reviews": "Manage Reviews",
     "link_level_test": "View Level Test Requests",
     "link_pricing": "Manage Pricing",
@@ -108,7 +109,8 @@
     "link_consult_channels": "Manage Consult Channels"
   },
   "notices": {
-    "admin_title": "Notices",
+    "admin_title": "Teacher Notices",
+    "admin_description": "Notices written here only appear on the teacher page's Bulletin Board. Students and visitors cannot see them.",
     "table_headers": { "title": "Title", "author": "Author", "created_at": "Created", "status": "Status", "actions": "Actions" },
     "no_rows": "No notices yet.",
     "new_button": "New Notice",
@@ -123,6 +125,10 @@
     "status_published": "Published",
     "status_hidden": "Hidden",
     "delete_button": "Delete"
+  },
+  "homeNotices": {
+    "admin_title": "Student Notices",
+    "admin_description": "Notices written here appear in the homepage's Notices section, visible to every student and visitor. Read-only — students cannot write these themselves."
   },
   "reviews": {
     "admin_title": "Reviews",

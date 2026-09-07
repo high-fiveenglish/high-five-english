@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AuthProvider } from "./context/AuthContext";
 import { LanguageProvider } from "./context/LanguageContext";
@@ -19,10 +19,10 @@ import { ClassroomPage } from "./pages/ClassroomPage";
 import { AdminReschedulePage } from "./pages/AdminReschedulePage";
 import { InstallPage } from "./pages/InstallPage";
 import { LegalPage } from "./pages/LegalPage";
-import { NoticeListPage } from "./pages/NoticeListPage";
 import { AdminMeetingSettingsPage } from "./pages/AdminMeetingSettingsPage";
 import { AdminAccountsPage } from "./pages/AdminAccountsPage";
 import { AdminNoticesPage } from "./pages/AdminNoticesPage";
+import { AdminHomeNoticesPage } from "./pages/AdminHomeNoticesPage";
 import { AdminReviewsPage } from "./pages/AdminReviewsPage";
 import { AdminLevelTestPage } from "./pages/AdminLevelTestPage";
 import { AdminPricingPage } from "./pages/AdminPricingPage";
@@ -40,6 +40,8 @@ function App() {
   const openLevelTest = () => setLevelTestOpen(true);
   const openLogin = () => setLoginOpen(true);
   const { t } = useTranslation(["common", "admin"]);
+  const location = useLocation();
+  const hideFloatingButtons = location.pathname === "/teacher";
 
   return (
     <AuthProvider>
@@ -66,7 +68,6 @@ function App() {
                 />
                 <Route path="process" element={<ProcessPage onOpenLevelTest={openLevelTest} />} />
                 <Route path="install" element={<InstallPage />} />
-                <Route path="notice" element={<NoticeListPage />} />
                 <Route path="counsel" element={<ConsultPage />} />
                 <Route path="terms" element={<LegalPage doc="terms" path="/terms" />} />
                 <Route path="privacy" element={<LegalPage doc="privacy" path="/privacy" />} />
@@ -93,6 +94,7 @@ function App() {
                         { label: t("admin:home.link_meeting_settings"), to: "/admin/meeting-settings" },
                         { label: t("admin:home.link_accounts"), to: "/admin/accounts" },
                         { label: t("admin:home.link_notices"), to: "/admin/notices" },
+                        { label: t("admin:home.link_home_notices"), to: "/admin/home-notices" },
                         { label: t("admin:home.link_reviews"), to: "/admin/reviews" },
                         { label: t("admin:home.link_level_test"), to: "/admin/level-test-requests" },
                         { label: t("admin:home.link_pricing"), to: "/admin/pricing" },
@@ -120,6 +122,10 @@ function App() {
                 element={<AdminNoticesPage onOpenLogin={openLogin} />}
               />
               <Route
+                path="/admin/home-notices"
+                element={<AdminHomeNoticesPage onOpenLogin={openLogin} />}
+              />
+              <Route
                 path="/admin/reviews"
                 element={<AdminReviewsPage onOpenLogin={openLogin} />}
               />
@@ -145,10 +151,12 @@ function App() {
           </main>
 
           <Footer onOpenContact={() => setContactOpen(true)} />
-          <FloatingSideButtons
-            onOpenLevelTest={openLevelTest}
-            onOpenContact={() => setContactOpen(true)}
-          />
+          {!hideFloatingButtons && (
+            <FloatingSideButtons
+              onOpenLevelTest={openLevelTest}
+              onOpenContact={() => setContactOpen(true)}
+            />
+          )}
         </div>
 
         <LevelTestModal open={levelTestOpen} onClose={() => setLevelTestOpen(false)} />

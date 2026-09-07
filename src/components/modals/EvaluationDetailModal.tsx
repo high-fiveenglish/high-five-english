@@ -39,6 +39,9 @@ export function EvaluationDetailModal({
 
   useEffect(() => {
     if (!lesson || !actor) return;
+    // A lesson recorded through the teacher's quick evaluation entry carries its own
+    // progress/comment directly — no need to fetch the older DailyEvaluation record.
+    if (lesson.teacherComment) return;
     let cancelled = false;
     getEvaluation(actor, lesson.id).then((res) => {
       if (!cancelled && res.ok) setEvaluation(res.value);
@@ -50,10 +53,25 @@ export function EvaluationDetailModal({
 
   return (
     <Modal open={!!lesson} onClose={onClose} title={t("evaluation_modal.title")} maxWidth="max-w-lg">
-      {lesson && !evaluation && (
+      {lesson && lesson.teacherComment && (
+        <div>
+          <p className="text-xs text-slate-400">{lesson.scheduledDate}</p>
+          {lesson.progress && (
+            <div className="mt-4">
+              <p className="text-xs font-bold text-slate-500">{t("evaluation_modal.progress")}</p>
+              <p className="mt-1 text-[13.5px] leading-relaxed text-slate-600">{lesson.progress}</p>
+            </div>
+          )}
+          <div className="mt-4 rounded-xl bg-brand-50/60 p-4">
+            <p className="text-xs font-bold text-brand-700">{t("evaluation_modal.teacher_comment")}</p>
+            <p className="mt-1.5 whitespace-pre-wrap text-[13.5px] leading-relaxed text-brand-900">{lesson.teacherComment}</p>
+          </div>
+        </div>
+      )}
+      {lesson && !lesson.teacherComment && !evaluation && (
         <p className="py-8 text-center text-sm text-slate-400">{t("evaluation_modal.loading")}</p>
       )}
-      {evaluation && (
+      {lesson && !lesson.teacherComment && evaluation && (
         <div>
           <p className="text-xs text-slate-400">{lesson?.scheduledDate}</p>
           <p className="mt-4 text-xs font-bold text-slate-500">{t("evaluation_modal.lesson_content")}</p>
