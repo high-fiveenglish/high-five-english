@@ -36,7 +36,12 @@ export async function findAvailableTeachersForSchedule(args: {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "enrollments.view");
 
-  if (args.weekdayValues.length === 0 || !args.classTime) return [];
+  // "모두 동일한 시간" 체크를 끄고 요일마다 다른 시간을 쓸 때는 기본 classTime이
+  // 비어 있을 수 있다 — 그럴 땐 체크된 요일 전부가 각자 시각을 갖고 있는지로 대신
+  // 판단한다(resolveScheduleTime이 요일별 오버라이드를 우선 쓰므로 기본값 없이도
+  // 문제없이 풀린다).
+  const everyDayHasTime = args.weekdayValues.every((day) => resolveScheduleTime(args.classTime, args.classTimes, day));
+  if (args.weekdayValues.length === 0 || !everyDayHasTime) return [];
 
   const teachers = await prisma.teacher.findMany({
     where: { siteId: DEFAULT_SITE_ID, approvalStatus: "APPROVED", accountStatus: "ACTIVE" },

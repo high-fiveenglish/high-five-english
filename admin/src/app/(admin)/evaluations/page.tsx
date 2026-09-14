@@ -28,7 +28,10 @@ export default async function EvaluationsPage({
   const sessions = await prisma.classSession.findMany({
     where: {
       siteId: DEFAULT_SITE_ID,
-      status: "COMPLETED",
+      // 강사가 평가서를 저장해야만 COMPLETED로 바뀌므로(teacher/sessions/[id]/actions.ts),
+      // 여기서 COMPLETED만 필터링하면 아직 평가서를 안 쓴 "오늘 수업"이 통째로 빠져
+      // 미작성 건수를 영원히 볼 수 없게 된다. 취소/휴강이 아닌 그날의 모든 수업을 대상으로 한다.
+      status: { notIn: ["CANCELLED", "LEAVE"] },
       scheduledAt: { gte: monthStart, lt: monthEnd },
     },
     orderBy: { scheduledAt: "asc" },
@@ -58,7 +61,7 @@ export default async function EvaluationsPage({
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-900">일일평가서 관리</h1>
-        <p className="mt-1 text-sm text-slate-500">날짜를 클릭하면 그날 완료된 수업과 평가서 작성 현황을 볼 수 있습니다.</p>
+        <p className="mt-1 text-sm text-slate-500">날짜를 클릭하면 그날 수업과 평가서 작성 현황을 볼 수 있습니다.</p>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
@@ -130,7 +133,7 @@ export default async function EvaluationsPage({
             <div className="mt-3 grid grid-cols-3 gap-3 text-center">
               <div className="rounded-xl bg-slate-50 py-3">
                 <p className="text-lg font-bold text-slate-900">{selectedSessions.length}</p>
-                <p className="text-[11px] text-slate-500">완료된 수업</p>
+                <p className="text-[11px] text-slate-500">오늘 수업</p>
               </div>
               <div className="rounded-xl bg-emerald-50 py-3">
                 <p className="text-lg font-bold text-emerald-700">{selectedWritten}</p>
@@ -181,7 +184,7 @@ export default async function EvaluationsPage({
                 {selectedSessions.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-4 py-10 text-center text-slate-400">
-                      이 날짜에 완료된 수업이 없습니다.
+                      이 날짜에 수업이 없습니다.
                     </td>
                   </tr>
                 )}

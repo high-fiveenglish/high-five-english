@@ -157,9 +157,11 @@ export type StudentEnrollmentHistoryRow = {
 };
 
 export async function getStudentEnrollmentHistory(studentId: number): Promise<StudentEnrollmentHistoryRow[]> {
+  // 수강 시작일이 아니라 "등록한(신청 처리된) 시점" 기준으로 최신순 — 시작일이
+  // 이후라도 나중에 등록한 수강 건이 아래로 밀리지 않고 맨 위에 오도록 한다.
   const enrollments = await prisma.enrollment.findMany({
     where: { studentId },
-    orderBy: { startDate: "desc" },
+    orderBy: { createdAt: "desc" },
     include: { teacher: { select: TEACHER_SUMMARY_SELECT } },
   });
   if (enrollments.length === 0) return [];

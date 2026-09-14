@@ -14,7 +14,7 @@ export function TopUtilityBar({
   onOpenLogin: () => void;
   onOpenFind: () => void;
 }) {
-  const { isLoggedIn, userName, role, logout } = useAuth();
+  const { isLoggedIn, userName, role, logout, adminBridgeToken } = useAuth();
   const { t } = useTranslation("common");
   const location = useLocation();
   const isAdminLike = role === "general_manager" || role === "general_admin";
@@ -58,7 +58,11 @@ export function TopUtilityBar({
             )}
             {isAdminLike && (
               <a
-                href={ADMIN_API_URL}
+                href={
+                  adminBridgeToken
+                    ? `${ADMIN_API_URL}/api/public/admin-bridge?token=${encodeURIComponent(adminBridgeToken)}`
+                    : ADMIN_API_URL
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="transition hover:text-white"

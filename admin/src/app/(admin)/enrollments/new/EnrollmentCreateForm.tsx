@@ -80,6 +80,11 @@ export function EnrollmentCreateForm({
   const [startDate, setStartDate] = useState(initialValues?.startDate ?? "");
   const [baseClassTime, setBaseClassTime] = useState(initialValues?.classTime ?? "");
   const [dayTimes, setDayTimes] = useState<Record<number, string>>(initialValues?.dayTimes ?? {});
+  // 기존에 요일별로 다른 시각이 저장돼 있던 건(수정 모드)은 "다르게" 상태로 열어서
+  // 저장된 값이 그대로 보이게 하고, 그 외엔 "모두 동일" 기본값으로 시작한다.
+  const [sameTimeForAllDays, setSameTimeForAllDays] = useState(
+    () => !(initialValues?.dayTimes && Object.keys(initialValues.dayTimes).length > 0),
+  );
   const [totalSessions, setTotalSessions] = useState(initialValues ? String(initialValues.totalSessions) : "");
   // 편집 모드에서는 이미 저장된 총 회차를 그대로 보여줘야 하므로, 마운트 시점에
   // "주 회차 × 기간" 자동계산이 그 값을 덮어쓰지 않도록 처음부터 dirty로 시작한다.
@@ -122,7 +127,11 @@ export function EnrollmentCreateForm({
     [startDate, checkedDays, totalSessions],
   );
 
-  const canSearchTeachers = checkedDays.length > 0 && baseClassTime !== "";
+  // "모두 동일" 모드에서는 기본 시각 하나만 있으면 되고, "요일마다 다르게" 모드에서는
+  // 체크된 요일 전부가 각자 시각을 가지고 있어야 강사를 찾을 수 있다.
+  const canSearchTeachers =
+    checkedDays.length > 0 &&
+    (sameTimeForAllDays ? baseClassTime !== "" : checkedDays.every((v) => Boolean(dayTimes[v])));
 
   // 요일·시간(기본 또는 요일별 재설정)이 바뀔 때마다 별도 "찾아보기" 클릭 없이 자동으로
   // 그 조건에 가능한 강사만 다시 조회한다.
@@ -131,12 +140,12 @@ export function EnrollmentCreateForm({
       setAvailableTeachers(null);
       return;
     }
-    const durationOverrides = Object.fromEntries(Object.entries(dayTimes).filter(([, v]) => v));
+    const durationOverrides = sameTimeForAllDays ? {} : Object.fromEntries(Object.entries(dayTimes).filter(([, v]) => v));
     let cancelled = false;
     startSearch(async () => {
       const result = await findAvailableTeachersForSchedule({
         weekdayValues: checkedDays,
-        classTime: baseClassTime,
+        classTime: sameTimeForAllDays ? baseClassTime : "",
         classTimes: durationOverrides,
         classDurationMin,
         excludeEnrollmentId: isEdit ? enrollmentId : undefined,
@@ -149,7 +158,7 @@ export function EnrollmentCreateForm({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checkedDays, baseClassTime, dayTimes, classDurationMin, canSearchTeachers, isEdit, enrollmentId]);
+  }, [checkedDays, baseClassTime, dayTimes, sameTimeForAllDays, classDurationMin, canSearchTeachers, isEdit, enrollmentId]);
 
   return (
     <form action={formAction} className="flex max-w-md flex-col gap-4">
@@ -336,25 +345,32 @@ export function EnrollmentCreateForm({
         <input name="startDate" type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} className="input" />
       </Field>
 
-      <Field label="강의 시간 선택 (기본)">
-        <select
-          name="classTime"
-          value={baseClassTime}
-          onChange={(e) => setBaseClassTime(e.target.value)}
-          className="input"
-        >
-          <option value="">선택하세요</option>
-          {HALF_HOUR_TIME_OPTIONS.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-        <p className="mt-1 text-xs text-slate-400">모든 수업 요일에 기본으로 적용되는 시각입니다.</p>
-      </Field>
+      <Field label="강의 시간 선택">
+        <label className="mb-2 flex items-center gap-1.5 text-xs font-medium text-slate-500">
+          <input
+            type="checkbox"
+            checked={sameTimeForAllDays}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setSameTimeForAllDays(checked);
+              if (checked) setDayTimes({});
+            }}
+          />
+          모두 동일한 시간 선택
+        </label>
 
-      {orderedCheckedDays.length > 1 && (
-        <Field label="요일별 시각 재설정 (선택)">
+        {sameTimeForAllDays ? (
+          <select name="classTime" value={baseClassTime} onChange={(e) => setBaseClassTime(e.target.value)} className="input">
+            <option value="">선택하세요</option>
+            {HALF_HOUR_TIME_OPTIONS.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        ) : orderedCheckedDays.length === 0 ? (
+          <p className="input flex items-center bg-slate-50 text-slate-400">수업 요일을 먼저 선택하세요</p>
+        ) : (
           <div className="flex flex-col gap-2 rounded-lg border border-slate-100 bg-slate-50/60 p-3">
             {orderedCheckedDays.map((v) => {
               const day = WEEKDAYS.find((d) => d.value === v)!;
@@ -363,11 +379,12 @@ export function EnrollmentCreateForm({
                   <span className="w-6 shrink-0 font-medium text-slate-600">{day.label}</span>
                   <select
                     name={`dayTime_${v}`}
+                    required
                     value={dayTimes[v] ?? ""}
                     onChange={(e) => setDayTimes((prev) => ({ ...prev, [v]: e.target.value }))}
                     className="input"
                   >
-                    <option value="">기본 시각 사용</option>
+                    <option value="">선택하세요</option>
                     {HALF_HOUR_TIME_OPTIONS.map((t) => (
                       <option key={t} value={t}>
                         {t}
@@ -378,11 +395,13 @@ export function EnrollmentCreateForm({
               );
             })}
           </div>
-          <p className="mt-1 text-xs text-slate-400">
-            요일마다 수업 시간이 다른 경우에만 선택하세요. 비워두면 위 기본 시각이 적용됩니다.
-          </p>
-        </Field>
-      )}
+        )}
+        <p className="mt-1 text-xs text-slate-400">
+          {sameTimeForAllDays
+            ? "체크를 해제하면 요일마다 다른 시각을 각각 지정할 수 있습니다."
+            : "요일마다 다른 시각을 지정합니다. 다시 체크하면 모든 요일에 같은 시각이 적용됩니다."}
+        </p>
+      </Field>
 
       <Field label="수강 종료일">
         <p className="input flex items-center bg-slate-50 text-slate-500">

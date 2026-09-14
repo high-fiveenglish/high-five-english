@@ -28,20 +28,30 @@ export interface LoginResult {
    * reviews), set only when a general_admin/general_manager login's id/password also
    * matched a real admin/AdminUser row (see bridgeAdminSession). Null otherwise. */
   adminApiToken: string | null;
+  /** One-time signed token for /api/public/admin-bridge — the "홈페이지관리" link uses
+   * this (instead of a bare ADMIN_API_URL) so the admin_session cookie gets planted via
+   * an actual page navigation, not a cross-origin fetch that third-party-cookie blocking
+   * would silently drop. Set alongside adminApiToken, null otherwise. */
+  adminBridgeToken: string | null;
 }
 
 // "홈페이지관리" 클릭 시 실제 admin 앱(:3001)이 별도 로그인 화면을 또 띄우는 문제
 // (버퍼링처럼 느껴짐)를 없애기 위해, general_admin/general_manager로 로그인할 때
 // 같은 아이디·비밀번호로 admin의 공개 admin-login API도 한 번 시도해본다. 그
-// 자격증명이 실제 AdminUser(예: 시드된 admin/0000)와 일치하면 (1) admin 도메인에
-// 진짜 admin_session 쿠키가 심어져서 나중에 "홈페이지관리"를 열 때 admin 앱이 곧바로
-// 대시보드를 보여주고, (2) 이 사이트 자체 관리자 패널(/admin/pricing 등)이 실제 DB에
-// 쓸 때 쓸 adminApiToken도 함께 받는다(admin_session은 SameSite=Lax라 cross-origin
-// fetch엔 안 실리므로 studentApiToken과 동일한 이유로 별도 토큰이 필요하다). Vite에만
+// 자격증명이 실제 AdminUser(예: 시드된 admin/0000)와 일치하면 (1) 이 사이트 자체
+// 관리자 패널(/admin/pricing 등)이 실제 DB에 쓸 때 쓸 adminApiToken을 받고, (2)
+// "홈페이지관리" 링크가 재로그인 없이 바로 admin 대시보드로 들어가는 데 쓸
+// adminBridgeToken도 함께 받는다. admin-login 응답에서 admin_session 쿠키를
+// 크로스 오리진으로 바로 심어보긴 하지만(SameSite=Lax), 서드파티 쿠키를 막는
+// 브라우저에서는 조용히 저장되지 않으므로 adminBridgeToken을 통한 페이지 이동
+// 경로(TopUtilityBar.tsx → /api/public/admin-bridge)가 실제 보장 수단이다. Vite에만
 // 있는 나머지 데모 계정(admin1, manager 등)은 애초에 AdminUser에 대응 행이 없어 그냥
-// 조용히 실패하고, 예전처럼 admin 앱 자체 로그인 화면이 뜨며 adminApiToken은 null로
+// 조용히 실패하고, 예전처럼 admin 앱 자체 로그인 화면이 뜨며 두 토큰 모두 null로
 // 남는다 — 실패해도 Vite 로그인 자체에는 전혀 영향이 없다.
-async function bridgeAdminSession(loginId: string, password: string): Promise<string | null> {
+async function bridgeAdminSession(
+  loginId: string,
+  password: string,
+): Promise<{ apiToken: string | null; bridgeToken: string | null }> {
   try {
     const res = await fetch(`${ADMIN_API_URL}/api/public/admin-login`, {
       method: "POST",
@@ -49,11 +59,11 @@ async function bridgeAdminSession(loginId: string, password: string): Promise<st
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ loginId, password }),
     });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { apiToken?: string };
-    return data.apiToken ?? null;
+    if (!res.ok) return { apiToken: null, bridgeToken: null };
+    const data = (await res.json()) as { apiToken?: string; bridgeToken?: string };
+    return { apiToken: data.apiToken ?? null, bridgeToken: data.bridgeToken ?? null };
   } catch {
-    return null;
+    return { apiToken: null, bridgeToken: null };
   }
 }
 
@@ -87,6 +97,7 @@ async function loginAsRealStudent(loginId: string, password: string): Promise<Lo
     apiToken: data.apiToken,
     profile: data.profile,
     adminApiToken: null,
+    adminBridgeToken: null,
   };
 }
 
@@ -101,8 +112,11 @@ export async function login(id: string, password: string): Promise<ServiceResult
     return errResult("INVALID_CREDENTIALS", "아이디 또는 비밀번호가 올바르지 않습니다.");
   }
   let adminApiToken: string | null = null;
+  let adminBridgeToken: string | null = null;
   if (account.role === "general_admin" || account.role === "general_manager") {
-    adminApiToken = await bridgeAdminSession(id, password);
+    const bridged = await bridgeAdminSession(id, password);
+    adminApiToken = bridged.apiToken;
+    adminBridgeToken = bridged.bridgeToken;
   }
   const grantedPermissions = store.adminPermissionOverrides[account.id] ?? account.permissions ?? [];
   const actor: Actor = {
@@ -120,6 +134,7 @@ export async function login(id: string, password: string): Promise<ServiceResult
     apiToken: null,
     profile: null,
     adminApiToken,
+    adminBridgeToken,
   });
 }
 

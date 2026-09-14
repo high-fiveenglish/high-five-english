@@ -4,6 +4,7 @@ import { corsHeaders, corsOptionsResponse } from "@/lib/cors";
 import { verifyBackofficeLogin, createBackofficeSession } from "@/lib/backofficeAuth";
 import { logAudit } from "@/lib/rbac";
 import { createAdminApiToken } from "@/lib/adminApiToken";
+import { createAdminBridgeToken } from "@/lib/adminBridgeToken";
 
 // 마케팅 사이트(Vite)의 "관리자/매니저" 로그인이, 아이디·비밀번호가 실제 admin
 // DB(AdminUser)와 일치할 때만 admin 앱(:3001)에 진짜 admin_session 쿠키를 심어주는
@@ -15,6 +16,12 @@ import { createAdminApiToken } from "@/lib/adminApiToken";
 // apiToken도 함께 내려준다 — admin_session 쿠키는 SameSite=Lax라 Vite의 자체 관리자
 // 패널(/admin/pricing 등)이 cross-origin fetch로 실제 DB에 쓸 때는 실리지 않으므로,
 // studentApiToken과 동일한 이유로 Bearer 토큰이 따로 필요하다(adminApiToken.ts 참고).
+// bridgeToken도 함께 내려준다 — 아래 createBackofficeSession으로 심는 admin_session
+// 쿠키는 이 응답이 크로스 오리진 fetch라 서드파티 쿠키 차단에 걸려 저장되지 않는
+// 브라우저가 많다. bridgeToken은 "홈페이지관리" 링크가 실제 페이지 이동으로
+// /api/public/admin-bridge를 열 때 그 1st-party 응답 안에서 쿠키를 다시 심는 데 쓴다
+// (adminBridgeToken.ts 참고) — 두 경로를 동시에 시도해 둘 중 브라우저가 허용하는
+// 쪽이 이기게 한다.
 export async function OPTIONS(request: Request) {
   return corsOptionsResponse(request, { credentials: true });
 }
@@ -51,10 +58,18 @@ export async function POST(request: Request) {
     description: "마케팅 사이트에서 관리자 페이지로 바로 이동(자동 로그인)",
   });
 
+  let bridgeToken: string | null = null;
+  try {
+    bridgeToken = createAdminBridgeToken(user.id);
+  } catch {
+    bridgeToken = null;
+  }
+
   return NextResponse.json(
     {
       matched: true,
       apiToken: createAdminApiToken(user.id, user.role),
+      bridgeToken,
       role: user.role,
       name: user.name,
     },

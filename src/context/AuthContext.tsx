@@ -41,6 +41,11 @@ type AuthContextValue = {
    * (/admin/pricing 등)이 실제 admin DB에 쓸 때 쓴다(admin_session 쿠키는 SameSite=Lax라
    * cross-origin fetch에는 실리지 않는다). Null for every other login. */
   adminApiToken: string | null;
+  /** Set alongside adminApiToken — the one-time signed token the "홈페이지관리" link uses
+   * to reach /api/public/admin-bridge via a real page navigation instead of the
+   * cross-origin fetch that plants admin_session (which third-party-cookie blocking can
+   * silently drop). Null whenever adminApiToken is null. */
+  adminBridgeToken: string | null;
   /** The full editable profile, already fetched at login/SSO time — the "정보변경" page
    * reads this directly instead of making its own request, so it renders instantly with
    * no loading spinner. Kept in sync after a save via setStudentProfile. */
@@ -67,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isRealAccount, setIsRealAccount] = useState(false);
   const [studentApiToken, setStudentApiToken] = useState<string | null>(null);
   const [adminApiToken, setAdminApiToken] = useState<string | null>(null);
+  const [adminBridgeToken, setAdminBridgeToken] = useState<string | null>(null);
   const [studentProfile, setStudentProfile] = useState<StudentProfileSnapshot | null>(null);
 
   const login = async (id: string, password: string) => {
@@ -79,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsRealAccount(result.value.isRealAccount);
     setStudentApiToken(result.value.apiToken ?? null);
     setAdminApiToken(result.value.adminApiToken ?? null);
+    setAdminBridgeToken(result.value.adminBridgeToken ?? null);
     setStudentProfile(result.value.profile ?? null);
     return { ok: true as const, role: result.value.actor.role };
   };
@@ -91,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsRealAccount(false);
     setStudentApiToken(null);
     setAdminApiToken(null);
+    setAdminBridgeToken(null);
     setStudentProfile(null);
   };
 
@@ -126,6 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isRealAccount,
         studentApiToken,
         adminApiToken,
+        adminBridgeToken,
         studentProfile,
         setStudentProfile,
         hydrateActor,

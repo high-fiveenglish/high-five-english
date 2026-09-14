@@ -1,9 +1,34 @@
 // 등록된 교재 목록 — 마케팅 사이트의 교재 카탈로그(src/data/textbookCatalog.ts)에서
 // 이름만 옮겨온 단순 목록이다. 별도 Textbook 모델 없이 문자열로만 저장하므로
-// (Enrollment.textbookName), 새 교재가 생기면 이 배열에 추가하면 된다.
+// (Enrollment.textbookName), 새 교재가 생기면 아래 RAW_TEXTBOOK_OPTIONS에 추가하면 된다.
 // "Free Talking"은 정규 교재 없이 자유 대화로 진행하는 수업을 위한 항목이다.
 
-export const TEXTBOOK_OPTIONS: string[] = [
+// "Exploring English 1-6"처럼 권수 범위로 뭉뚱그려진 이름을, 드롭다운에서는
+// "Exploring English 1" ~ "Exploring English 6"처럼 한 권씩 고를 수 있게 펼친다.
+// 이름에서 처음 나오는 숫자-숫자(- 또는 ~) 패턴만 대상으로 하므로 "1000 Useful
+// Words 2018"이나 "Time to Talk series Pre A1-B2"처럼 진짜 권수 범위가 아닌 숫자는
+// 건드리지 않는다. "Situation English 1~60"처럼 권수가 지나치게 많은 시리즈는 한
+// 권씩 고르는 게 오히려 비현실적이라 원래 표기 그대로 둔다(MAX_EXPAND_VOLUMES).
+const MAX_EXPAND_VOLUMES = 20;
+const VOLUME_RANGE_PATTERN = /(\d+)[-~](\d+)/;
+
+function expandVolumeRange(name: string): string[] {
+  const match = VOLUME_RANGE_PATTERN.exec(name);
+  if (!match || match.index == null) return [name];
+  const start = Number(match[1]);
+  const end = Number(match[2]);
+  if (!(start < end) || end - start + 1 > MAX_EXPAND_VOLUMES) return [name];
+
+  const before = name.slice(0, match.index);
+  const after = name.slice(match.index + match[0].length);
+  const volumes: string[] = [];
+  for (let n = start; n <= end; n++) {
+    volumes.push(`${before}${n}${after}`);
+  }
+  return volumes;
+}
+
+const RAW_TEXTBOOK_OPTIONS: string[] = [
   "Free Talking",
   "100 Interactive English Lessons",
   "100-pattern-English",
@@ -159,3 +184,5 @@ export const TEXTBOOK_OPTIONS: string[] = [
   "World Wonders 1-2",
   "영어회화 100일",
 ];
+
+export const TEXTBOOK_OPTIONS: string[] = RAW_TEXTBOOK_OPTIONS.flatMap(expandVolumeRange);
