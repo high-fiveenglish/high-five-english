@@ -17,9 +17,27 @@
   },
   "section_track": {
     "title": "2. Chương trình học",
-    "junior": "Thiếu nhi",
-    "senior": "Nâng cao",
-    "business": "Thương mại"
+    "age_group_label": "Độ tuổi",
+    "field_label": "Lĩnh vực",
+    "field_placeholder": "Vui lòng chọn độ tuổi trước",
+    "age_groups": {
+      "preschool": "Mầm non",
+      "elementary": "Tiểu học",
+      "secondary": "Trung học",
+      "adult": "Người lớn"
+    },
+    "fields": {
+      "phonics": "Phonics (Ngữ âm)",
+      "basic-conversation": "Hội thoại cơ bản",
+      "reading-smalltalk": "Đọc hiểu · Giao tiếp",
+      "native-reading": "Đọc sách nguyên bản (theo cấp độ AR)",
+      "conversation-debate": "Hội thoại · Tranh luận",
+      "advanced-discussion": "Thảo luận nâng cao · Viết luận",
+      "exam": "Luyện thi",
+      "business": "Tiếng Anh thương mại",
+      "expression": "Nâng cao diễn đạt",
+      "interview": "Luyện phỏng vấn"
+    }
   },
   "section_plan": {
     "title": "3. Thời hạn · Tần suất · Thời lượng buổi học",

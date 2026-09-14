@@ -16,13 +16,19 @@ import {
   submitEnrollmentRequest,
   weeklyDaysForFrequency,
 } from "../services/enrollmentRequestService";
-import type { ConsultChannel, CurriculumTrack, EnrollmentDurationId } from "../lib/community/types";
+import type { ConsultChannel, EnrollmentDurationId } from "../lib/community/types";
 import type { LessonFrequencyId } from "../lib/community/types";
+import {
+  CURRICULUM_AGE_GROUPS,
+  CURRICULUM_FIELDS_BY_AGE_GROUP,
+  curriculumTrackId,
+  type CurriculumAgeGroup,
+  type CurriculumField,
+} from "../data/curriculumTracks";
 
 const DURATIONS: EnrollmentDurationId[] = ["1m", "3m", "6m"];
 const FREQUENCIES: LessonFrequencyId[] = ["freq5", "freq3", "freq2"];
 const LESSON_LENGTHS: (25 | 50)[] = [25, 50];
-const TRACKS: CurriculumTrack[] = ["junior", "senior", "business"];
 
 // KST wall-clock slots, 06:00 through 23:30 in 30-minute steps — always Korea time
 // regardless of who's submitting, per the academy's own scheduling (unlike the level
@@ -65,7 +71,8 @@ function SelectCard({
 interface FormState {
   platform: MeetingPlatformId | "";
   teamsId: string;
-  track: CurriculumTrack | "";
+  ageGroup: CurriculumAgeGroup | "";
+  field: CurriculumField | "";
   durationId: EnrollmentDurationId | "";
   frequency: LessonFrequencyId | "";
   lessonLength: 25 | 50 | 0;
@@ -77,7 +84,8 @@ interface FormState {
 const EMPTY_FORM: FormState = {
   platform: "",
   teamsId: "",
-  track: "",
+  ageGroup: "",
+  field: "",
   durationId: "",
   frequency: "",
   lessonLength: 0,
@@ -129,7 +137,8 @@ export function EnrollmentRegisterPage({ onOpenLogin }: { onOpenLogin: () => voi
   const isValid =
     form.platform !== "" &&
     (form.platform !== "teams" || form.teamsId.trim() !== "") &&
-    form.track !== "" &&
+    form.ageGroup !== "" &&
+    form.field !== "" &&
     form.durationId !== "" &&
     form.frequency !== "" &&
     form.lessonLength !== 0 &&
@@ -138,7 +147,7 @@ export function EnrollmentRegisterPage({ onOpenLogin }: { onOpenLogin: () => voi
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValid || !studentApiToken) return;
+    if (!isValid || !studentApiToken || form.ageGroup === "" || form.field === "") return;
 
     setSubmitting(true);
     setSubmitError(null);
@@ -146,7 +155,7 @@ export function EnrollmentRegisterPage({ onOpenLogin }: { onOpenLogin: () => voi
       {
         meetingPlatform: form.platform as MeetingPlatformId,
         teamsId: form.platform === "teams" ? form.teamsId : undefined,
-        curriculumTrack: form.track as CurriculumTrack,
+        curriculumTrack: curriculumTrackId(form.ageGroup, form.field),
         durationId: form.durationId as EnrollmentDurationId,
         lessonFrequency: form.frequency as LessonFrequencyId,
         lessonDurationMin: form.lessonLength as 25 | 50,
@@ -252,17 +261,36 @@ export function EnrollmentRegisterPage({ onOpenLogin }: { onOpenLogin: () => voi
               )}
             </div>
 
-            {/* 2. curriculum track */}
+            {/* 2. curriculum track: age group, then a field list scoped to that age group */}
             <div>
               <label className="mb-1.5 block text-sm font-bold text-brand-950">{t("section_track.title")}</label>
+              <p className="mb-1.5 text-xs font-medium text-slate-500">{t("section_track.age_group_label")}</p>
               <div className="flex gap-2">
-                {TRACKS.map((tr) => (
-                  <SelectCard key={tr} active={form.track === tr} onClick={() => setForm({ ...form, track: tr })}>
-                    {t(`section_track.${tr}`)}
+                {CURRICULUM_AGE_GROUPS.map((g) => (
+                  <SelectCard
+                    key={g}
+                    active={form.ageGroup === g}
+                    onClick={() => setForm({ ...form, ageGroup: g, field: "" })}
+                  >
+                    {t(`section_track.age_groups.${g}`)}
                   </SelectCard>
                 ))}
               </div>
-              {errorFor(form.track === "")}
+              {errorFor(form.ageGroup === "")}
+
+              <p className="mb-1.5 mt-3 text-xs font-medium text-slate-500">{t("section_track.field_label")}</p>
+              {form.ageGroup === "" ? (
+                <p className="text-[12.5px] text-slate-400">{t("section_track.field_placeholder")}</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {CURRICULUM_FIELDS_BY_AGE_GROUP[form.ageGroup].map((f) => (
+                    <SelectCard key={f} active={form.field === f} onClick={() => setForm({ ...form, field: f })}>
+                      {t(`section_track.fields.${f}`)}
+                    </SelectCard>
+                  ))}
+                </div>
+              )}
+              {errorFor(form.ageGroup !== "" && form.field === "")}
             </div>
 
             {/* 3. duration / frequency / lesson length */}

@@ -17,9 +17,27 @@
   },
   "section_track": {
     "title": "2. 교육과정",
-    "junior": "주니어",
-    "senior": "시니어",
-    "business": "비즈니스"
+    "age_group_label": "연령대",
+    "field_label": "분야",
+    "field_placeholder": "연령대를 먼저 선택하세요",
+    "age_groups": {
+      "preschool": "유아 (미취학)",
+      "elementary": "초등",
+      "secondary": "중고등",
+      "adult": "성인"
+    },
+    "fields": {
+      "phonics": "파닉스",
+      "basic-conversation": "기초 회화",
+      "reading-smalltalk": "리딩·스몰토크",
+      "native-reading": "원서 읽기 (AR 단계별)",
+      "conversation-debate": "회화·디베이트",
+      "advanced-discussion": "고급 토론·에세이",
+      "exam": "시험 대비",
+      "business": "비즈니스 영어",
+      "expression": "표현력 강화",
+      "interview": "인터뷰 준비"
+    }
   },
   "section_plan": {
     "title": "3. 수강 기간 · 횟수 · 시간",

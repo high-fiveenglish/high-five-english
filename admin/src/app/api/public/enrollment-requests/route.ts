@@ -15,7 +15,26 @@ export async function OPTIONS(request: Request) {
 
 const VALID_FREQUENCIES = ["freq2", "freq3", "freq5"];
 const VALID_DURATIONS_MIN = [25, 50];
-const VALID_TRACKS = ["junior", "senior", "business"];
+// "{ageGroup}:{field}" — 마케팅 사이트(Vite)의 src/data/curriculumTracks.ts와 정확히
+// 맞춘 목록이다. 한쪽만 고치고 다른 쪽을 깜빡하면 수강신청이 조용히 거부된다.
+const VALID_TRACKS = [
+  "preschool:phonics",
+  "preschool:basic-conversation",
+  "elementary:phonics",
+  "elementary:basic-conversation",
+  "elementary:reading-smalltalk",
+  "elementary:native-reading",
+  "secondary:reading-smalltalk",
+  "secondary:conversation-debate",
+  "secondary:advanced-discussion",
+  "secondary:exam",
+  "adult:conversation-debate",
+  "adult:advanced-discussion",
+  "adult:business",
+  "adult:exam",
+  "adult:expression",
+  "adult:interview",
+];
 const VALID_DURATION_IDS = ["1m", "3m", "6m"];
 const PLATFORM_TO_CLASS_METHOD: Record<string, string> = { zoom: "zoom", voov: "tencent", teams: "teams" };
 

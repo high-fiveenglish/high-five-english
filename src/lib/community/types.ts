@@ -74,7 +74,11 @@ export interface LevelTestRequest {
   status: LevelTestStatus;
 }
 
-export type CurriculumTrack = "junior" | "senior" | "business";
+/** "{ageGroup}:{field}", e.g. "adult:business" — see data/curriculumTracks.ts for the
+ * valid age groups/fields and which combinations exist. Kept as a plain string (rather
+ * than a template-literal union) since it round-trips through the admin DB's single
+ * String column as-is. */
+export type CurriculumTrack = string;
 // Matches PricingDuration's ids in data/pricing.ts (1/3/6-month packages) — kept as its
 // own literal union here (rather than importing PricingDuration) since this is a fixed
 // set of purchasable plan lengths, not the admin-editable pricing data itself.

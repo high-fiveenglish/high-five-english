@@ -16,10 +16,11 @@ import type { MeetingPlatformId } from "../data/meetingPlatforms";
 import { MEETING_PLATFORMS } from "../data/meetingPlatforms";
 import { store } from "./store";
 import { ADMIN_API_URL } from "../lib/adminApi";
+import { ALL_CURRICULUM_TRACKS } from "../data/curriculumTracks";
 
 const VALID_FREQUENCIES: LessonFrequencyId[] = ["freq2", "freq3", "freq5"];
 const VALID_DURATIONS: EnrollmentDurationId[] = ["1m", "3m", "6m"];
-const VALID_TRACKS: CurriculumTrack[] = ["junior", "senior", "business"];
+const VALID_TRACKS: CurriculumTrack[] = ALL_CURRICULUM_TRACKS;
 const VALID_LESSON_LENGTHS = [25, 50];
 
 // 0=Sun..6=Sat, matching Enrollment.weeklyDays' own convention. Days aren't picked by

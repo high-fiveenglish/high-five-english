@@ -3,7 +3,37 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { formatAppDate, formatAppDateTime } from "@/lib/appTime";
 import { StatusSelect } from "./StatusSelect";
 
-const TRACK_LABEL: Record<string, string> = { junior: "주니어", senior: "성인", business: "비즈니스" };
+// curriculumTrack은 "{ageGroup}:{field}" 형태로 저장된다(마케팅 사이트 src/data/
+// curriculumTracks.ts와 동일한 값) — 예전 junior/senior/business 값이 붙은 과거
+// 신청 건도 있을 수 있어 그쪽 라벨도 함께 남겨둔다.
+const AGE_GROUP_LABEL: Record<string, string> = {
+  preschool: "유아",
+  elementary: "초등",
+  secondary: "중고등",
+  adult: "성인",
+  junior: "주니어",
+  senior: "성인",
+  business: "비즈니스",
+};
+const FIELD_LABEL: Record<string, string> = {
+  phonics: "파닉스",
+  "basic-conversation": "기초 회화",
+  "reading-smalltalk": "리딩·스몰토크",
+  "native-reading": "원서 읽기",
+  "conversation-debate": "회화·디베이트",
+  "advanced-discussion": "고급 토론·에세이",
+  exam: "시험 대비",
+  business: "비즈니스 영어",
+  expression: "표현력 강화",
+  interview: "인터뷰 준비",
+};
+function trackLabel(track: string): string {
+  const sepIndex = track.indexOf(":");
+  if (sepIndex === -1) return AGE_GROUP_LABEL[track] ?? track;
+  const ageGroup = track.slice(0, sepIndex);
+  const field = track.slice(sepIndex + 1);
+  return `${AGE_GROUP_LABEL[ageGroup] ?? ageGroup} · ${FIELD_LABEL[field] ?? field}`;
+}
 const DURATION_LABEL: Record<string, string> = { "1m": "1개월", "3m": "3개월", "6m": "6개월" };
 const FREQUENCY_LABEL: Record<string, string> = { freq5: "주 5회", freq3: "주 3회", freq2: "주 2회" };
 const PLATFORM_LABEL: Record<string, string> = { zoom: "Zoom", voov: "VooV", teams: "Teams" };
@@ -47,7 +77,7 @@ export default async function EnrollmentRequestsPage() {
                   <p className="font-medium text-slate-900">{r.student.name}</p>
                   <p className="text-xs text-slate-400">{r.student.loginId}</p>
                 </td>
-                <td className="px-4 py-3">{TRACK_LABEL[r.curriculumTrack] ?? r.curriculumTrack}</td>
+                <td className="px-4 py-3">{trackLabel(r.curriculumTrack)}</td>
                 <td className="px-4 py-3">{DURATION_LABEL[r.durationId] ?? r.durationId}</td>
                 <td className="whitespace-nowrap px-4 py-3">
                   {FREQUENCY_LABEL[r.lessonFrequency] ?? r.lessonFrequency} · {r.lessonDurationMin}분

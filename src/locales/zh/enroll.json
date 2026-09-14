@@ -17,9 +17,27 @@
   },
   "section_track": {
     "title": "2. 课程体系",
-    "junior": "青少年",
-    "senior": "高级",
-    "business": "商务"
+    "age_group_label": "年龄段",
+    "field_label": "领域",
+    "field_placeholder": "请先选择年龄段",
+    "age_groups": {
+      "preschool": "学前",
+      "elementary": "小学",
+      "secondary": "中学生·高中生",
+      "adult": "成人"
+    },
+    "fields": {
+      "phonics": "自然拼读",
+      "basic-conversation": "基础会话",
+      "reading-smalltalk": "阅读·日常对话",
+      "native-reading": "原版阅读（按AR分级）",
+      "conversation-debate": "会话·辩论",
+      "advanced-discussion": "高级讨论·写作",
+      "exam": "考试备考",
+      "business": "商务英语",
+      "expression": "表达能力提升",
+      "interview": "面试准备"
+    }
   },
   "section_plan": {
     "title": "3. 报名周期 · 频率 · 上课时长",

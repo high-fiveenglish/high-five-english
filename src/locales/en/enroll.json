@@ -17,9 +17,27 @@
   },
   "section_track": {
     "title": "2. Curriculum",
-    "junior": "Junior",
-    "senior": "Senior",
-    "business": "Business"
+    "age_group_label": "Age Group",
+    "field_label": "Focus Area",
+    "field_placeholder": "Please select an age group first",
+    "age_groups": {
+      "preschool": "Preschool",
+      "elementary": "Elementary",
+      "secondary": "Secondary",
+      "adult": "Adult"
+    },
+    "fields": {
+      "phonics": "Phonics",
+      "basic-conversation": "Basic Conversation",
+      "reading-smalltalk": "Reading & Small Talk",
+      "native-reading": "Native Reading (by AR Level)",
+      "conversation-debate": "Conversation & Debate",
+      "advanced-discussion": "Advanced Discussion & Essay",
+      "exam": "Exam Prep",
+      "business": "Business English",
+      "expression": "Expression Building",
+      "interview": "Interview Prep"
+    }
   },
   "section_plan": {
     "title": "3. Plan Length · Frequency · Lesson Time",
