@@ -69,6 +69,7 @@ const PERMISSION_SEED: { key: string; description: string }[] = [
   { key: "consult_channels.update", description: "상담채널 수정" },
   { key: "reviews.view", description: "수강후기 게시판 조회" },
   { key: "reviews.delete", description: "수강후기 게시판 글 삭제(모더레이션)" },
+  { key: "teacher_stats.view", description: "강사수업통계/급여 조회 및 엑셀 다운로드" },
 ];
 
 const ROLE_PERMISSION_SEED: Record<Exclude<RoleName, "ADMIN">, string[]> = {
@@ -87,6 +88,7 @@ const ROLE_PERMISSION_SEED: Record<Exclude<RoleName, "ADMIN">, string[]> = {
     "home_notices.view", "home_notices.create", "home_notices.update", "home_notices.delete",
     "consult_channels.view", "consult_channels.update",
     "reviews.view", "reviews.delete",
+    "teacher_stats.view",
   ],
   TEACHER: [
     "own_schedule.view", "own_evaluations.view", "own_evaluations.update",

@@ -365,8 +365,6 @@ enum EnrollmentStatus {
   ACTIVE
   HOLDING
   COMPLETED
-  RENEWED
-  LOST
 }
 
 enum PaymentStatus {

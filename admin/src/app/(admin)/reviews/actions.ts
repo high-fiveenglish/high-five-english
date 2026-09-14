@@ -5,6 +5,22 @@ import { prisma } from "@/lib/prisma";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission, logAudit } from "@/lib/rbac";
 
+export async function updateReviewViews(id: number, _prevState: { error?: string } | undefined, formData: FormData) {
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "reviews.delete");
+
+  const viewsRaw = String(formData.get("views") ?? "").trim();
+  if (!/^\d+$/.test(viewsRaw)) {
+    return { error: "조회수는 0 이상의 숫자여야 합니다." };
+  }
+
+  await prisma.reviewPost.update({ where: { id }, data: { views: Number(viewsRaw) } });
+  await logAudit({ actor, action: "UPDATE", targetType: "ReviewPost", targetId: id, description: `조회수 수정: ${viewsRaw}` });
+
+  revalidatePath("/reviews");
+  return {};
+}
+
 export async function deleteReviewPost(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "reviews.delete");

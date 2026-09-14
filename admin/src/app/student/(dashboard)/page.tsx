@@ -23,8 +23,6 @@ const ENROLLMENT_STATUS_LABEL: Record<EnrollmentStatus, string> = {
   ACTIVE: "진행중",
   HOLDING: "홀드",
   COMPLETED: "종료",
-  RENEWED: "재수강",
-  LOST: "이탈",
 };
 
 const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
@@ -47,7 +45,7 @@ export default async function StudentHomePage({
   // 가져오지 않는다. 특정 Enrollment가 선택된 뒤에야 그 범위의 수업만 조회한다.
   const [enrollments, levelTests, recentEvaluations] = await Promise.all([
     prisma.enrollment.findMany({
-      where: { studentId: student.id, status: { notIn: ["LOST"] } },
+      where: { studentId: student.id },
       include: { teacher: { select: TEACHER_SUMMARY_SELECT } },
       orderBy: { startDate: "desc" },
     }),

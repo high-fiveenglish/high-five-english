@@ -3,6 +3,7 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { DeleteButton } from "../DeleteButton";
 import { deleteReviewPost } from "./actions";
 import { formatAppDateTime } from "@/lib/appTime";
+import { ReviewViewsForm } from "./ReviewViewsForm";
 
 export default async function ReviewsPage() {
   const posts = await prisma.reviewPost.findMany({
@@ -30,11 +31,12 @@ export default async function ReviewsPage() {
                   {p.title}
                   <span className="ml-2 font-normal text-slate-400">{p.student.name}</span>
                 </p>
-                <p className="mt-0.5 font-mono text-[11px] text-slate-400">
-                  {formatAppDateTime(p.createdAt)} · 조회 {p.views}
-                </p>
+                <p className="mt-0.5 font-mono text-[11px] text-slate-400">{formatAppDateTime(p.createdAt)}</p>
               </div>
-              <DeleteButton action={deleteReviewPost.bind(null, p.id)} />
+              <div className="flex items-center gap-2">
+                <ReviewViewsForm id={p.id} views={p.views} />
+                <DeleteButton action={deleteReviewPost.bind(null, p.id)} />
+              </div>
             </div>
             <p className="mt-3 whitespace-pre-wrap text-[13.5px] leading-relaxed text-slate-600">{p.content}</p>
           </div>

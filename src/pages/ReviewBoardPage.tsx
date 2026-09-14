@@ -15,7 +15,11 @@ function formatDate(iso: string) {
 }
 
 function ReviewBoardContent() {
-  const { userName, studentApiToken, isRealAccount, studentProfile } = useAuth();
+  const { userName, studentApiToken, adminApiToken, isRealAccount, studentProfile } = useAuth();
+  // 관리자(general_manager/general_admin)는 studentApiToken이 없으므로, 조회는
+  // adminApiToken으로도 가능하게 한다(api/public/reviews GET이 이미 이를 지원한다) —
+  // 글쓰기/수정은 여전히 studentApiToken(실제 학생 본인)만 가능하다.
+  const viewToken = studentApiToken ?? adminApiToken;
   const { t } = useTranslation("reviewBoard");
   const location = useLocation();
   const [posts, setPosts] = useState<ReviewPost[]>([]);
@@ -37,13 +41,13 @@ function ReviewBoardContent() {
   const canModify = (post: ReviewPost) => post.authorName === myAuthorName;
 
   const load = () => {
-    listBoardPosts(studentApiToken).then((res) => {
+    listBoardPosts(viewToken).then((res) => {
       if (res.ok) setPosts(res.value);
       setLoading(false);
     });
   };
 
-  useEffect(load, [studentApiToken]);
+  useEffect(load, [viewToken]);
 
   // Every fresh navigation to this route (including clicking the "수강후기" nav link
   // while a post is already open, where the path itself doesn't change) gets a new
@@ -54,7 +58,7 @@ function ReviewBoardContent() {
   }, [location.key]);
 
   const openDetail = async (id: string) => {
-    const res = await getBoardPost(studentApiToken, id);
+    const res = await getBoardPost(viewToken, id);
     if (res.ok) setSelected(res.value);
     load();
   };
@@ -99,7 +103,7 @@ function ReviewBoardContent() {
     for (const r of replies) rows.push({ post: r, isReply: true });
   }
 
-  if (!studentApiToken) {
+  if (!viewToken) {
     return (
       <Container className="flex min-h-[50vh] flex-col items-center justify-center py-24 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-brand-500">

@@ -12,7 +12,7 @@ const LABEL: Record<EnrollmentRequestStatus, string> = {
   CANCELLED: "취소",
 };
 
-export function StatusSelect({ id, status }: { id: number; status: EnrollmentRequestStatus }) {
+export function RequestStatusSelect({ id, status }: { id: number; status: EnrollmentRequestStatus }) {
   const [pending, startTransition] = useTransition();
 
   return (

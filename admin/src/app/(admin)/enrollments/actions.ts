@@ -8,9 +8,24 @@ import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { WEEKDAYS } from "@/lib/weekdays";
-import { findRecurringScheduleConflicts, resolveScheduleTime } from "./scheduleUtils";
+import { computeEndDate, findRecurringScheduleConflicts, parseScheduleDaysLabel, resolveScheduleTime } from "./scheduleUtils";
 import { isWithinAvailableHours, timeStringToMinuteOfDay } from "@/lib/timeSlots";
-import { Prisma, type EnrollmentStatus, type PaymentStatus } from "@/generated/prisma/client";
+import { Prisma, type EnrollmentStatus, type EnrollmentRequestStatus, type PaymentStatus } from "@/generated/prisma/client";
+
+const REQUEST_STATUSES = ["NEW", "CONTACTED", "CONVERTED", "CANCELLED"] as const;
+
+// 마케팅 사이트에서 학생이 제출한 수강신청 리드(EnrollmentRequest)의 상태 변경 — 예전
+// 별도 페이지(/enrollment-requests)에 있던 것을 수강내역관리 화면 상단 "신청" 목록으로
+// 옮기며 이 파일로 함께 이동했다.
+export async function updateEnrollmentRequestStatus(id: number, status: EnrollmentRequestStatus) {
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "enrollment_requests.update");
+  if (!REQUEST_STATUSES.includes(status)) throw new Error("잘못된 상태값입니다.");
+
+  await prisma.enrollmentRequest.update({ where: { id }, data: { status } });
+  await logAudit({ actor, action: "UPDATE", targetType: "EnrollmentRequest", targetId: id, description: `status = ${status}` });
+  revalidatePath("/enrollments");
+}
 
 // 월~일 표시 순서로 정렬 — WEEKDAYS는 일(0)이 먼저라 체크박스 제출 순서를 그대로 쓰면
 // "일월수" 처럼 어색하게 나온다.
@@ -64,7 +79,7 @@ export async function findAvailableTeachersForSchedule(args: {
     const otherEnrollments = await prisma.enrollment.findMany({
       where: {
         teacherId: teacher.id,
-        status: { notIn: ["COMPLETED", "LOST"] },
+        status: { notIn: ["COMPLETED"] },
         ...(args.excludeEnrollmentId ? { id: { not: args.excludeEnrollmentId } } : {}),
       },
       select: { id: true, scheduleDays: true, classTime: true, classTimes: true, classDurationMin: true },
@@ -279,6 +294,64 @@ export async function updateEnrollmentPrice(
 
   revalidatePath("/enrollments");
   redirect("/enrollments");
+}
+
+// "재수강" — 기존 수강 건과 강사/요일/시간/기간/교재 등 모든 내용을 동일하게 유지한
+// 채, 기존 종료일 다음날부터 이어지는 새 Enrollment를 하나 더 만든다. 기존 건
+// 자체는 손대지 않는다(상태 변경으로 표현하지 않는 이유 — 재수강 전후 두 수강 건의
+// 결제/수업 이력이 각각 독립적으로 남아야 하기 때문).
+export async function renewEnrollment(id: number) {
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "enrollments.create");
+
+  const existing = await prisma.enrollment.findUnique({ where: { id } });
+  if (!existing) return;
+
+  const newStartDate = new Date(existing.endDate);
+  newStartDate.setUTCDate(newStartDate.getUTCDate() + 1);
+  const startDateIso = newStartDate.toISOString().slice(0, 10);
+
+  const weekdayValues = parseScheduleDaysLabel(existing.scheduleDays);
+  const computedEndDateIso = computeEndDate(startDateIso, weekdayValues, existing.totalSessions);
+  const newEndDate = computedEndDateIso
+    ? new Date(`${computedEndDateIso}T00:00:00Z`)
+    : new Date(Date.UTC(newStartDate.getUTCFullYear(), newStartDate.getUTCMonth() + existing.packageMonths, newStartDate.getUTCDate()));
+
+  const renewed = await prisma.enrollment.create({
+    data: {
+      siteId: existing.siteId,
+      studentId: existing.studentId,
+      teacherId: existing.teacherId,
+      packageMonths: existing.packageMonths,
+      classMethod: existing.classMethod,
+      scheduleDays: existing.scheduleDays,
+      classDurationMin: existing.classDurationMin,
+      totalSessions: existing.totalSessions,
+      startDate: newStartDate,
+      endDate: newEndDate,
+      classType: existing.classType,
+      textbookName: existing.textbookName,
+      classTime: existing.classTime,
+      classTimes: existing.classTimes ?? undefined,
+      studentLevel: existing.studentLevel,
+      studentEnglishName: existing.studentEnglishName,
+      curriculum: existing.curriculum,
+      adminNote: existing.adminNote,
+      status: "APPLIED",
+      paymentStatus: "UNPAID",
+    },
+  });
+  await logAudit({
+    actor,
+    action: "CREATE",
+    targetType: "Enrollment",
+    targetId: renewed.id,
+    description: `재수강 신청 (원본 수강 건 #${id})`,
+  });
+
+  revalidatePath("/enrollments");
+  revalidatePath("/students");
+  redirect(`/enrollments/${renewed.id}/edit`);
 }
 
 export async function deleteEnrollment(id: number) {

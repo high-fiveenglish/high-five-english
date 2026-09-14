@@ -19,11 +19,8 @@ const NAV_GROUPS = [
     ],
   },
   {
-    title: "수업 운영",
-    items: [
-      { href: "/schedule", label: "전체 일정표", permission: "schedules.view" },
-      { href: "/leave-requests", label: "휴강 관리", permission: "leave_requests.view" },
-    ],
+    title: "레벨테스트",
+    items: [{ href: "/level-tests", label: "신청/진행 관리", permission: "level_tests.view" }],
   },
   {
     title: "수강내역관리",
@@ -36,20 +33,22 @@ const NAV_GROUPS = [
     ],
   },
   {
-    title: "레벨테스트",
-    items: [{ href: "/level-tests", label: "신청/진행 관리", permission: "level_tests.view" }],
+    title: "수업 운영",
+    items: [
+      { href: "/schedule", label: "전체 일정표", permission: "schedules.view" },
+      { href: "/leave-requests", label: "휴강 관리", permission: "leave_requests.view" },
+    ],
   },
   {
-    title: "콘텐츠 관리",
+    title: "강사페이지 관리",
     items: [
       { href: "/pricing", label: "가격표 관리", permission: "pricing.view" },
       { href: "/bulletins", label: "공지사항 관리", permission: "bulletins.view" },
     ],
   },
   {
-    title: "마케팅 사이트",
+    title: "메인 사이트 관리",
     items: [
-      { href: "/enrollment-requests", label: "수강신청 관리", permission: "enrollment_requests.view" },
       { href: "/home-notices", label: "홈페이지 공지 관리", permission: "home_notices.view" },
       { href: "/reviews", label: "수강후기 게시판", permission: "reviews.view" },
       { href: "/consult-channels", label: "상담채널 설정", permission: "consult_channels.view" },

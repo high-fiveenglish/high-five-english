@@ -33,18 +33,23 @@ export default async function BulletinsPage() {
               <th className="px-4 py-3">작성일</th>
               <th className="px-4 py-3">수정일</th>
               <th className="px-4 py-3" />
+              <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
             {bulletins.map((b) => (
               <tr key={b.id} className="border-b border-slate-100 last:border-0">
-                <td className="px-4 py-3">
-                  <Link href={`/bulletins/${b.id}`} className="font-medium text-slate-900 hover:underline">
-                    {b.title}
-                  </Link>
-                </td>
+                <td className="px-4 py-3 font-medium text-slate-900">{b.title}</td>
                 <td className="px-4 py-3 text-slate-500">{fmtDateTime(b.createdAt)}</td>
                 <td className="px-4 py-3 text-slate-500">{fmtDateTime(b.updatedAt)}</td>
+                <td className="px-4 py-3 text-right">
+                  <Link
+                    href={`/bulletins/${b.id}`}
+                    className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                  >
+                    수정
+                  </Link>
+                </td>
                 <td className="px-4 py-3 text-right">
                   <DeleteButton action={deleteBulletin.bind(null, b.id)} />
                 </td>
@@ -52,7 +57,7 @@ export default async function BulletinsPage() {
             ))}
             {bulletins.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={5} className="px-4 py-10 text-center text-slate-400">
                   등록된 공지사항이 없습니다.
                 </td>
               </tr>

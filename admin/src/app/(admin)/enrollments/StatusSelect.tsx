@@ -10,8 +10,6 @@ const OPTIONS: { value: EnrollmentStatus; label: string }[] = [
   { value: "ACTIVE", label: "진행중" },
   { value: "HOLDING", label: "홀드" },
   { value: "COMPLETED", label: "종료" },
-  { value: "RENEWED", label: "재수강" },
-  { value: "LOST", label: "이탈" },
 ];
 
 export function StatusSelect({ id, status }: { id: number; status: EnrollmentStatus }) {
