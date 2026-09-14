@@ -4,7 +4,7 @@ import type { Lang } from "./config";
 // they intentionally do NOT carry a /:lang prefix — their language comes from the
 // logged-in account's own preference instead (see LanguageContext). Only public/
 // marketing routes get locale-prefixed URLs for SEO.
-const PROTECTED_PREFIXES = ["/classroom", "/teacher", "/admin", "/mypage"];
+const PROTECTED_PREFIXES = ["/classroom", "/reviews", "/teacher", "/admin", "/mypage"];
 
 export function isProtectedPath(path: string): boolean {
   return PROTECTED_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));

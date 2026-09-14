@@ -20,6 +20,9 @@ export default async function StudentDashboardLayout({ children }: { children: R
             <Link href="/student/sessions" className="hover:text-slate-900">
               내 수업
             </Link>
+            <Link href="/student/profile" className="hover:text-slate-900">
+              정보변경
+            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-3">

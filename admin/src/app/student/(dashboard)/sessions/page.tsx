@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireStudent } from "@/lib/studentAuth";
+import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { formatAppDateTime } from "@/lib/appTime";
 import { LeaveRequestButton } from "./LeaveRequestButton";
 
@@ -19,7 +20,7 @@ export default async function StudentSessionsPage() {
   const sessions = await prisma.classSession.findMany({
     where: { studentId: student.id },
     orderBy: { scheduledAt: "desc" },
-    include: { teacher: true, leaveRequest: true },
+    include: { teacher: { select: TEACHER_SUMMARY_SELECT }, leaveRequest: true },
     take: 100,
   });
   const now = new Date().getTime();
@@ -42,7 +43,14 @@ export default async function StudentSessionsPage() {
           <tbody>
             {sessions.map((s) => (
               <tr key={s.id} className="border-b border-slate-100 last:border-0">
-                <td className="px-4 py-3 text-slate-900">{fmtDateTime(s.scheduledAt)}</td>
+                <td className="px-4 py-3 text-slate-900">
+                  {fmtDateTime(s.scheduledAt)}
+                  {s.isSupplement && (
+                    <span className="ml-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                      보충수업
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-slate-600">{s.teacher.realName}</td>
                 <td className="px-4 py-3 text-slate-600">{s.durationMin}</td>
                 <td className="px-4 py-3">

@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
+import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { DeleteButton } from "../DeleteButton";
 import { deleteTeacher } from "./actions";
 import { AccountStatusSelect } from "./AccountStatusSelect";
+import { ImpersonateButton } from "./ImpersonateButton";
 
 const APPROVAL_LABEL: Record<string, string> = {
   PENDING: "승인 대기",
@@ -25,7 +27,7 @@ export default async function TeachersPage({
       accountStatus: showInactive ? { not: "ACTIVE" } : "ACTIVE",
     },
     orderBy: { id: "desc" },
-    include: { rates: { orderBy: { effectiveFrom: "desc" }, take: 1 } },
+    select: { ...TEACHER_SUMMARY_SELECT, rates: { orderBy: { effectiveFrom: "desc" }, take: 1 } },
   });
 
   return (
@@ -64,6 +66,7 @@ export default async function TeachersPage({
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
               <th className="px-4 py-3">실명</th>
+              <th className="px-4 py-3" />
               <th className="px-4 py-3">닉네임</th>
               <th className="px-4 py-3">로그인 ID</th>
               <th className="px-4 py-3">국적</th>
@@ -76,9 +79,13 @@ export default async function TeachersPage({
           <tbody>
             {teachers.map((t) => (
               <tr key={t.id} className="border-b border-slate-100 last:border-0">
-                <td className="px-4 py-3">
-                  <Link href={`/teachers/${t.id}`} className="font-medium text-slate-900 hover:underline">
-                    {t.realName}
+                <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">{t.realName}</td>
+                <td className="whitespace-nowrap px-4 py-3">
+                  <Link
+                    href={`/teachers/${t.id}`}
+                    className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                  >
+                    수정
                   </Link>
                 </td>
                 <td className="px-4 py-3 text-slate-600">{t.nickname ?? "-"}</td>
@@ -89,16 +96,21 @@ export default async function TeachersPage({
                   <AccountStatusSelect teacherId={t.id} accountStatus={t.accountStatus} />
                 </td>
                 <td className="px-4 py-3 text-slate-600">
-                  {t.rates[0] ? `${t.rates[0].ratePerUnit.toString()}원` : "-"}
+                  {t.rates[0] ? `₱${t.rates[0].ratePerUnit.toString()}` : "-"}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  {!showInactive && <DeleteButton action={deleteTeacher.bind(null, t.id)} />}
+                  <div className="flex items-center justify-end gap-1">
+                    {t.accountStatus === "ACTIVE" && (
+                      <ImpersonateButton teacherId={t.id} teacherName={t.realName} />
+                    )}
+                    {!showInactive && <DeleteButton action={deleteTeacher.bind(null, t.id)} />}
+                  </div>
                 </td>
               </tr>
             ))}
             {teachers.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={9} className="px-4 py-10 text-center text-slate-400">
                   {showInactive ? "비활성/정지 상태인 강사가 없습니다." : "등록된 강사가 없습니다."}
                 </td>
               </tr>

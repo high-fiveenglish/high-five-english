@@ -85,6 +85,7 @@
     "table_header_type": "Class Type",
     "table_header_fee": "Tuition",
     "cta": "Start with a Free Level Test",
+    "enroll_cta": "Register for Classes",
     "loading": "Loading pricing...",
     "disclaimer": "* The tuition above is for private 1:1 lessons. Promotions and sibling discounts are available through a 1:1 consultation.",
     "durations": {
@@ -119,57 +120,23 @@
   "reviews": {
     "eyebrow": "Support · Reviews",
     "title": "Proven by Reviews, Not Ads",
-    "description": "HiFive English has grown through reviews from parents and students who've experienced our lessons firsthand, instead of ad spending.",
-    "items": {
-      "r1": {
-        "author": "Kim O-eun's Parent",
-        "role": "3rd Grade Elementary Student",
-        "period": "8 Months Enrolled",
-        "content": "At first my child was very shy on video, but the teacher always greeted her warmly, so now class time is what she looks forward to most. The learning evaluation report shows exactly which expressions she struggled with each time, which has made reviewing at home much easier."
-      },
-      "r2": {
-        "author": "Park O-jun",
-        "role": "8th Grade Student",
-        "period": "1 Year 2 Months Enrolled",
-        "content": "I used to only study English for school tests, but after starting video English, I can now speak my thoughts in English right away with a native teacher. She corrects my grammar mistakes on the spot, so I can really feel myself improving."
-      },
-      "r3": {
-        "author": "Lee O-young's Parent",
-        "role": "5th Grade Elementary Student",
-        "period": "6 Months Enrolled",
-        "content": "I compared several video English services, and this one had the most thorough teacher matching and management. Every time I consult with them, they clearly understand my child's situation, which builds real trust. Being able to see my child's progress visually through the monthly level test is also a huge plus."
-      },
-      "r4": {
-        "author": "Choi O-ah",
-        "role": "Working Adult",
-        "period": "4 Months Enrolled",
-        "content": "I travel for business often, so I needed business English. My teacher taught me expressions tailored to my actual work situations, and I use them all the time now. Scheduling is flexible and the teacher is great — I'm very satisfied."
-      },
-      "r5": {
-        "author": "Jung O-ho's Parent",
-        "role": "6th Grade Elementary Student",
-        "period": "1 Year 6 Months Enrolled",
-        "content": "Instead of a generic \"great job,\" they give specific feedback on what my child learned and struggled with each day. The consistent care makes it easy to understand why this place grew by word of mouth alone, without advertising."
-      },
-      "r6": {
-        "author": "Han O-su",
-        "role": "10th Grade Student",
-        "period": "3 Months Enrolled",
-        "content": "At first, speaking English every day felt like a burden, but thanks to the repeated practice, I can now form sentences much faster. Sometimes my teacher's schedule fills up, which is a bit disappointing, but overall I'm very satisfied."
-      }
-    }
+    "description": "HiFive English has grown through reviews from parents and students who've experienced our lessons firsthand, instead of ad spending."
   },
   "instructors": {
     "eyebrow": "Our Teachers",
     "title": "Verified, Professional Teachers by Your Side",
     "description": "From selection to training to regular evaluations — these teachers have passed the standards HiFive English has refined over 12 years. Click a photo to hear their voice introduction and see their detailed background.",
     "listen_hover": "Listen to Introduction",
+    "empty": "Instructor profiles are being prepared.",
+    "tesol_badge": "TESOL Certified",
+    "grade_senior": "Senior Teacher",
     "modal": {
       "title": "Teacher Profile",
       "audio_label": "🔊 Listen to Voice Introduction",
       "audio_unsupported": "Your browser does not support audio playback.",
       "audio_disclaimer": "* This is a sample demo voice. It will be replaced with the actual teacher's voice introduction.",
       "career_label": "Background & Qualifications",
+      "working_hours_label": "Working Hours",
       "play_label": "Play",
       "pause_label": "Pause",
       "hours_label": "Available Hours",
@@ -211,7 +178,7 @@
     "items": {
       "classroom": {
         "title": "My Classroom",
-        "desc": "Manage class bookings, changes, and video class entry all in one place. You can also instantly access past class replays and course materials."
+        "desc": "Manage class reschedules and video class entry all in one place. You can also instantly access past class replays and course materials."
       },
       "report": {
         "title": "Learning Evaluation Report",

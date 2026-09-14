@@ -45,14 +45,12 @@ export default async function EditStudentPage({
           occupation: student.occupation,
           region: student.region,
           address: student.address,
-          landlinePhone: student.landlinePhone,
           mobilePhone: student.mobilePhone,
           etcNote: student.etcNote,
-          parentName: student.parentName,
-          parentContact: student.parentContact,
           preferredClassMethod: student.preferredClassMethod,
-          smsOptIn: student.smsOptIn,
           teamsId: student.teamsId,
+          kakaoId: student.kakaoId,
+          wechatId: student.wechatId,
           referrerId: student.referrerId,
         }}
         agents={agents.map((a) => ({ id: a.id, name: a.name }))}

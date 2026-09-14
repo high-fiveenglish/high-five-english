@@ -9,7 +9,6 @@ import { ConsultationNoteModal } from "./ConsultationNoteModal";
 import { ImpersonateButton } from "./ImpersonateButton";
 import { StudentDeleteButton } from "./StudentDeleteButton";
 import { RestoreStudentButton } from "./RestoreStudentButton";
-import { AccountStatusSelect } from "./AccountStatusSelect";
 import { formatAppDateTime } from "@/lib/appTime";
 
 const fmtDateTime = formatAppDateTime;
@@ -22,15 +21,22 @@ const NOTICE_LABEL: Record<string, string> = {
 export default async function StudentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; notice?: string }>;
+  searchParams: Promise<{ filter?: string; notice?: string; q?: string }>;
 }) {
-  const { filter, notice } = await searchParams;
+  const { filter, notice, q } = await searchParams;
   const showDeleted = filter === "deleted";
   const noticeText = notice ? NOTICE_LABEL[notice] : undefined;
+  const query = q?.trim();
 
   const [students, agents] = await Promise.all([
     prisma.student.findMany({
-      where: { siteId: DEFAULT_SITE_ID, deletedAt: showDeleted ? { not: null } : null },
+      where: {
+        siteId: DEFAULT_SITE_ID,
+        deletedAt: showDeleted ? { not: null } : null,
+        ...(query
+          ? { OR: [{ name: { contains: query, mode: "insensitive" } }, { loginId: { contains: query, mode: "insensitive" } }] }
+          : {}),
+      },
       orderBy: { id: "desc" },
       include: {
         agent: true,
@@ -78,6 +84,31 @@ export default async function StudentsPage({
         </Link>
       </div>
 
+      <form className="mb-4 flex gap-2" method="get">
+        {showDeleted && <input type="hidden" name="filter" value="deleted" />}
+        <input
+          type="text"
+          name="q"
+          defaultValue={q ?? ""}
+          placeholder="이름 또는 아이디로 검색"
+          className="w-64 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+        />
+        <button
+          type="submit"
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+        >
+          검색
+        </button>
+        {query && (
+          <Link
+            href={showDeleted ? "/students?filter=deleted" : "/students"}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:underline"
+          >
+            초기화
+          </Link>
+        )}
+      </form>
+
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
         <table className="w-full min-w-[1100px] text-sm">
           <thead>
@@ -86,7 +117,6 @@ export default async function StudentsPage({
               <th className="px-3 py-3">회원등급</th>
               <th className="px-3 py-3">이름 / 아이디</th>
               <th className="px-3 py-3">수강상태</th>
-              <th className="px-3 py-3">계정 상태</th>
               <th className="px-3 py-3">가입일</th>
               <th className="px-3 py-3">관리</th>
             </tr>
@@ -132,13 +162,6 @@ export default async function StudentsPage({
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-3">
-                    {showDeleted ? (
-                      <span className="text-slate-500">{s.accountStatus}</span>
-                    ) : (
-                      <AccountStatusSelect studentId={s.id} accountStatus={s.accountStatus} />
-                    )}
-                  </td>
                   <td className="px-3 py-3 text-slate-500">{s.joinedAt.toISOString().slice(0, 10)}</td>
                   <td className="px-3 py-3">
                     {showDeleted ? (
@@ -182,7 +205,7 @@ export default async function StudentsPage({
             })}
             {students.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
                   {showDeleted ? "삭제된 회원이 없습니다." : "등록된 학생이 없습니다."}
                 </td>
               </tr>

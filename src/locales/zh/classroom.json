@@ -9,11 +9,11 @@
   "lesson_status": {
     "scheduled": "预定",
     "completed": "出席",
-    "absent": "缺席",
-    "rescheduled": "已调课",
-    "teacher_absent": "教师缺席",
-    "academy_closed": "停课",
-    "admin_cancelled": "管理员取消"
+    "absent": "学生缺席",
+    "rescheduled": "学生调课",
+    "teacher_absent": "管理员调课",
+    "academy_closed": "管理员调课",
+    "admin_cancelled": "管理员调课"
   },
   "summary_card": {
     "enrollment_period": "学习期间",
@@ -49,7 +49,8 @@
     "link_pending": "链接准备中",
     "reschedule_cta": "申请调课",
     "reschedule_closed": "调课申请已截止",
-    "reschedule_closed_tooltip": "仅可在课程开始前4小时之前申请调课"
+    "reschedule_closed_tooltip": "仅可在课程开始前4小时之前申请调课",
+    "empty": "所选日期没有安排课程。"
   },
   "calendar": {
     "title": "课程日历",
@@ -61,8 +62,7 @@
     "evaluation_in_progress": "评价撰写中",
     "holiday_title": "Holiday / No Class",
     "teacher_unavailable": "因教师个人原因停课。",
-    "no_lesson": "没有预定的课程。",
-    "select_date_prompt": "选择日期以查看详细信息。"
+    "no_lesson": "没有预定的课程。"
   },
   "enter_button": {
     "class_ended": "课程已结束",
@@ -73,11 +73,15 @@
     "enter_now": "立即进入{{platform}}课堂"
   },
   "textbook_card": {
-    "title": "教材信息",
-    "view_online": "在线查看",
-    "download": "下载",
-    "view_online_notice": "在线查看功能即将推出。",
-    "download_notice": "教材下载文件尚未准备好。"
+    "title": "教材信息"
+  },
+  "reschedule_allowance": {
+    "title": "调课情况",
+    "total": "可调课总次数",
+    "used_by_student": "学生已使用调课",
+    "used_by_admin": "管理员调课次数",
+    "count_value": "{{count}} 次",
+    "admin_note": "管理员发起的调课不计入学生的可调课次数。"
   },
   "reschedule_modal": {
     "title": "调课",
@@ -107,20 +111,52 @@
     "eyebrow": "我的页面",
     "title": "我的教室",
     "loading": "加载中...",
+    "refreshing": "正在刷新...",
     "not_found": "未找到学习信息。",
     "schedule_table_title": "课程安排表",
-    "write_review_cta": "撰写学习评价"
+    "review_board_cta": "学习评价公告板",
+    "enrollment_select_label": "选择课程",
+    "enrollment_option_prefix": "在线英语",
+    "enrollment_option_suffix": "课程",
+    "timeline": {
+      "ended": "已结束",
+      "in_progress": "进行中",
+      "upcoming": "即将开始"
+    },
+    "tab_classroom": "我的教室",
+    "tab_level_test_apply": "申请分班测试",
+    "tab_level_test_result": "分班测试结果",
+    "tab_enroll": "申请课程",
+    "tab_history": "学习内容"
   },
-  "review_modal": {
-    "title": "撰写学习评价",
-    "intro": "您撰写的评价经管理员确认后将公开在官网上。教师姓名和您的姓名会自动填写，无法任意修改。",
-    "teacher_label": "授课教师",
-    "content_label": "评价内容",
-    "content_placeholder": "请自由分享您上课的感受。",
-    "validation_error": "请输入评价内容。",
-    "submitting": "提交中...",
-    "submit": "提交评价",
-    "success": "感谢您宝贵的评价。经管理员确认后将公开在官网上。",
-    "confirm_ok": "确认"
+  "history_table": {
+    "headers": {
+      "name": "课程名称",
+      "period": "期间",
+      "receipt": "收据",
+      "certificate": "出勤证明"
+    },
+    "empty": "暂无学习内容。"
+  },
+  "level_test_status": {
+    "접수": "已接收",
+    "수업확정": "已确定",
+    "수업완료": "已完成",
+    "결석": "缺席",
+    "취소": "已取消"
+  },
+  "level_test_apply_tab": {
+    "real_account_required": "仅限使用真实会员账号登录时才能申请分班测试。",
+    "eligible_desc": "您可以申请新的分班测试，请选择您希望的日期和时间。",
+    "cta": "申请分班测试",
+    "pending_desc": "您已有正在受理或进行中的分班测试申请，需等结果出来后才能再次申请。",
+    "cooldown_desc": "您最近一次分班测试已于 {{lastConductedAt}} 完成。分班测试完成后需等待6个月才能再次申请，可于 {{eligibleAt}} 之后重新申请。",
+    "view_results_cta": "查看分班测试结果"
+  },
+  "level_test_result_tab": {
+    "empty": "暂无已进行的分班测试。",
+    "recommended_level": "推荐级别",
+    "recommended_textbook": "推荐教材",
+    "not_written": "结果尚未填写。"
   }
 }

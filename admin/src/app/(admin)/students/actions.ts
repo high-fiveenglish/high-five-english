@@ -7,8 +7,18 @@ import { prisma } from "@/lib/prisma";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission, logAudit } from "@/lib/rbac";
 import { startStudentImpersonation, stopStudentImpersonation } from "@/lib/studentAuth";
-import { DEFAULT_SITE_ID } from "@/lib/constants";
-import type { AccountStatus, StudentGrade, StudentStatus, Sex, ResidenceRegion } from "@/generated/prisma/client";
+import { createSsoToken } from "@/lib/sso";
+import { DEFAULT_SITE_ID, HIGHFIVE_AGENT_CODE } from "@/lib/constants";
+import type { StudentGrade, StudentStatus, Sex, ResidenceRegion } from "@/generated/prisma/client";
+
+// 회원등급이 GENERAL(일반회원)이고 협력사를 명시적으로 고르지 않았다면 직영에이전트를
+// 기본값으로 채운다. 다른 등급이거나 협력사를 명시적으로 골랐다면 그 값을 그대로 쓴다.
+async function resolveAgentId(grade: StudentGrade, agentIdRaw: string): Promise<number | null> {
+  if (agentIdRaw) return Number(agentIdRaw);
+  if (grade !== "GENERAL") return null;
+  const highfive = await prisma.agent.findUnique({ where: { code: HIGHFIVE_AGENT_CODE } });
+  return highfive?.id ?? null;
+}
 
 export async function createStudent(_prevState: { error?: string } | undefined, formData: FormData) {
   const actor = await requireBackofficeActor();
@@ -42,7 +52,7 @@ export async function createStudent(_prevState: { error?: string } | undefined, 
       grade,
       status,
       discountRate,
-      agentId: agentIdRaw ? Number(agentIdRaw) : null,
+      agentId: await resolveAgentId(grade, agentIdRaw),
     },
   });
   await logAudit({ actor, action: "ACCOUNT_CREATED", targetType: "Student", targetId: student.id, description: `학생 등록: ${name}` });
@@ -68,14 +78,12 @@ export async function updateStudent(id: number, _prevState: { error?: string } |
   const occupation = String(formData.get("occupation") ?? "").trim();
   const regionRaw = String(formData.get("region") ?? "");
   const address = String(formData.get("address") ?? "").trim();
-  const landlinePhone = String(formData.get("landlinePhone") ?? "").trim();
   const mobilePhone = String(formData.get("mobilePhone") ?? "").trim();
   const etcNote = String(formData.get("etcNote") ?? "").trim();
-  const parentName = String(formData.get("parentName") ?? "").trim();
-  const parentContact = String(formData.get("parentContact") ?? "").trim();
   const preferredClassMethod = String(formData.get("preferredClassMethod") ?? "").trim();
-  const smsOptIn = formData.get("smsOptIn") === "on";
   const teamsId = String(formData.get("teamsId") ?? "").trim();
+  const kakaoId = String(formData.get("kakaoId") ?? "").trim();
+  const wechatId = String(formData.get("wechatId") ?? "").trim();
   const referrerId = String(formData.get("referrerId") ?? "").trim();
   const agentIdRaw = String(formData.get("agentId") ?? "");
 
@@ -97,16 +105,14 @@ export async function updateStudent(id: number, _prevState: { error?: string } |
       occupation: occupation || null,
       region: regionRaw ? (regionRaw as ResidenceRegion) : null,
       address: address || null,
-      landlinePhone: landlinePhone || null,
       mobilePhone: mobilePhone || null,
       etcNote: etcNote || null,
-      parentName: parentName || null,
-      parentContact: parentContact || null,
       preferredClassMethod: preferredClassMethod || null,
-      smsOptIn,
       teamsId: teamsId || null,
+      kakaoId: kakaoId || null,
+      wechatId: wechatId || null,
       referrerId: referrerId || null,
-      agentId: agentIdRaw ? Number(agentIdRaw) : null,
+      agentId: await resolveAgentId(grade, agentIdRaw),
       ...(newPassword ? { passwordHash: await bcrypt.hash(newPassword, 10) } : {}),
     },
   });
@@ -146,22 +152,10 @@ export async function updateStudentAgent(id: number, agentId: number | null) {
 export async function updateStudentGrade(id: number, grade: StudentGrade) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "students.update");
-  await prisma.student.update({ where: { id }, data: { grade } });
+  const student = await prisma.student.findUnique({ where: { id } });
+  const agentId = grade === "GENERAL" && !student?.agentId ? await resolveAgentId(grade, "") : undefined;
+  await prisma.student.update({ where: { id }, data: { grade, ...(agentId !== undefined ? { agentId } : {}) } });
   await logAudit({ actor, action: "UPDATE", targetType: "Student", targetId: id, description: `회원등급 변경: ${grade}` });
-  revalidatePath("/students");
-}
-
-export async function updateStudentAccountStatus(id: number, accountStatus: AccountStatus) {
-  const actor = await requireBackofficeActor();
-  requirePermission(actor, "students.update");
-  await prisma.student.update({ where: { id }, data: { accountStatus } });
-  await logAudit({
-    actor,
-    action: accountStatus === "ACTIVE" ? "UPDATE" : "ACCOUNT_DISABLED",
-    targetType: "Student",
-    targetId: id,
-    description: `계정 상태 변경: ${accountStatus}`,
-  });
   revalidatePath("/students");
 }
 
@@ -202,9 +196,13 @@ export async function deleteConsultationNote(studentId: number, noteId: number) 
   revalidatePath("/students");
 }
 
-// 관리자가 학생 계정 화면을 그대로 확인하기 위한 대리 로그인. 관리자 세션은 유지되므로
-// 학생 화면 배너의 "관리자로 돌아가기"로 즉시 복귀할 수 있다. students.update와 분리된
-// 별도 권한(students.impersonate)으로 게이트하며, 기본 시드는 ADMIN만 보유한다.
+// 관리자가 학생 계정 화면을 그대로 확인하기 위한 대리 로그인. 실제 학생이 보는 화면은
+// admin이 아니라 메인 마케팅 사이트(Vite, 별도 origin·별도 mock 데이터)의 "내 강의실"이므로,
+// 서명된 1회용 SSO 토큰을 발급해 그쪽 /sso 진입 라우트로 이동시킨다(sso.ts/verify 라우트
+// 참고). admin 쪽 student_session 쿠키도 함께 발급해두는데, 이건 admin 자체의 /student
+// 화면(레거시 폴백)과 endImpersonation()의 "돌아가기" 흐름이 계속 동작하도록 남겨둔
+// 것으로, 실제 이동 목적지와는 별개다. students.update와 분리된 별도 권한
+// (students.impersonate)으로 게이트하며, 기본 시드는 ADMIN만 보유한다.
 export async function impersonateStudent(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "students.impersonate");
@@ -214,7 +212,15 @@ export async function impersonateStudent(id: number) {
   }
   await startStudentImpersonation(id);
   await logAudit({ actor, action: "IMPERSONATION_STARTED", targetType: "Student", targetId: id, description: `${actor.name}이(가) 학생 ${student.name}(${student.loginId})으로 대리 로그인 시작` });
-  redirect("/student");
+
+  const token = createSsoToken({
+    studentId: student.id,
+    loginId: student.loginId,
+    name: student.name,
+    englishName: student.englishName,
+  });
+  const marketingSiteUrl = process.env.MARKETING_SITE_URL ?? "http://localhost:5173";
+  redirect(`${marketingSiteUrl}/sso?token=${encodeURIComponent(token)}`);
 }
 
 export async function endImpersonation() {

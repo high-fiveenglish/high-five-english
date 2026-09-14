@@ -42,9 +42,17 @@ const NAV_GROUPS = [
   {
     title: "콘텐츠 관리",
     items: [
-      { href: "/instructors", label: "강사소개 관리", permission: "instructors.view" },
       { href: "/pricing", label: "가격표 관리", permission: "pricing.view" },
       { href: "/bulletins", label: "공지사항 관리", permission: "bulletins.view" },
+    ],
+  },
+  {
+    title: "마케팅 사이트",
+    items: [
+      { href: "/enrollment-requests", label: "수강신청 관리", permission: "enrollment_requests.view" },
+      { href: "/home-notices", label: "홈페이지 공지 관리", permission: "home_notices.view" },
+      { href: "/reviews", label: "수강후기 게시판", permission: "reviews.view" },
+      { href: "/consult-channels", label: "상담채널 설정", permission: "consult_channels.view" },
     ],
   },
 ] as const;
@@ -63,6 +71,7 @@ const ADMIN_ONLY_GROUP = {
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const actor = await requireBackofficeActor();
   const isAdmin = actor.role === "ADMIN";
+  const marketingSiteUrl = process.env.MARKETING_SITE_URL ?? "http://localhost:5173";
   const hasPermission = (key: string | null) => key === null || isAdmin || ("permissions" in actor && actor.permissions.includes(key));
 
   const visibleGroups = NAV_GROUPS.map((group) => ({
@@ -117,7 +126,27 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         </form>
       </aside>
 
-      <main className="flex-1 overflow-x-auto p-8">{children}</main>
+      <main className="flex flex-1 flex-col overflow-x-auto">
+        <header className="flex items-center justify-end gap-2 border-b border-slate-200 bg-white px-8 py-3">
+          <a
+            href={marketingSiteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            홈페이지 메인
+          </a>
+          <form action={logout}>
+            <button
+              type="submit"
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            >
+              로그아웃
+            </button>
+          </form>
+        </header>
+        <div className="flex-1 p-8">{children}</div>
+      </main>
     </div>
   );
 }

@@ -85,6 +85,7 @@
     "table_header_type": "Loại lớp học",
     "table_header_fee": "Học phí",
     "cta": "Bắt đầu với bài kiểm tra trình độ miễn phí",
+    "enroll_cta": "Đăng ký khóa học",
     "loading": "Đang tải bảng giá...",
     "disclaimer": "* Học phí trên áp dụng cho lớp học cá nhân 1:1. Các chương trình khuyến mãi và ưu đãi anh chị em sẽ được tư vấn qua buổi tư vấn 1:1.",
     "durations": {
@@ -119,57 +120,23 @@
   "reviews": {
     "eyebrow": "Hỗ trợ khách hàng · Đánh giá học viên",
     "title": "Minh chứng bằng đánh giá, không phải quảng cáo",
-    "description": "HiFive English đã phát triển nhờ đánh giá của phụ huynh và học viên đã thực sự trải nghiệm lớp học, thay vì chi tiêu cho quảng cáo.",
-    "items": {
-      "r1": {
-        "author": "Phụ huynh bé Kim O-eun",
-        "role": "Con học lớp 3",
-        "period": "Học được 8 tháng",
-        "content": "Ban đầu con khá rụt rè khi học qua video, nhưng nhờ giáo viên luôn chào đón vui vẻ nên giờ đây con mong chờ nhất là giờ học. Nhờ phiếu đánh giá học tập, tôi biết được mỗi lần con gặp khó khăn với cách diễn đạt nào, nên việc ôn tập ở nhà cũng dễ dàng hơn nhiều."
-      },
-      "r2": {
-        "author": "Park O-jun",
-        "role": "Học sinh lớp 8",
-        "period": "Học được 1 năm 2 tháng",
-        "content": "Trước đây em chỉ học tiếng Anh để thi ở trường, nhưng từ khi học tiếng Anh qua video, giờ em có thể nói ngay suy nghĩ của mình bằng tiếng Anh với giáo viên bản ngữ. Cô sửa lỗi ngữ pháp ngay tại chỗ nên em cảm nhận rõ mình đang tiến bộ."
-      },
-      "r3": {
-        "author": "Phụ huynh bé Lee O-young",
-        "role": "Con học lớp 5",
-        "period": "Học được 6 tháng",
-        "content": "Tôi đã so sánh nhiều trung tâm tiếng Anh qua video và thấy nơi này có việc phân công và quản lý giáo viên kỹ lưỡng nhất. Mỗi lần tư vấn, họ đều nắm rõ tình hình của con nên tôi rất yên tâm. Việc có thể thấy rõ quá trình tiến bộ qua bài kiểm tra trình độ hàng tháng cũng là một điểm cộng lớn."
-      },
-      "r4": {
-        "author": "Choi O-a",
-        "role": "Người đi làm",
-        "period": "Học được 4 tháng",
-        "content": "Vì hay đi công tác nên tôi cần tiếng Anh thương mại, giáo viên đã dạy tôi những cách diễn đạt phù hợp với công việc thực tế nên tôi áp dụng được rất nhiều. Việc đặt lịch cũng linh hoạt và giáo viên rất tốt nên tôi rất hài lòng khi theo học."
-      },
-      "r5": {
-        "author": "Phụ huynh bé Jung O-ho",
-        "role": "Con học lớp 6",
-        "period": "Học được 1 năm 6 tháng",
-        "content": "Tôi thích việc thay vì nhận xét chung chung kiểu \"con học tốt lắm\", giáo viên phản hồi cụ thể hôm nay con học gì và gặp khó khăn ở đâu. Sự chăm sóc bền bỉ này khiến tôi hiểu vì sao nơi đây phát triển nhờ truyền miệng mà không cần quảng cáo."
-      },
-      "r6": {
-        "author": "Han O-su",
-        "role": "Học sinh lớp 10",
-        "period": "Học được 3 tháng",
-        "content": "Ban đầu việc phải nói tiếng Anh mỗi ngày khiến em thấy áp lực, nhưng nhờ luyện tập lặp lại, giờ tốc độ đặt câu của em đã nhanh hơn hẳn. Đôi lúc lịch của giáo viên kín hơi tiếc, nhưng nhìn chung em rất hài lòng."
-      }
-    }
+    "description": "HiFive English đã phát triển nhờ đánh giá của phụ huynh và học viên đã thực sự trải nghiệm lớp học, thay vì chi tiêu cho quảng cáo."
   },
   "instructors": {
     "eyebrow": "Giáo viên",
     "title": "Đội ngũ giáo viên chuyên nghiệp đã được kiểm chứng",
     "description": "Từ tuyển chọn, đào tạo đến đánh giá định kỳ — đây là những giáo viên đã vượt qua tiêu chuẩn mà HiFive English đúc kết suốt 12 năm. Nhấp vào ảnh để nghe phần giới thiệu bằng giọng nói và xem lý lịch chi tiết.",
     "listen_hover": "Nghe giới thiệu",
+    "empty": "Thông tin giáo viên đang được chuẩn bị.",
+    "tesol_badge": "Chứng chỉ TESOL",
+    "grade_senior": "Giáo viên cấp cao",
     "modal": {
       "title": "Giới thiệu giáo viên",
       "audio_label": "🔊 Nghe giới thiệu bằng giọng nói",
       "audio_unsupported": "Trình duyệt của bạn không hỗ trợ phát âm thanh.",
       "audio_disclaimer": "* Đây là giọng mẫu demo. Sẽ được thay thế bằng phần giới thiệu giọng nói thực tế của giáo viên.",
       "career_label": "Kinh nghiệm & Chứng chỉ",
+      "working_hours_label": "Giờ làm việc",
       "play_label": "Phát",
       "pause_label": "Tạm dừng",
       "hours_label": "Giờ có thể dạy",
@@ -211,7 +178,7 @@
     "items": {
       "classroom": {
         "title": "Lớp học của tôi",
-        "desc": "Quản lý đặt lịch, thay đổi lịch học và vào lớp học video tất cả trong một nơi. Bạn cũng có thể xem lại buổi học trước và tài liệu học tập ngay lập tức."
+        "desc": "Quản lý dời lịch và vào lớp học video tất cả trong một nơi. Bạn cũng có thể xem lại buổi học trước và tài liệu học tập ngay lập tức."
       },
       "report": {
         "title": "Phiếu đánh giá học tập",

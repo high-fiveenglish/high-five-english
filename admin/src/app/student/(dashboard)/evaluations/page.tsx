@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireStudent } from "@/lib/studentAuth";
+import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { formatAppDate } from "@/lib/appTime";
 
 const fmtDate = formatAppDate;
@@ -10,7 +11,7 @@ export default async function StudentEvaluationsPage() {
 
   const sessions = await prisma.classSession.findMany({
     where: { studentId: student.id, evaluation: { isNot: null } },
-    include: { evaluation: true, teacher: true, enrollment: true },
+    include: { evaluation: true, teacher: { select: TEACHER_SUMMARY_SELECT }, enrollment: true },
     orderBy: { scheduledAt: "desc" },
   });
 

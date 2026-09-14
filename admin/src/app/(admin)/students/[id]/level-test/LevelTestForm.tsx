@@ -1,15 +1,18 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useState } from "react";
 import { createLevelTestForStudent } from "./actions";
-import { TeacherAvailabilityPicker } from "./TeacherAvailabilityPicker";
+import { useLevelTestAvailableTeachers } from "../../../level-tests/useLevelTestAvailableTeachers";
 import {
   SUBJECT_OPTIONS,
   CLASS_METHOD_OPTIONS,
   ENGLISH_LEVEL_OPTIONS,
   AGE_GROUP_OPTIONS,
-  INTEREST_TOPIC_OPTIONS,
+  AGE_GROUP_TO_TOPIC_GROUP,
+  ALL_INTEREST_TOPIC_OPTIONS,
+  INTEREST_TOPIC_GROUPS,
 } from "@/lib/levelTestOptions";
+import { HALF_HOUR_TIME_OPTIONS } from "@/lib/timeOptions";
 
 export type StudentDefaults = {
   id: number;
@@ -20,29 +23,35 @@ export type StudentDefaults = {
   email: string | null;
   teamsId: string | null;
   kakaoId: string | null;
+  wechatId: string | null;
   preferredClassMethod: string | null;
 };
 
-export type TeacherOption = { id: number; label: string };
-
 export function LevelTestForm({
   student,
-  teachers,
   defaultEnglishLevel,
   defaultAgeGroup,
   defaultInterestTopic,
 }: {
   student: StudentDefaults;
-  teachers: TeacherOption[];
   defaultEnglishLevel: string | null;
   defaultAgeGroup: string | null;
   defaultInterestTopic: string | null;
 }) {
   const action = createLevelTestForStudent.bind(null, student.id);
   const [state, formAction, pending] = useActionState(action, undefined);
-  const dateRef = useRef<HTMLInputElement>(null);
-  const timeRef = useRef<HTMLInputElement>(null);
+  const [testDate, setTestDate] = useState("");
   const [teacherId, setTeacherId] = useState("");
+  const [testTime, setTestTime] = useState("");
+  const { teachers: availableTeachers, loading: loadingTeachers, canSearch } = useLevelTestAvailableTeachers({
+    testDate,
+    testTime,
+    setTeacherId,
+  });
+  const [ageGroup, setAgeGroup] = useState(defaultAgeGroup ?? "");
+  const [interestTopic, setInterestTopic] = useState(defaultInterestTopic ?? "");
+  const topicGroupKey = AGE_GROUP_TO_TOPIC_GROUP[ageGroup];
+  const topicOptions = topicGroupKey ? INTEREST_TOPIC_GROUPS[topicGroupKey] : ALL_INTEREST_TOPIC_OPTIONS;
 
   return (
     <form action={formAction} className="flex max-w-2xl flex-col gap-5">
@@ -84,6 +93,9 @@ export function LevelTestForm({
           <Field label="카카오톡 ID">
             <input name="kakaoId" defaultValue={student.kakaoId ?? ""} className="input" />
           </Field>
+          <Field label="위챗 ID">
+            <input name="wechatId" defaultValue={student.wechatId ?? ""} className="input" />
+          </Field>
         </div>
       </Section>
 
@@ -98,39 +110,49 @@ export function LevelTestForm({
       <Section title="희망 일시 및 강사">
         <div className="grid grid-cols-2 gap-4">
           <Field label="수업일자">
-            <input ref={dateRef} name="testDate" type="date" className="input" />
+            <input
+              name="testDate"
+              type="date"
+              value={testDate}
+              onChange={(e) => setTestDate(e.target.value)}
+              className="input"
+            />
           </Field>
           <Field label="희망 시작시간">
-            <input ref={timeRef} name="testTime" type="time" className="input" />
-          </Field>
-        </div>
-        <div className="flex items-end gap-3">
-          <Field label="희망 강사">
-            <select
-              name="teacherId"
-              value={teacherId}
-              onChange={(e) => setTeacherId(e.target.value)}
-              className="input"
-            >
-              <option value="">미지정</option>
-              {teachers.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
+            <select name="testTime" value={testTime} onChange={(e) => setTestTime(e.target.value)} className="input">
+              <option value="">선택하세요</option>
+              {HALF_HOUR_TIME_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
                 </option>
               ))}
             </select>
           </Field>
-          <TeacherAvailabilityPicker
-            getDate={() => dateRef.current?.value ?? ""}
-            onPick={(id, _name, hour) => {
-              setTeacherId(String(id));
-              if (timeRef.current) timeRef.current.value = `${String(hour).padStart(2, "0")}:00`;
-            }}
-          />
         </div>
-        <p className="text-xs text-slate-400">
-          &ldquo;찾아보기&rdquo;를 누르면 선택한 수업일자 기준으로 실제 비어있는 강사·시간만 보여줍니다.
-        </p>
+        <Field label="희망 강사 (해당 일시에 가능한 강사만)">
+          <select
+            name="teacherId"
+            value={teacherId}
+            onChange={(e) => setTeacherId(e.target.value)}
+            disabled={canSearch && loadingTeachers}
+            className="input"
+          >
+            {!canSearch ? (
+              <option value="">수업일자·시작시간을 먼저 선택하세요</option>
+            ) : loadingTeachers ? (
+              <option value="">조회 중...</option>
+            ) : (
+              <>
+                <option value="">미지정</option>
+                {availableTeachers.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </>
+            )}
+          </select>
+        </Field>
       </Section>
 
       <Section title="영어실력">
@@ -143,7 +165,15 @@ export function LevelTestForm({
       </Section>
 
       <Section title="연령대">
-        <select name="ageGroup" defaultValue={defaultAgeGroup ?? ""} className="input max-w-xs">
+        <select
+          name="ageGroup"
+          value={ageGroup}
+          onChange={(e) => {
+            setAgeGroup(e.target.value);
+            setInterestTopic("");
+          }}
+          className="input max-w-xs"
+        >
           <option value="">:: 선택 ::</option>
           {AGE_GROUP_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -154,14 +184,20 @@ export function LevelTestForm({
       </Section>
 
       <Section title="레벨테스트 문제 (관심분야)">
-        <select name="interestTopic" defaultValue={defaultInterestTopic ?? ""} className="input max-w-xs">
+        <select
+          name="interestTopic"
+          value={interestTopic}
+          onChange={(e) => setInterestTopic(e.target.value)}
+          className="input max-w-xs"
+        >
           <option value="">:: 레벨테스트 문제 ::</option>
-          {INTEREST_TOPIC_OPTIONS.map((o) => (
+          {topicOptions.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
           ))}
         </select>
+        <p className="text-xs text-slate-400">연령대를 먼저 선택하면 해당 연령대에 맞는 주제만 표시됩니다.</p>
       </Section>
 
       <Section title="강사에게 전달할 사항">

@@ -31,7 +31,7 @@ export default async function TeacherBulletinsPage() {
         ))}
         {bulletins.length === 0 && (
           <p className="rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-slate-400">
-            등록된 공지사항이 없습니다.
+            No notices found.
           </p>
         )}
       </div>

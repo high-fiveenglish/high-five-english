@@ -14,6 +14,7 @@ import {
   markAttendance,
   recomputeEnrollmentEndDate,
 } from "../lib/scheduling/engine";
+import { addDays } from "../lib/scheduling/dateUtils";
 import type {
   ClosureDate,
   DailyEvaluation,
@@ -106,6 +107,20 @@ export const STUDENTS: ClassroomStudent[] = [
   { id: "student-6", name: "강태오", englishName: "Taeo Kang" },
 ];
 
+// Demo loyalty-point balances, keyed by studentId — earned in the real product via
+// referral (5,000pt to the referring friend once the referred student registers) and
+// writing a review (1,000pt per review), per the "수강등록" 적립금 policy. No earning
+// automation exists yet in this mock; these are just starting balances so the
+// EnrollmentRegisterPage's "잔여 적립금" display has something real to show.
+export const STUDENT_POINTS_SEED: Record<string, number> = {
+  "demo-student": 3000,
+  "student-2": 1000,
+  "student-3": 0,
+  "student-4": 5000,
+  "student-5": 0,
+  "student-6": 1000,
+};
+
 export const CLOSURES: ClosureDate[] = [
   { id: "closure-1", date: "2026-07-24", type: "academy_closed", label: "학원 창립기념일 휴무" },
   { id: "closure-2", date: "2026-10-09", type: "public_holiday", label: "한글날" },
@@ -137,6 +152,9 @@ interface EnrollmentBlueprint {
   startDate: string;
   weeklyDays: Enrollment["weeklyDays"];
   classTime: string;
+  /** Optional per-weekday time overrides, for an "admin-registered" demo enrollment
+   * with a genuinely mixed schedule — see Enrollment.weeklyTimes. */
+  weeklyTimes?: Enrollment["weeklyTimes"];
   totalLessons: number;
   meetingPlatform: MeetingPlatformId;
   route: string;
@@ -170,11 +188,39 @@ const BLUEPRINTS: EnrollmentBlueprint[] = [
     enrollmentId: "enrollment-1",
     studentId: "demo-student",
     teacherId: TEACHER_JAMES.id,
-    startDate: "2026-07-06",
-    weeklyDays: [1, 3, 5],
+    startDate: "2026-09-01",
+    weeklyDays: [1, 2, 3, 4, 5],
     classTime: "19:00",
-    totalLessons: 24,
+    totalLessons: 60,
     meetingPlatform: "zoom",
+    route: "main",
+    currentLevel: "b1",
+  },
+  // A finished past enrollment and a not-yet-started future one for the SAME student —
+  // demo-student is deliberately given all three timeline states (ended/in-progress/
+  // upcoming; see classroomService.classifyEnrollmentTimeline) so the classroom page's
+  // "수업선택" history dropdown has real past/current/upcoming records to switch between.
+  {
+    enrollmentId: "enrollment-1-past",
+    studentId: "demo-student",
+    teacherId: TEACHER_SARAH.id,
+    startDate: "2026-03-02",
+    weeklyDays: [2, 4],
+    classTime: "18:00",
+    totalLessons: 16,
+    meetingPlatform: "voov",
+    route: "main",
+    currentLevel: "a2",
+  },
+  {
+    enrollmentId: "enrollment-1-future",
+    studentId: "demo-student",
+    teacherId: TEACHER_EMILY.id,
+    startDate: "2027-01-04",
+    weeklyDays: [1, 3, 5],
+    classTime: "20:00",
+    totalLessons: 24,
+    meetingPlatform: "teams",
     route: "main",
     currentLevel: "b1",
   },
@@ -238,6 +284,24 @@ const BLUEPRINTS: EnrollmentBlueprint[] = [
     route: "mnmenglish",
     currentLevel: "a1",
   },
+  // Demonstrates an admin-registered enrollment with a genuinely mixed weekly
+  // schedule (see Enrollment.weeklyTimes / engine.resolveClassTime): Mon/Fri use the
+  // shared `classTime` (20:00), Wednesday overrides to 20:30. Deliberately booked
+  // against James, whose other two enrollments above never touch Mon/Wed/Fri at these
+  // times, so this seeds cleanly with zero real conflicts.
+  {
+    enrollmentId: "enrollment-6-mixed",
+    studentId: "student-6",
+    teacherId: TEACHER_JAMES.id,
+    startDate: "2026-09-07",
+    weeklyDays: [1, 3, 5],
+    classTime: "20:00",
+    weeklyTimes: { 3: "20:30" },
+    totalLessons: 12,
+    meetingPlatform: "zoom",
+    route: "main",
+    currentLevel: "b1",
+  },
 ];
 
 function draftFor(bp: EnrollmentBlueprint): Enrollment {
@@ -254,6 +318,7 @@ function draftFor(bp: EnrollmentBlueprint): Enrollment {
     lessonDurationMin: 25,
     weeklyDays: bp.weeklyDays,
     classTime: bp.classTime,
+    weeklyTimes: bp.weeklyTimes,
     status: "active",
     meetingPlatform: bp.meetingPlatform,
     route: bp.route,
@@ -261,11 +326,83 @@ function draftFor(bp: EnrollmentBlueprint): Enrollment {
   };
 }
 
-/** The flagship demo enrollment — kept exactly as it has been throughout development
- * (one student-initiated reschedule, one teacher-caused cancellation, a finished
- * evaluation, a pending evaluation, an absence, two pre-registered per-lesson join
- * links) so every screen that was already verified against this data keeps working
- * identically. */
+// 9 reschedules total, spread across lesson dates well after the evaluated block below
+// (2026-09-14 through 2026-09-24) so none of them touch the 9/1-9/7 lessons that must
+// stay completed-with-evaluation. Alternates student/teacher-initiated for variety.
+const RESCHEDULE_TARGET_DATES = [
+  "2026-09-14",
+  "2026-09-15",
+  "2026-09-16",
+  "2026-09-17",
+  "2026-09-18",
+  "2026-09-21",
+  "2026-09-22",
+  "2026-09-23",
+  "2026-09-24",
+];
+
+// The 5 weekday lessons from 9/1 through 9/7 — each gets a completed, fully-written
+// evaluation per the "9월7일까지는 평가서가 모두 작성" requirement.
+const EVALUATED_DATES = ["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-07"];
+
+const EVALUATION_CONTENT = [
+  {
+    lessonSummary: "Unit 5 'Making Conversation' 대화 패턴을 활용해 자기소개 롤플레이를 진행했습니다.",
+    strengths: "처음 만나는 상황을 가정한 질문에도 머뭇거리지 않고 답변했습니다.",
+    improvements: "현재시제와 현재진행형을 혼동하는 경우가 있어 다음 수업에서 짚어줄 예정입니다.",
+    teacherComment: "9월 첫 수업인데도 긴장하지 않고 잘 참여해줬어요!",
+    pronunciation: { score: 4, comment: "모음 발음이 또렷함" },
+    grammar: { score: 3, comment: "현재시제/현재진행형 혼용" },
+    vocabulary: { score: 4, comment: "일상 표현을 적절히 사용" },
+    speaking: { score: 4, comment: "망설임 없이 문장을 완성함" },
+  },
+  {
+    lessonSummary: "지난 수업에서 배운 표현을 복습하고, 취미에 대해 이야기 나누는 활동을 했습니다.",
+    strengths: "배운 표현을 새로운 문맥에 바로 응용하려는 시도가 인상적이었습니다.",
+    improvements: "복수형 명사 사용에서 실수가 반복되어 추가 연습이 필요합니다.",
+    teacherComment: "취미 얘기할 때 눈빛이 반짝였어요. 다음에도 이 주제로 더 얘기해봐요!",
+    pronunciation: { score: 4, comment: "억양이 자연스러워짐" },
+    grammar: { score: 3, comment: "복수형 명사 실수 반복" },
+    vocabulary: { score: 4, comment: "취미 관련 어휘를 잘 활용함" },
+    speaking: { score: 4, comment: "문장 길이가 조금씩 늘어남" },
+  },
+  {
+    lessonSummary: "질문-답변 패턴을 활용해 하루 일과를 설명하는 연습을 진행했습니다.",
+    strengths: "순서를 나타내는 연결어(first, then, after that)를 자연스럽게 사용했습니다.",
+    improvements: "과거시제 동사 활용에서 반복적인 실수가 있어 집중 교정이 필요합니다.",
+    teacherComment: "오늘 자유발화 비중이 확실히 늘었어요!",
+    pronunciation: { score: 4, comment: "th 발음이 안정적으로 자리잡음" },
+    grammar: { score: 3, comment: "과거시제 동사 변형에서 실수 반복" },
+    vocabulary: { score: 4, comment: "일상 표현 어휘량이 꾸준히 늘고 있음" },
+    speaking: { score: 4, comment: "머뭇거림 없이 문장을 끝까지 완성함" },
+  },
+  {
+    lessonSummary: "Unit 5 핵심 표현을 활용한 짧은 역할극으로 실전 회화 연습을 진행했습니다.",
+    strengths: "질문에 바로 응답하려는 적극적인 태도가 좋았습니다.",
+    improvements: "문장을 조금 더 길게 확장해서 말하는 연습이 필요합니다.",
+    teacherComment: "오늘도 적극적으로 참여해줘서 좋았어요. 이 페이스 유지해봐요!",
+    pronunciation: { score: 4, comment: "전반적으로 또렷한 발음" },
+    grammar: { score: 3, comment: "현재완료 표현에서 종종 실수" },
+    vocabulary: { score: 4, comment: "주제 관련 어휘를 적절히 사용" },
+    speaking: { score: 3, comment: "문장 길이를 조금 더 늘려볼 것" },
+  },
+  {
+    lessonSummary: "한 주를 마무리하며 지난 한 주간 배운 표현을 정리하고 자유 발화 시간을 가졌습니다.",
+    strengths: "일주일간 배운 표현을 스스로 정리해서 문장을 만들어낸 점이 좋았습니다.",
+    improvements: "발화 속도가 다소 느린 편이라 자유 발화 비중을 늘리는 것을 추천합니다.",
+    teacherComment: "한 주 동안 정말 많이 늘었어요. 다음 주도 이 흐름대로 가봅시다!",
+    pronunciation: { score: 4, comment: "문장 강세가 안정적임" },
+    grammar: { score: 4, comment: "이번 주 배운 문법을 잘 적용함" },
+    vocabulary: { score: 4, comment: "복습한 표현을 능동적으로 사용" },
+    speaking: { score: 3, comment: "발화 속도를 조금 더 높이면 좋음" },
+  },
+] as const;
+
+/** The flagship demo enrollment for demo-student: 60 lessons, 5x/week (Mon-Fri) starting
+ * 2026-09-01, with 9 total reschedules and every lesson through 2026-09-07 completed
+ * with a written evaluation — matches the specific scenario requested for verification.
+ * Lessons after that (up to "today") are picked up generically by applyRealismPass, so
+ * the most recent one demonstrates the "평가서 작성 중" (evaluation still pending) state. */
 function buildFlagshipSeed(bp: EnrollmentBlueprint): {
   enrollment: Enrollment;
   lessons: Lesson[];
@@ -291,20 +428,24 @@ function buildFlagshipSeed(bp: EnrollmentBlueprint): {
   const replace = (lesson: Lesson) =>
     (lessons = lessons.map((l) => (l.id === lesson.id ? lesson : l)));
 
-  // --- one student-initiated reschedule (seeds a "rescheduled" row + audit record) ---
-  const swappedLesson = byDate("2026-07-15");
-  if (swappedLesson) {
+  // --- 9 reschedules, alternating student/teacher-initiated ---
+  RESCHEDULE_TARGET_DATES.forEach((date, i) => {
+    const target = byDate(date);
+    if (!target) return;
+    const studentInitiated = i % 2 === 0;
     const result = extendSchedule({
       enrollment,
       allEnrollmentLessons: lessons,
       allTeacherLessons: lessons,
-      targetLesson: swappedLesson,
-      cause: "rescheduled",
-      initiatedBy: "student",
-      reason: "가족 행사로 참석 어려움",
+      targetLesson: target,
+      cause: studentInitiated ? "rescheduled" : "teacher_absent",
+      initiatedBy: studentInitiated ? "student" : "teacher",
+      reason: studentInitiated ? "개인 사정으로 참석 어려움" : "강사 개인 사정으로 휴강",
       closures: CLOSURES,
       unavailability: TEACHER_UNAVAILABILITY,
-      nowMs: Date.parse("2026-07-10T08:00:00+09:00"),
+      // Student reschedules need >=4h lead time before class; simulate a few days'
+      // notice either way using a timestamp well before the target lesson.
+      nowMs: Date.parse(`${addDays(date, studentInitiated ? -5 : -1)}T08:00:00+09:00`),
       idGen,
     });
     if (result.ok) {
@@ -313,71 +454,26 @@ function buildFlagshipSeed(bp: EnrollmentBlueprint): {
       enrollment = result.value.updatedEnrollment;
       rescheduleRequests.push(result.value.rescheduleRequest);
     }
-  }
+  });
 
-  // --- one teacher-caused cancellation (auto-extends, does not consume a lesson) ---
-  const teacherOutLesson = byDate("2026-07-27");
-  if (teacherOutLesson) {
-    const result = extendSchedule({
-      enrollment,
-      allEnrollmentLessons: lessons,
-      allTeacherLessons: lessons,
-      targetLesson: teacherOutLesson,
-      cause: "teacher_absent",
-      initiatedBy: "teacher",
-      reason: "강사 개인 사정으로 휴강",
-      closures: CLOSURES,
-      unavailability: TEACHER_UNAVAILABILITY,
-      nowMs: Date.parse("2026-07-26T08:00:00+09:00"),
-      idGen,
-    });
-    if (result.ok) {
-      replace(result.value.updatedOriginalLesson);
-      lessons = [...lessons, result.value.newLesson];
-      enrollment = result.value.updatedEnrollment;
-      rescheduleRequests.push(result.value.rescheduleRequest);
-    }
-  }
-
-  // --- a completed lesson with a finished evaluation ---
-  const evaluatedLesson = byDate("2026-08-19");
-  if (evaluatedLesson) {
-    const { updatedLesson } = markAttendance(evaluatedLesson, "completed");
+  // --- every lesson from 9/1 through 9/7: completed with a fully-written evaluation ---
+  EVALUATED_DATES.forEach((date, i) => {
+    const lesson = byDate(date);
+    if (!lesson) return;
+    const { updatedLesson } = markAttendance(lesson, "completed");
     updatedLesson.evaluationStatus = "completed";
     replace(updatedLesson);
     enrollment = { ...enrollment, remainingLessons: enrollment.remainingLessons - 1 };
+    const content = EVALUATION_CONTENT[i % EVALUATION_CONTENT.length];
     evaluations.push({
       id: idGen(),
       lessonId: updatedLesson.id,
       studentId: bp.studentId,
       teacherId: bp.teacherId,
-      lessonSummary: "Unit 5 'Making Conversation' 대화 패턴을 활용해 실제 상황극을 진행했습니다.",
-      strengths: "새로운 표현을 배우면 바로 자기 문장으로 응용해 말하려는 시도가 좋았습니다.",
-      improvements: "과거시제 동사 활용에서 반복적인 실수가 있어 다음 수업에서 집중 교정이 필요합니다.",
-      teacherComment: "오늘 자유발화 비중이 확실히 늘었어요! 다음 시간엔 좀 더 긴 문장에 도전해봐요.",
-      pronunciation: { score: 4, comment: "th 발음이 안정적으로 자리잡음" },
-      grammar: { score: 3, comment: "과거시제 동사 변형에서 실수 반복" },
-      vocabulary: { score: 4, comment: "일상 표현 어휘량이 꾸준히 늘고 있음" },
-      speaking: { score: 4, comment: "머뭇거림 없이 문장을 끝까지 완성함" },
+      ...content,
       source: "teacher",
     });
-  }
-
-  // --- a completed lesson whose evaluation is still being written ---
-  const pendingEvalLesson = byDate("2026-08-12");
-  if (pendingEvalLesson) {
-    const { updatedLesson } = markAttendance(pendingEvalLesson, "completed");
-    replace(updatedLesson);
-    enrollment = { ...enrollment, remainingLessons: enrollment.remainingLessons - 1 };
-  }
-
-  // --- an absence (forfeits the lesson, no schedule extension) ---
-  const absentLesson = byDate("2026-08-17");
-  if (absentLesson) {
-    const { updatedLesson } = markAttendance(absentLesson, "absent");
-    replace(updatedLesson);
-    enrollment = { ...enrollment, remainingLessons: enrollment.remainingLessons - 1 };
-  }
+  });
 
   applyRealismPass();
   attachDemoJoinLinks(2);

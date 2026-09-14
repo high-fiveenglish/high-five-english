@@ -1,0 +1,21 @@
+{
+  "eyebrow": "Hỗ trợ · Thông báo",
+  "title": "Thông báo",
+  "total": "Tổng cộng ({{count}})",
+  "new_post": "Viết bài",
+  "table_headers": {
+    "no": "No.",
+    "title": "Tiêu đề",
+    "name": "Người viết",
+    "date": "Ngày",
+    "hit": "Lượt xem"
+  },
+  "empty": "Chưa có thông báo nào.",
+  "loading": "Đang tải...",
+  "detail": {
+    "list": "Danh sách",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "hit": "Lượt xem: {{count}}"
+  }
+}

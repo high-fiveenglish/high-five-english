@@ -10,6 +10,7 @@
     "enrollment_guide": "Enrollment Info",
     "pricing": "Pricing",
     "process": "Enrollment Process",
+    "enrollment_register": "Register for Classes",
     "instructors": "Our Teachers",
     "learning_system": "Learning System",
     "my_classroom": "My Classroom",
@@ -68,6 +69,9 @@
     "leveltest_line1": "Level Test",
     "leveltest_line2": "Apply",
     "leveltest_aria": "Apply for Free Level Test",
+    "classroom_line1": "My",
+    "classroom_line2": "Classroom",
+    "classroom_aria": "Go to My Classroom",
     "scroll_top_aria": "Scroll to top"
   },
   "service_errors": {
@@ -93,6 +97,7 @@
     "forbidden_desc": "Your account doesn't have permission to view this page. Contact an administrator if you need access.",
     "not_found_title": "Page Not Found",
     "in_preparation_title": "This page is currently being prepared. We'll have more details soon.",
+    "demo_account_no_profile": "This is a demo account, so saving profile changes isn't supported. If you're an actual enrolled student, please contact the administrator to update your information.",
     "back_to_home": "Back to Home"
   }
 }

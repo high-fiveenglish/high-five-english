@@ -21,16 +21,18 @@ export function RescheduleConfirmModal({
   onClose: () => void;
   onRescheduled: (newDate: string) => void;
 }) {
-  const { actor } = useAuth();
+  const { actor, isRealAccount, studentApiToken } = useAuth();
   const { t } = useTranslation("classroom");
   const weekdayLabels = t("weekdays_short", { returnObjects: true }) as string[];
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
   const handleClose = () => {
     setSubmitting(false);
     setError(null);
+    setSubmitted(false);
     setResult(null);
     onClose();
   };
@@ -39,19 +41,23 @@ export function RescheduleConfirmModal({
     if (!lesson || !actor) return;
     setSubmitting(true);
     setError(null);
-    const res = await requestReschedule(actor, lesson.id, "");
+    const res = await requestReschedule(actor, lesson.id, "", studentApiToken);
     setSubmitting(false);
     if (!res.ok) {
       setError(t(`service_errors.${res.error.code}`, { ns: "common", defaultValue: t("service_errors.unknown", { ns: "common" }) }));
       return;
     }
-    setResult(res.value.newDate);
+    setSubmitted(true);
+    // 실제 계정은 admin에 "대체할 새 수업"이라는 개념이 없어(원래 수업이 LEAVE 처리되고
+    // 수강 종료일만 연장됨) newDate가 원래 날짜 그대로다 — 그 값을 "새 수업일"인 것처럼
+    // 보여주면 틀린 정보라, 실제 계정일 때는 날짜 없이 완료 사실만 보여준다.
+    if (!isRealAccount) setResult(res.value.newDate);
     onRescheduled(res.value.newDate);
   };
 
   return (
     <Modal open={!!lesson} onClose={handleClose} title={t("reschedule_modal.title")}>
-      {lesson && !result && (
+      {lesson && !submitted && (
         <div>
           <p className="text-[15px] leading-relaxed text-brand-950">
             <span className="font-bold">{formatDate(lesson.scheduledDate, weekdayLabels)} {lesson.scheduledTime}</span>{" "}
@@ -86,13 +92,17 @@ export function RescheduleConfirmModal({
         </div>
       )}
 
-      {result && (
+      {submitted && (
         <div className="flex flex-col items-center gap-3 py-4 text-center">
           <CheckCircle2 className="text-brand-600" size={40} />
           <p className="text-sm text-slate-600">
             {t("reschedule_modal.success_title")}
-            <br />
-            {t("reschedule_modal.new_date_label")}: <span className="font-bold text-brand-950">{formatDate(result, weekdayLabels)}</span>
+            {result && (
+              <>
+                <br />
+                {t("reschedule_modal.new_date_label")}: <span className="font-bold text-brand-950">{formatDate(result, weekdayLabels)}</span>
+              </>
+            )}
           </p>
           <button
             onClick={handleClose}

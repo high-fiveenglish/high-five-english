@@ -14,20 +14,19 @@ function formatDateTime(iso: string) {
 }
 
 function AdminHomeNoticesContent() {
-  const { actor } = useAuth();
+  const { adminApiToken } = useAuth();
   const { t } = useTranslation("admin");
   const [notices, setNotices] = useState<HomeNotice[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<HomeNotice | null>(null);
 
   const load = () => {
-    if (!actor) return;
-    listAllHomeNotices(actor).then((res) => {
+    listAllHomeNotices(adminApiToken).then((res) => {
       if (res.ok) setNotices(res.value);
     });
   };
 
-  useEffect(load, [actor]);
+  useEffect(load, [adminApiToken]);
 
   const openCreate = () => {
     setEditing(null);
@@ -38,8 +37,7 @@ function AdminHomeNoticesContent() {
     setFormOpen(true);
   };
   const handleDelete = async (id: string) => {
-    if (!actor) return;
-    await deleteHomeNotice(actor, id);
+    await deleteHomeNotice(adminApiToken, id);
     load();
   };
 

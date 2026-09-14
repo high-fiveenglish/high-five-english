@@ -5,35 +5,28 @@ import { Container } from "../components/ui/Container";
 import { SectionHeading } from "../components/ui/SectionHeading";
 import { RouteGuard } from "../components/auth/RouteGuard";
 import { useAuth } from "../context/AuthContext";
-import { listAllReviews, setReviewPublished, deleteReview } from "../services/reviewService";
-import type { StudentReview } from "../lib/community/types";
+import { listBoardPosts, deleteBoardPost } from "../services/reviewService";
+import type { ReviewPost } from "../lib/community/types";
 
 function formatDateTime(iso: string) {
   return iso.slice(0, 16).replace("T", " ");
 }
 
 function AdminReviewsContent() {
-  const { actor } = useAuth();
+  const { adminApiToken } = useAuth();
   const { t } = useTranslation("admin");
-  const [reviews, setReviews] = useState<StudentReview[]>([]);
+  const [reviews, setReviews] = useState<ReviewPost[]>([]);
 
   const load = () => {
-    if (!actor) return;
-    listAllReviews(actor).then((res) => {
+    listBoardPosts(adminApiToken).then((res) => {
       if (res.ok) setReviews(res.value);
     });
   };
 
-  useEffect(load, [actor]);
+  useEffect(load, [adminApiToken]);
 
-  const togglePublished = async (r: StudentReview) => {
-    if (!actor) return;
-    await setReviewPublished(actor, r.id, !r.published);
-    load();
-  };
   const handleDelete = async (id: string) => {
-    if (!actor) return;
-    await deleteReview(actor, id);
+    await deleteBoardPost(adminApiToken, id);
     load();
   };
 
@@ -59,22 +52,12 @@ function AdminReviewsContent() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-bold text-brand-950">
-                    {r.studentEnglishName}
-                    <span className="ml-2 font-normal text-slate-400">
-                      {t("reviews.about_teacher", { teacher: r.teacherName })}
-                    </span>
+                    {r.title}
+                    <span className="ml-2 font-normal text-slate-400">{r.authorName}</span>
                   </p>
                   <p className="mt-0.5 font-mono text-[11px] text-slate-400">{formatDateTime(r.createdAt)}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => togglePublished(r)}
-                    className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${
-                      r.published ? "bg-brand-50 text-brand-700" : "bg-slate-100 text-slate-500"
-                    }`}
-                  >
-                    {r.published ? t("reviews.status_published") : t("reviews.status_hidden")}
-                  </button>
                   <button
                     onClick={() => handleDelete(r.id)}
                     className="rounded-lg p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600"

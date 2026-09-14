@@ -3,6 +3,7 @@ import type {
   ClosureDate,
   Enrollment,
   ISODate,
+  ISOTime,
   InitiatedBy,
   Lesson,
   RescheduleRequest,
@@ -48,6 +49,72 @@ function slotKey(date: ISODate, time: string): string {
   return `${date}_${time}`;
 }
 
+/** The time a lesson on `day` actually uses — `weeklyTimes[day]` if the enrollment has
+ * a per-weekday override for that day, else the enrollment's shared `classTime`. Always
+ * resolve through this rather than reading either field directly, since either can be
+ * the one that applies depending on how the enrollment was registered. */
+export function resolveClassTime(
+  enrollment: Pick<Enrollment, "classTime" | "weeklyTimes">,
+  day: WeekDay,
+): ISOTime {
+  return enrollment.weeklyTimes?.[day] ?? enrollment.classTime;
+}
+
+function timeToMinutes(time: ISOTime): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function timeRangesOverlap(startA: number, durationA: number, startB: number, durationB: number): boolean {
+  return startA < startB + durationB && startB < startA + durationA;
+}
+
+export interface WeeklyScheduleConflict {
+  day: WeekDay;
+  time: ISOTime;
+  conflictingEnrollmentId: string;
+}
+
+/**
+ * Pre-flight check for an admin registering a new (optionally mixed-time) weekly
+ * pattern: for each day in `weeklyDays`, does the resolved time overlap another of the
+ * same teacher's active enrollments on that same weekday? Works purely off the weekly
+ * pattern — no concrete dates needed — so a registration form can validate instantly,
+ * before any lesson exists. This is a different check from findNextAvailableDate's
+ * teacherBookedSlots: that one prevents a single date/time from double-booking once
+ * lessons are already generated; this one catches a same-teacher recurring-slot clash
+ * up front, on every future occurrence of that weekday, not just the next one.
+ * Returns every conflicting (day, time) pair — an empty array means the pattern is
+ * safe to register. Excludes the enrollment being edited via `excludeEnrollmentId`.
+ */
+export function findWeeklyScheduleConflicts(args: {
+  teacherId: string;
+  weeklyDays: WeekDay[];
+  lessonDurationMin: number;
+  resolveTime: (day: WeekDay) => ISOTime;
+  teacherEnrollments: Enrollment[];
+  excludeEnrollmentId?: string;
+}): WeeklyScheduleConflict[] {
+  const { teacherId, weeklyDays, lessonDurationMin, resolveTime, teacherEnrollments, excludeEnrollmentId } = args;
+  const others = teacherEnrollments.filter(
+    (e) => e.teacherId === teacherId && e.status === "active" && e.id !== excludeEnrollmentId,
+  );
+
+  const conflicts: WeeklyScheduleConflict[] = [];
+  for (const day of weeklyDays) {
+    const time = resolveTime(day);
+    const startMin = timeToMinutes(time);
+    for (const other of others) {
+      if (!other.weeklyDays.includes(day)) continue;
+      const otherStart = timeToMinutes(resolveClassTime(other, day));
+      if (timeRangesOverlap(startMin, lessonDurationMin, otherStart, other.lessonDurationMin)) {
+        conflicts.push({ day, time, conflictingEnrollmentId: other.id });
+      }
+    }
+  }
+  return conflicts;
+}
+
 /** (date,time) slots already booked by this teacher across ANY enrollment, to prevent
  * a rescheduled lesson from double-booking a different student's normal slot. */
 export function computeTeacherBookedSlots(
@@ -65,14 +132,17 @@ export function computeTeacherBookedSlots(
 
 export function findNextAvailableDate(args: {
   afterDate: ISODate;
-  classTime: string;
+  /** Resolves the class time for a given weekday — pass `() => enrollment.classTime`
+   * for the standard equal-time patterns, or `(day) => resolveClassTime(enrollment, day)`
+   * for one with per-weekday overrides. */
+  resolveTime: (day: WeekDay) => ISOTime;
   weeklyDays: WeekDay[];
   blockedDates: Set<ISODate>;
   existingDates: Set<ISODate>;
   teacherBookedSlots: Set<string>;
   maxIterations?: number;
 }): Result<ISODate> {
-  const { afterDate, classTime, weeklyDays, blockedDates, existingDates, teacherBookedSlots } = args;
+  const { afterDate, resolveTime, weeklyDays, blockedDates, existingDates, teacherBookedSlots } = args;
   if (weeklyDays.length === 0) {
     return err("INVALID_WEEKLY_DAYS", "enrollment.weeklyDays must not be empty");
   }
@@ -80,10 +150,11 @@ export function findNextAvailableDate(args: {
 
   let candidate = addDays(afterDate, 1);
   for (let i = 0; i < maxIterations; i++) {
-    const isClassDay = weeklyDays.includes(dayOfWeek(candidate));
+    const day = dayOfWeek(candidate);
+    const isClassDay = weeklyDays.includes(day);
     const isBlocked = blockedDates.has(candidate);
     const isTaken = existingDates.has(candidate);
-    const isTeacherBusy = teacherBookedSlots.has(slotKey(candidate, classTime));
+    const isTeacherBusy = isClassDay && teacherBookedSlots.has(slotKey(candidate, resolveTime(day)));
     if (isClassDay && !isBlocked && !isTaken && !isTeacherBusy) {
       return ok(candidate);
     }
@@ -96,7 +167,7 @@ export function findNextAvailableDate(args: {
 export function generateInitialSchedule(args: {
   enrollment: Pick<
     Enrollment,
-    "id" | "startDate" | "weeklyDays" | "classTime" | "teacherId" | "totalLessons"
+    "id" | "startDate" | "weeklyDays" | "classTime" | "weeklyTimes" | "teacherId" | "totalLessons"
   >;
   closures: ClosureDate[];
   unavailability: TeacherUnavailability[];
@@ -111,6 +182,7 @@ export function generateInitialSchedule(args: {
   const teacherBookedSlots = computeTeacherBookedSlots(allTeacherLessons);
   const existingDates = new Set<ISODate>();
   const lessons: Lesson[] = [];
+  const resolveTime = (day: WeekDay) => resolveClassTime(enrollment, day);
 
   // Search starts the day *before* start_date so start_date itself can be selected.
   let cursor = addDays(enrollment.startDate, -1);
@@ -122,7 +194,7 @@ export function generateInitialSchedule(args: {
     }
     const found = findNextAvailableDate({
       afterDate: cursor,
-      classTime: enrollment.classTime,
+      resolveTime,
       weeklyDays: enrollment.weeklyDays,
       blockedDates,
       existingDates,
@@ -134,7 +206,7 @@ export function generateInitialSchedule(args: {
       id: idGen(),
       enrollmentId: enrollment.id,
       scheduledDate: found.value,
-      scheduledTime: enrollment.classTime,
+      scheduledTime: resolveTime(dayOfWeek(found.value)),
       status: "scheduled",
       evaluationStatus: "not_started",
     });
@@ -222,10 +294,11 @@ export function extendSchedule(args: {
     allEnrollmentLessons.filter((l) => l.enrollmentId === enrollment.id).map((l) => l.scheduledDate),
   );
   const teacherBookedSlots = computeTeacherBookedSlots(allTeacherLessons, enrollment.id);
+  const resolveTime = (day: WeekDay) => resolveClassTime(enrollment, day);
 
   const found = findNextAvailableDate({
     afterDate: tailDate,
-    classTime: enrollment.classTime,
+    resolveTime,
     weeklyDays: enrollment.weeklyDays,
     blockedDates,
     existingDates,
@@ -238,7 +311,7 @@ export function extendSchedule(args: {
     id: idGen(),
     enrollmentId: enrollment.id,
     scheduledDate: newDate,
-    scheduledTime: enrollment.classTime,
+    scheduledTime: resolveTime(dayOfWeek(newDate)),
     status: "scheduled",
     evaluationStatus: "not_started",
     rescheduledFromLessonId: targetLesson.id,

@@ -1,89 +1,116 @@
-// Real, student-authored review mock service layer. submitReview only accepts free-text
-// `content` from the client — studentEnglishName/teacherId/teacherName are always
-// resolved server-side from the actor's own active enrollment, so a student can never
-// claim to be reviewing a teacher they aren't actually assigned to, or use someone
-// else's name. Same requirePermission pattern as adminService.ts for moderation.
-import type { StudentReview } from "../lib/community/types";
-import type { Actor, ServiceResult } from "../lib/auth/types";
+// Review board service layer — bridges to the real admin/LMS backend's public API
+// (admin/src/app/api/public/reviews). Reading and writing both require login: the board
+// itself needs a real studentApiToken (only a real student account can post/reply), and
+// the Vite site's own mock admin panel (/admin/reviews) can list/delete via adminApiToken
+// for moderation — the "홈페이지 노출용" curation feature that used to exist here
+// (featuredOnHome/listPublishedReviews/setFeaturedOnHome) has been removed entirely; the
+// board is only ever visible after login, never previewed on the public homepage.
+import type { AuthErrorCode, ServiceResult } from "../lib/auth/types";
 import { errResult, okResult } from "../lib/auth/types";
-import { requirePermission, requireRole } from "../lib/auth/permissions";
-import { INSTRUCTORS } from "../data/instructors";
-import { findStudentEnglishName } from "./classroomService";
-import { store } from "./store";
+import type { ReviewPost } from "../lib/community/types";
+import { ADMIN_API_URL } from "../lib/adminApi";
 
-function nextReviewId(): string {
-  return `sreview-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-}
-
-export async function submitReview(
-  actor: Actor | null,
-  input: { content: string },
-): Promise<ServiceResult<StudentReview>> {
-  const guard = requireRole(actor, ["student"]);
-  if (!guard.ok) return guard;
-
-  const enrollment = store.enrollments.find(
-    (e) => e.studentId === actor!.linkedId && e.status === "active",
-  );
-  if (!enrollment) {
-    return errResult("NOT_FOUND", "진행 중인 수강 정보를 찾을 수 없어 후기를 작성할 수 없습니다.");
+async function parseErrorCode(res: Response): Promise<AuthErrorCode> {
+  try {
+    const data = (await res.json()) as { error?: string };
+    if (data.error === "forbidden") return "FORBIDDEN_ROLE";
+    if (data.error === "not_found" || data.error === "parent_not_found") return "NOT_FOUND";
+  } catch {
+    /* fall through */
   }
-
-  const review: StudentReview = {
-    id: nextReviewId(),
-    studentId: actor!.linkedId!,
-    studentEnglishName: findStudentEnglishName(actor!.linkedId!),
-    teacherId: enrollment.teacherId,
-    teacherName: INSTRUCTORS.find((i) => i.id === enrollment.teacherId)?.name ?? enrollment.teacherId,
-    content: input.content.trim(),
-    createdAt: new Date().toISOString(),
-    published: false,
-  };
-  store.studentReviews = [review, ...store.studentReviews];
-  return okResult(review);
+  return res.status === 401 ? "UNAUTHENTICATED" : "NOT_FOUND";
 }
 
-export async function listMyReviews(actor: Actor | null): Promise<ServiceResult<StudentReview[]>> {
-  const guard = requireRole(actor, ["student"]);
-  if (!guard.ok) return guard;
-  return okResult(
-    store.studentReviews
-      .filter((r) => r.studentId === actor!.linkedId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-  );
+/** token: studentApiToken (게시판 열람용) 또는 adminApiToken(관리자 패널 모니터링용) —
+ * 둘 중 하나만 있으면 된다. 없으면 애초에 호출하지 않는다(RouteGuard/canSubmit이 미리
+ * 막는다). */
+export async function listBoardPosts(token: string | null): Promise<ServiceResult<ReviewPost[]>> {
+  if (!token) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/reviews`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    return errResult("NOT_FOUND", "서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
+  }
+  if (!res.ok) return errResult(await parseErrorCode(res), "게시글을 불러오지 못했습니다.");
+  return okResult((await res.json()) as ReviewPost[]);
 }
 
-export async function listPublishedReviews(): Promise<StudentReview[]> {
-  return [...store.studentReviews]
-    .filter((r) => r.published)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+export async function getBoardPost(token: string | null, id: string): Promise<ServiceResult<ReviewPost>> {
+  if (!token) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/reviews/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    return errResult("NOT_FOUND", "서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
+  }
+  if (!res.ok) return errResult(await parseErrorCode(res), "게시글을 찾을 수 없습니다.");
+  return okResult((await res.json()) as ReviewPost);
 }
 
-export async function listAllReviews(actor: Actor | null): Promise<ServiceResult<StudentReview[]>> {
-  const guard = requirePermission(actor, "reviews");
-  if (!guard.ok) return guard;
-  return okResult([...store.studentReviews].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+export async function createBoardPost(
+  studentApiToken: string | null,
+  input: { title: string; content: string; parentId?: string },
+): Promise<ServiceResult<ReviewPost>> {
+  if (!studentApiToken) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
+  const title = input.title.trim();
+  const content = input.content.trim();
+  if (!title || !content) return errResult("NOT_FOUND", "제목과 내용을 모두 입력해주세요.");
+
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/reviews`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${studentApiToken}` },
+      body: JSON.stringify({ title, content, parentId: input.parentId }),
+    });
+  } catch {
+    return errResult("NOT_FOUND", "서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
+  }
+  if (!res.ok) return errResult(await parseErrorCode(res), "게시글을 등록하지 못했습니다.");
+  return okResult((await res.json()) as ReviewPost);
 }
 
-export async function setReviewPublished(
-  actor: Actor | null,
+export async function updateBoardPost(
+  studentApiToken: string | null,
   id: string,
-  published: boolean,
-): Promise<ServiceResult<StudentReview>> {
-  const guard = requirePermission(actor, "reviews");
-  if (!guard.ok) return guard;
+  input: { title: string; content: string },
+): Promise<ServiceResult<void>> {
+  if (!studentApiToken) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
+  const title = input.title.trim();
+  const content = input.content.trim();
+  if (!title || !content) return errResult("NOT_FOUND", "제목과 내용을 모두 입력해주세요.");
 
-  const existing = store.studentReviews.find((r) => r.id === id);
-  if (!existing) return errResult("NOT_FOUND", "후기를 찾을 수 없습니다.");
-
-  const updated = { ...existing, published };
-  store.studentReviews = store.studentReviews.map((r) => (r.id === id ? updated : r));
-  return okResult(updated);
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/reviews/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${studentApiToken}` },
+      body: JSON.stringify({ title, content }),
+    });
+  } catch {
+    return errResult("NOT_FOUND", "서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
+  }
+  if (!res.ok) return errResult(await parseErrorCode(res), "게시글을 수정하지 못했습니다.");
+  return okResult(undefined);
 }
 
-export async function deleteReview(actor: Actor | null, id: string): Promise<ServiceResult<void>> {
-  const guard = requirePermission(actor, "reviews");
-  if (!guard.ok) return guard;
-  store.studentReviews = store.studentReviews.filter((r) => r.id !== id);
+/** token: 작성자 본인의 studentApiToken 또는 모더레이션하는 관리자의 adminApiToken. */
+export async function deleteBoardPost(token: string | null, id: string): Promise<ServiceResult<void>> {
+  if (!token) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/reviews/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    return errResult("NOT_FOUND", "서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
+  }
+  if (!res.ok) return errResult(await parseErrorCode(res), "게시글을 삭제하지 못했습니다.");
   return okResult(undefined);
 }

@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "title": "Register for Classes | HiFive English",
+    "description": "Choose your class method, curriculum, plan length and frequency, then submit your enrollment request."
+  },
+  "hero": {
+    "eyebrow": "Enrollment Info · Register",
+    "title": "Class Registration",
+    "description": "Fill in the details below and our team will follow up. Final payment and schedule are confirmed through a consultation."
+  },
+  "login_required_desc": "You must be logged in to submit a course registration. Please log in and try again.",
+  "login_cta": "Log in",
+  "section_platform": {
+    "title": "1. Class Method",
+    "teams_id_label": "Teams ID",
+    "teams_id_placeholder": "Enter your Microsoft Teams ID"
+  },
+  "section_track": {
+    "title": "2. Curriculum",
+    "junior": "Junior",
+    "senior": "Senior",
+    "business": "Business"
+  },
+  "section_plan": {
+    "title": "3. Plan Length · Frequency · Lesson Time",
+    "duration_label": "Plan Length",
+    "frequency_label": "Weekly Frequency",
+    "lesson_length_label": "Lesson Length",
+    "lesson_length_option": "{{min}} min",
+    "zoom_50min_notice": "A 50-minute Zoom class runs as 25 minutes · 5-minute break · 25 minutes. For an uninterrupted 50-minute class, we recommend VooV Meeting or Teams instead."
+  },
+  "section_weekday": {
+    "title": "4. Class Days",
+    "value_label": "Default class days for your selection",
+    "custom_note": "Want weekend classes or a different day pattern? Message our manager directly through one of the channels below.",
+    "contact_kakao": "KakaoTalk",
+    "contact_wechat": "WeChat"
+  },
+  "section_points": {
+    "title": "5. Loyalty Points Discount",
+    "balance_label": "Your Points Balance",
+    "balance_value": "{{count}}P",
+    "apply_checkbox": "Apply my full points balance as a discount",
+    "guest_note": "Only a logged-in student account can check and use points.",
+    "earn_note": "Points are earned when a friend you refer registers (5,000P to you) or when you write a review (1,000P)."
+  },
+  "price_preview": {
+    "estimated_label": "Estimated Price",
+    "discount_label": "Points Discount",
+    "final_label": "Estimated Total",
+    "krw_only_note": "The points discount is calculated based on KRW payment.",
+    "disclaimer": "* The final amount may differ after a consultation, depending on promotions or family discounts."
+  },
+  "section_schedule": {
+    "title": "6. Preferred Start Date · Time",
+    "start_date_label": "Preferred Start Date",
+    "start_time_label": "Preferred Start Time",
+    "time_zone_note": "Korea Standard Time (KST), selectable in 30-minute increments from 6:00 AM to midnight."
+  },
+  "validation_required": "This field is required.",
+  "submitting": "Submitting...",
+  "submit": "Submit Registration",
+  "success_title": "Your registration request has been received.",
+  "success_desc": "Our team will contact you shortly.",
+  "confirm": "OK"
+}

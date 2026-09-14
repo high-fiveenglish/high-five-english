@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
+import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { TeacherEditForm } from "./TeacherEditForm";
 
 export default async function EditTeacherPage({
@@ -19,6 +20,7 @@ export default async function EditTeacherPage({
     prisma.teacher.findMany({
       where: { siteId: DEFAULT_SITE_ID, id: { not: teacherId } },
       orderBy: { realName: "asc" },
+      select: TEACHER_SUMMARY_SELECT,
     }),
   ]);
 
@@ -44,10 +46,10 @@ export default async function EditTeacherPage({
           schoolName: teacher.schoolName,
           major: teacher.major,
           address: teacher.address,
-          availableTimeText: teacher.availableTimeText,
           availableHours: teacher.availableHours,
           mobilePhone: teacher.mobilePhone,
           teamsId: teacher.teamsId,
+          teamsUrl: teacher.teamsUrl,
           zoomUrl: teacher.zoomUrl,
           zoomPw: teacher.zoomPw,
           tencentUrl: teacher.tencentUrl,

@@ -6,13 +6,17 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient() {
-  // 이 환경에서는 동시에 여러 커넥션을 열면(Promise.all 등) 첫 번째만 성공하고 나머지가
-  // 타임아웃되는 문제가 있었다(Neon 무료 컴퓨트 커넥션 제한 또는 로컬 네트워크 제약으로
-  // 추정). 풀을 커넥션 1개로 고정해 모든 쿼리가 순차적으로 하나의 연결을 재사용하도록
-  // 강제하면 이 문제를 완전히 피할 수 있다 — 이 관리자 도구의 트래픽 규모에서는 충분하다.
+  // 예전엔 DATABASE_URL이 Neon의 직접(non-pooled) 엔드포인트였고, 그 상태에서 동시에
+  // 여러 커넥션을 열면(Promise.all 등) 첫 번째만 성공하고 나머지가 타임아웃되는 문제가
+  // 있어 풀을 1개로 고정해뒀었다. 하지만 이 admin 서버 하나가 관리자 페이지 자체 트래픽과
+  // 마케팅 사이트가 호출하는 /api/public/* 공개 API 트래픽을 동시에 처리하다 보니, 풀이
+  // 1개뿐이면 둘이 서로를 막아 세워(예: 마케팅 사이트가 강사 목록을 조회하는 동안 관리자
+  // 페이지 전체가 멈춰 보임) 체감 버퍼링이 심했다. DATABASE_URL을 Neon의 풀드(PgBouncer)
+  // 엔드포인트로 바꾼 뒤(.env 참고)부터는 여러 커넥션을 동시에 열어도 PgBouncer가 안전하게
+  // 처리하므로, 풀을 5개로 늘려 관리자 화면과 공개 API가 서로를 기다리지 않게 한다.
   const adapter = new PrismaPg({
     connectionString: process.env.DATABASE_URL,
-    max: 1,
+    max: 5,
     connectionTimeoutMillis: 10_000,
   });
   return new PrismaClient({ adapter });

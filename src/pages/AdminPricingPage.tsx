@@ -23,7 +23,7 @@ function PriceCell({
   value: number | undefined;
   onSaved: (durations: PricingDuration[]) => void;
 }) {
-  const { actor } = useAuth();
+  const { adminApiToken } = useAuth();
   const [draft, setDraft] = useState(String(value ?? ""));
 
   useEffect(() => {
@@ -31,14 +31,13 @@ function PriceCell({
   }, [value]);
 
   const handleBlur = async () => {
-    if (!actor) return;
     const amount = Number(draft);
     if (!Number.isFinite(amount) || amount < 0) {
       setDraft(String(value ?? ""));
       return;
     }
     if (amount === value) return;
-    const result = await updatePricingPrice(actor, durationId, frequencyId, lessonLength, currency, amount);
+    const result = await updatePricingPrice(adminApiToken, durationId, frequencyId, lessonLength, currency, amount);
     if (result.ok) onSaved(result.value);
   };
 

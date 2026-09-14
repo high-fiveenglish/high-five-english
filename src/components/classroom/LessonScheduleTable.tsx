@@ -54,6 +54,13 @@ export function LessonScheduleTable({
           </tr>
         </thead>
         <tbody>
+          {lessons.length === 0 && (
+            <tr>
+              <td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-400">
+                {t("schedule_table.empty")}
+              </td>
+            </tr>
+          )}
           {lessons.map((lesson) => {
             const hoursUntil = hoursBetween(now, combineDateTimeMs(lesson.scheduledDate, lesson.scheduledTime));
             const isReschedulable = lesson.status === "scheduled" && hoursUntil >= RESCHEDULE_CUTOFF_HOURS;
@@ -70,7 +77,10 @@ export function LessonScheduleTable({
                 <td className="px-4 py-3 text-sm text-slate-600">{courseName}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{teacherName}</td>
                 <td className="whitespace-nowrap px-4 py-3">
-                  <LessonStatusBadge status={lesson.status} />
+                  <LessonStatusBadge status={lesson.status} reason={lesson.reason} />
+                  {lesson.reason && lesson.status !== "academy_closed" && (
+                    <p className="mt-1 text-[11px] text-slate-400">{lesson.reason}</p>
+                  )}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
                   {lesson.status === "completed" ? (

@@ -5,9 +5,7 @@ import type { CEFRLevel } from "./textbookCatalog";
 export type Instructor = {
   /** Immutable once created — teacher login accounts (Account.linkedId) and
    * enrollments (Enrollment.teacherId) reference this id by convention, so renaming
-   * or reusing it would silently break the student classroom lookup. See
-   * instructorService.deleteInstructor for the referential-integrity guard this
-   * implies. */
+   * or reusing it would silently break the student classroom lookup. */
   id: string;
   name: string;
   nameEn: string;
@@ -33,10 +31,10 @@ export type Instructor = {
   order: number;
 };
 
-// NOTE: Photos are placeholder initials-avatars until an admin uploads a real one via
-// the admin instructor CRUD (src/pages/AdminInstructorsPage.tsx). This array is the
-// SEED for src/services/store.ts's mutable `instructors` — admin edits only ever
-// change the store copy, never this file. Kept here (rather than deleted) because
+// NOTE: this is legacy fixture data for the classroom mock only — the real public
+// homepage instructor section no longer reads from this file or from
+// services/store.ts's `instructors` copy; it fetches active Teacher accounts from the
+// admin backend instead (see services/instructorService.ts). Kept here because
 // src/data/classroomMock.ts's seed construction still reads directly from this array
 // by id for the 3 teachers with real login accounts (sarah/james/emily).
 export const INSTRUCTORS: Instructor[] = [

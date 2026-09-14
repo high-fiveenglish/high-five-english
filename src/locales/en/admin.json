@@ -105,7 +105,6 @@
     "link_reviews": "Manage Reviews",
     "link_level_test": "View Level Test Requests",
     "link_pricing": "Manage Pricing",
-    "link_instructors": "Manage Instructors",
     "link_consult_channels": "Manage Consult Channels"
   },
   "notices": {
@@ -132,11 +131,8 @@
   },
   "reviews": {
     "admin_title": "Reviews",
-    "admin_description": "Review what students have submitted and manage which ones are published. Only published reviews appear on the homepage.",
-    "no_rows": "No reviews submitted yet.",
-    "about_teacher": "· with {{teacher}}",
-    "status_published": "Published",
-    "status_hidden": "Hidden"
+    "admin_description": "Posts from the Review Board (any logged-in student can post there). Remove inappropriate posts here.",
+    "no_rows": "No reviews submitted yet."
   },
   "level_test": {
     "admin_title": "Level Test Requests",
@@ -161,39 +157,6 @@
     "admin_title": "Pricing",
     "admin_description": "Manage each market's sale price independently. Editing one currency's price never affects another currency's price, and prices are never auto-converted by exchange rate.",
     "class_column": "Class"
-  },
-  "instructors": {
-    "admin_title": "Instructors",
-    "no_rows": "No instructors registered yet.",
-    "new_button": "Add Instructor",
-    "create_title": "Add Instructor",
-    "edit_title": "Edit Instructor",
-    "field_name": "Name",
-    "field_name_en": "English Name",
-    "field_country": "Country",
-    "field_flag": "Flag Emoji",
-    "field_photo": "Profile Photo",
-    "upload_photo": "Upload Photo",
-    "field_audio": "Voice Intro",
-    "upload_audio": "Upload Audio File",
-    "field_bio": "Bio",
-    "field_career": "Career / Credentials",
-    "field_class_features": "Class Features",
-    "field_specialties": "Specialties",
-    "multiline_placeholder": "One per line",
-    "field_teaching_style": "Teaching Style",
-    "field_available_hours": "Available Hours",
-    "available_hours_placeholder": "e.g. Weekdays 19:00–22:00",
-    "field_available_days": "Available Days",
-    "field_levels": "Levels Taught",
-    "field_published": "Published",
-    "validation_error": "Name, English name, and bio are required.",
-    "saving": "Saving...",
-    "save": "Save",
-    "status_published": "Published",
-    "status_hidden": "Hidden",
-    "delete_button": "Delete",
-    "delete_blocked": "This instructor has an active teacher account or an assigned student and can't be deleted — use Unpublish instead."
   },
   "consult_channels": {
     "admin_title": "Consult Channels",

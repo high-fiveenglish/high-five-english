@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireStudent } from "@/lib/studentAuth";
+import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { EnrollmentSelect } from "./EnrollmentSelect";
 import { CalendarView } from "./CalendarView";
 import { ENGLISH_LEVEL_OPTIONS } from "@/lib/levelTestOptions";
@@ -47,19 +48,19 @@ export default async function StudentHomePage({
   const [enrollments, levelTests, recentEvaluations] = await Promise.all([
     prisma.enrollment.findMany({
       where: { studentId: student.id, status: { notIn: ["LOST"] } },
-      include: { teacher: true },
+      include: { teacher: { select: TEACHER_SUMMARY_SELECT } },
       orderBy: { startDate: "desc" },
     }),
     // 레벨테스트는 Enrollment 선택과 무관하게 학생 전체 기준.
     prisma.levelTest.findMany({
       where: { studentId: student.id },
-      include: { teacher: true },
+      include: { teacher: { select: TEACHER_SUMMARY_SELECT } },
       orderBy: { id: "desc" },
     }),
     // 데일리 평가서 미리보기도 Enrollment 선택과 무관하게 학생 전체 기준, 최신 3건만.
     prisma.classSession.findMany({
       where: { studentId: student.id, evaluation: { isNot: null } },
-      include: { evaluation: true, teacher: true },
+      include: { evaluation: true, teacher: { select: TEACHER_SUMMARY_SELECT } },
       orderBy: { scheduledAt: "desc" },
       take: 3,
     }),
@@ -77,7 +78,7 @@ export default async function StudentHomePage({
   const sessions = selected
     ? await prisma.classSession.findMany({
         where: { enrollmentId: selected.id },
-        include: { teacher: true, evaluation: true },
+        include: { teacher: { select: TEACHER_SUMMARY_SELECT }, evaluation: true },
         orderBy: { scheduledAt: "asc" },
       })
     : [];
@@ -144,6 +145,7 @@ export default async function StudentHomePage({
                     progressNote: s.progressNote,
                     teacherName: s.teacher.realName,
                     evaluationId: s.evaluation?.id ?? null,
+                    isSupplement: s.isSupplement,
                   }))}
                   classMethod={selected!.classMethod}
                   classType={selected!.classType}
@@ -166,6 +168,7 @@ export default async function StudentHomePage({
               <th className="px-4 py-3">결과</th>
               <th className="px-4 py-3">레벨</th>
               <th className="px-4 py-3">코멘트</th>
+              <th className="px-4 py-3">평가서</th>
             </tr>
           </thead>
           <tbody>
@@ -177,11 +180,23 @@ export default async function StudentHomePage({
                 <td className="px-4 py-3 text-slate-600">{lt.progressStatus ?? "-"}</td>
                 <td className="px-4 py-3 text-slate-600">{lt.englishLevel ? (ENGLISH_LEVEL_LABEL[lt.englishLevel] ?? lt.englishLevel) : "-"}</td>
                 <td className="px-4 py-3 text-slate-500">{lt.teacherNote ?? "-"}</td>
+                <td className="px-4 py-3">
+                  {lt.resultContent ? (
+                    <Link
+                      href={`/student/level-tests/${lt.id}`}
+                      className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-bold text-blue-700 hover:underline"
+                    >
+                      결과 보기
+                    </Link>
+                  ) : (
+                    <span className="text-xs text-slate-300">-</span>
+                  )}
+                </td>
               </tr>
             ))}
             {levelTests.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
                   레벨테스트 기록이 없습니다.
                 </td>
               </tr>
@@ -244,6 +259,7 @@ function SessionGroup({
     scheduledAt: Date;
     durationMin: number;
     status: SessionStatus;
+    isSupplement: boolean;
     teacher: { realName: string };
     evaluation: { id: number } | null;
   }[];
@@ -255,7 +271,14 @@ function SessionGroup({
       <div className="flex flex-col gap-2">
         {sessions.map((s) => (
           <div key={s.id} className="rounded-lg border border-slate-100 p-3 text-sm">
-            <p className="font-medium text-slate-900">{fmtDate(s.scheduledAt)}</p>
+            <p className="font-medium text-slate-900">
+              {fmtDate(s.scheduledAt)}
+              {s.isSupplement && (
+                <span className="ml-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                  보충수업
+                </span>
+              )}
+            </p>
             <p className="text-xs text-slate-500">
               {fmtTime(s.scheduledAt)} · {s.teacher.realName} · {SESSION_STATUS_LABEL[s.status]}
             </p>

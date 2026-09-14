@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { EvaluationAdminForm } from "./EvaluationAdminForm";
 import { formatAppDateTime } from "@/lib/appTime";
 
@@ -15,7 +16,7 @@ export default async function EvaluationDetailPage({
 
   const session = await prisma.classSession.findUnique({
     where: { id: Number(id) },
-    include: { student: true, teacher: true, evaluation: true },
+    include: { student: true, teacher: { select: TEACHER_SUMMARY_SELECT }, evaluation: true },
   });
 
   if (!session) notFound();

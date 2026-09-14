@@ -1,82 +1,111 @@
-// Homepage notice board mock service layer — same "requirePermission first" pattern as
-// noticeService.ts, but public-facing: listPublishedHomeNotices takes no actor at all
-// (students/guests can read, never write) since this is the read-only student/visitor
-// announcement feed shown in HomeNoticesSection. Distinct from noticeService.ts, which is
-// the teacher-only bulletin board.
+// Homepage notice board service layer — bridges to the real admin/LMS backend's public
+// API (admin/src/app/api/public/home-notices). Reading (listPublishedHomeNotices/
+// getPublishedHomeNotice) is public, no login required, matching the real homepage's
+// visitor-facing feed. Writing is only ever done from the real admin/ Next.js app in
+// practice, but this site's own mock admin panel (/admin/home-notices) can also write via
+// adminApiToken (see AuthContext) — both paths hit the same real DB.
 import type { HomeNotice } from "../lib/community/types";
-import type { Actor, ServiceResult } from "../lib/auth/types";
+import type { AuthErrorCode, ServiceResult } from "../lib/auth/types";
 import { errResult, okResult } from "../lib/auth/types";
-import { requirePermission } from "../lib/auth/permissions";
-import { ACCOUNTS } from "../data/accounts";
-import { store } from "./store";
+import { ADMIN_API_URL } from "../lib/adminApi";
 
-function findAccountName(accountId: string): string {
-  return ACCOUNTS.find((a) => a.id === accountId)?.name ?? accountId;
-}
-
-function nextHomeNoticeId(): string {
-  return `home-notice-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+async function parseErrorCode(res: Response): Promise<AuthErrorCode> {
+  try {
+    const data = (await res.json()) as { error?: string };
+    if (data.error === "forbidden") return "FORBIDDEN_ROLE";
+    if (data.error === "not_found") return "NOT_FOUND";
+  } catch {
+    /* fall through */
+  }
+  return res.status === 401 ? "UNAUTHENTICATED" : "NOT_FOUND";
 }
 
 export async function listPublishedHomeNotices(): Promise<HomeNotice[]> {
-  return [...store.homeNotices]
-    .filter((n) => n.published)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  try {
+    const res = await fetch(`${ADMIN_API_URL}/api/public/home-notices`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()) as HomeNotice[];
+  } catch (err) {
+    console.warn("[homeNoticeService] admin backend unreachable", err);
+    return [];
+  }
 }
 
-export async function listAllHomeNotices(actor: Actor | null): Promise<ServiceResult<HomeNotice[]>> {
-  const guard = requirePermission(actor, "homeNotices");
-  if (!guard.ok) return guard;
-  return okResult([...store.homeNotices].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+export async function getPublishedHomeNotice(id: string): Promise<HomeNotice | null> {
+  try {
+    const res = await fetch(`${ADMIN_API_URL}/api/public/home-notices/${id}`);
+    if (!res.ok) return null;
+    return (await res.json()) as HomeNotice;
+  } catch {
+    return null;
+  }
+}
+
+export async function listAllHomeNotices(adminApiToken: string | null): Promise<ServiceResult<HomeNotice[]>> {
+  if (!adminApiToken) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/home-notices`, {
+      headers: { Authorization: `Bearer ${adminApiToken}` },
+    });
+  } catch {
+    return errResult("NOT_FOUND", "서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
+  }
+  if (!res.ok) return errResult(await parseErrorCode(res), "공지사항을 불러오지 못했습니다.");
+  return okResult((await res.json()) as HomeNotice[]);
 }
 
 export async function createHomeNotice(
-  actor: Actor | null,
+  adminApiToken: string | null,
   input: { title: string; content: string; published: boolean },
 ): Promise<ServiceResult<HomeNotice>> {
-  const guard = requirePermission(actor, "homeNotices");
-  if (!guard.ok) return guard;
-
-  const now = new Date().toISOString();
-  const notice: HomeNotice = {
-    id: nextHomeNoticeId(),
-    title: input.title.trim(),
-    content: input.content.trim(),
-    authorAccountId: actor!.accountId,
-    authorName: findAccountName(actor!.accountId),
-    published: input.published,
-    createdAt: now,
-    updatedAt: now,
-  };
-  store.homeNotices = [notice, ...store.homeNotices];
-  return okResult(notice);
+  if (!adminApiToken) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/home-notices`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminApiToken}` },
+      body: JSON.stringify(input),
+    });
+  } catch {
+    return errResult("NOT_FOUND", "서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
+  }
+  if (!res.ok) return errResult(await parseErrorCode(res), "공지사항을 등록하지 못했습니다.");
+  const data = (await res.json()) as { id: string };
+  return okResult({ id: data.id, ...input, createdAt: new Date().toISOString(), views: 0 });
 }
 
 export async function updateHomeNotice(
-  actor: Actor | null,
+  adminApiToken: string | null,
   id: string,
   input: { title: string; content: string; published: boolean },
-): Promise<ServiceResult<HomeNotice>> {
-  const guard = requirePermission(actor, "homeNotices");
-  if (!guard.ok) return guard;
-
-  const existing = store.homeNotices.find((n) => n.id === id);
-  if (!existing) return errResult("NOT_FOUND", "공지사항을 찾을 수 없습니다.");
-
-  const updated: HomeNotice = {
-    ...existing,
-    title: input.title.trim(),
-    content: input.content.trim(),
-    published: input.published,
-    updatedAt: new Date().toISOString(),
-  };
-  store.homeNotices = store.homeNotices.map((n) => (n.id === id ? updated : n));
-  return okResult(updated);
+): Promise<ServiceResult<void>> {
+  if (!adminApiToken) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/home-notices/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminApiToken}` },
+      body: JSON.stringify(input),
+    });
+  } catch {
+    return errResult("NOT_FOUND", "서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
+  }
+  if (!res.ok) return errResult(await parseErrorCode(res), "공지사항을 수정하지 못했습니다.");
+  return okResult(undefined);
 }
 
-export async function deleteHomeNotice(actor: Actor | null, id: string): Promise<ServiceResult<void>> {
-  const guard = requirePermission(actor, "homeNotices");
-  if (!guard.ok) return guard;
-  store.homeNotices = store.homeNotices.filter((n) => n.id !== id);
+export async function deleteHomeNotice(adminApiToken: string | null, id: string): Promise<ServiceResult<void>> {
+  if (!adminApiToken) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/home-notices/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${adminApiToken}` },
+    });
+  } catch {
+    return errResult("NOT_FOUND", "서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
+  }
+  if (!res.ok) return errResult(await parseErrorCode(res), "공지사항을 삭제하지 못했습니다.");
   return okResult(undefined);
 }

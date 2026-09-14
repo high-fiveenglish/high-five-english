@@ -9,11 +9,11 @@
   "lesson_status": {
     "scheduled": "예정",
     "completed": "출석",
-    "absent": "결석",
-    "rescheduled": "연기",
-    "teacher_absent": "강사결석",
-    "academy_closed": "휴강",
-    "admin_cancelled": "관리자취소"
+    "absent": "학생결석",
+    "rescheduled": "학생연기",
+    "teacher_absent": "관리자연기",
+    "academy_closed": "관리자연기",
+    "admin_cancelled": "관리자연기"
   },
   "summary_card": {
     "enrollment_period": "수강 기간",
@@ -49,7 +49,8 @@
     "link_pending": "입장 링크 준비 중",
     "reschedule_cta": "수업 연기",
     "reschedule_closed": "연기 신청 마감",
-    "reschedule_closed_tooltip": "수업 시작 4시간 전까지만 연기 신청이 가능합니다"
+    "reschedule_closed_tooltip": "수업 시작 4시간 전까지만 연기 신청이 가능합니다",
+    "empty": "선택한 날짜에 예정된 수업이 없습니다."
   },
   "calendar": {
     "title": "수업 일정 캘린더",
@@ -61,8 +62,7 @@
     "evaluation_in_progress": "평가서 작성 중",
     "holiday_title": "Holiday / No Class",
     "teacher_unavailable": "강사 사정으로 휴강입니다.",
-    "no_lesson": "예정된 수업이 없습니다.",
-    "select_date_prompt": "날짜를 선택하면 상세정보를 볼 수 있습니다."
+    "no_lesson": "예정된 수업이 없습니다."
   },
   "enter_button": {
     "class_ended": "수업 종료",
@@ -73,11 +73,15 @@
     "enter_now": "지금 {{platform}} 수업 입장하기"
   },
   "textbook_card": {
-    "title": "교재 정보",
-    "view_online": "온라인 보기",
-    "download": "다운로드",
-    "view_online_notice": "온라인 보기 준비 중입니다.",
-    "download_notice": "교재 다운로드 파일이 아직 준비되지 않았습니다."
+    "title": "교재 정보"
+  },
+  "reschedule_allowance": {
+    "title": "연기 현황",
+    "total": "총 연기 가능",
+    "used_by_student": "학생 사용 연기",
+    "used_by_admin": "관리자 연기",
+    "count_value": "{{count}}회",
+    "admin_note": "관리자 연기는 학생 연기 가능 횟수에서 차감되지 않습니다."
   },
   "reschedule_modal": {
     "title": "수업 연기",
@@ -107,20 +111,52 @@
     "eyebrow": "마이페이지",
     "title": "내 강의실",
     "loading": "불러오는 중입니다...",
+    "refreshing": "새로고침 중...",
     "not_found": "수강 정보를 찾을 수 없습니다.",
     "schedule_table_title": "수강 스케줄표",
-    "write_review_cta": "수강후기 작성하기"
+    "review_board_cta": "수강후기 게시판",
+    "enrollment_select_label": "수업선택",
+    "enrollment_option_prefix": "온라인영어",
+    "enrollment_option_suffix": "수업",
+    "timeline": {
+      "ended": "종료",
+      "in_progress": "진행",
+      "upcoming": "예정"
+    },
+    "tab_classroom": "내 강의실",
+    "tab_level_test_apply": "레벨테스트신청",
+    "tab_level_test_result": "레벨테스트결과",
+    "tab_enroll": "수강신청",
+    "tab_history": "수강내역"
   },
-  "review_modal": {
-    "title": "수강후기 작성",
-    "intro": "작성하신 후기는 관리자 확인 후 홈페이지에 공개됩니다. 강사명과 이름은 자동으로 입력되어 임의로 수정할 수 없습니다.",
-    "teacher_label": "담당 강사",
-    "content_label": "후기 내용",
-    "content_placeholder": "수업을 들으며 느낀 점을 자유롭게 남겨주세요.",
-    "validation_error": "후기 내용을 입력해주세요.",
-    "submitting": "제출 중...",
-    "submit": "후기 제출하기",
-    "success": "소중한 후기 감사합니다. 관리자 확인 후 홈페이지에 공개됩니다.",
-    "confirm_ok": "확인"
+  "history_table": {
+    "headers": {
+      "name": "수업명",
+      "period": "기간",
+      "receipt": "영수증",
+      "certificate": "출석증"
+    },
+    "empty": "수강 내역이 없습니다."
+  },
+  "level_test_status": {
+    "접수": "신청완료",
+    "수업확정": "일정 확정",
+    "수업완료": "완료",
+    "결석": "결석",
+    "취소": "취소"
+  },
+  "level_test_apply_tab": {
+    "real_account_required": "레벨테스트 신청은 실제 회원 계정으로 로그인한 경우에만 이용할 수 있습니다.",
+    "eligible_desc": "새로운 레벨테스트를 신청할 수 있습니다. 원하는 날짜와 시간을 선택해 신청해주세요.",
+    "cta": "레벨테스트 신청하기",
+    "pending_desc": "이미 접수되었거나 진행 중인 레벨테스트 신청이 있습니다. 결과가 나올 때까지 새로 신청할 수 없습니다.",
+    "cooldown_desc": "가장 최근 레벨테스트가 {{lastConductedAt}}에 완료되었습니다. 레벨테스트는 완료 후 6개월이 지나야 다시 신청할 수 있으며, {{eligibleAt}} 이후 신청 가능합니다.",
+    "view_results_cta": "레벨테스트결과 보기"
+  },
+  "level_test_result_tab": {
+    "empty": "아직 진행된 레벨테스트가 없습니다.",
+    "recommended_level": "추천 레벨",
+    "recommended_textbook": "추천 교재",
+    "not_written": "아직 작성된 결과가 없습니다."
   }
 }

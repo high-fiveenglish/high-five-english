@@ -17,7 +17,7 @@ export function AdminHomeNoticeFormModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { actor } = useAuth();
+  const { adminApiToken } = useAuth();
   const { t } = useTranslation("admin");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -35,15 +35,15 @@ export function AdminHomeNoticeFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim() || !actor) {
+    if (!title.trim() || !content.trim()) {
       setError(t("notices.validation_error"));
       return;
     }
     setSubmitting(true);
     setError(null);
     const result = notice
-      ? await updateHomeNotice(actor, notice.id, { title, content, published })
-      : await createHomeNotice(actor, { title, content, published });
+      ? await updateHomeNotice(adminApiToken, notice.id, { title, content, published })
+      : await createHomeNotice(adminApiToken, { title, content, published });
     setSubmitting(false);
     if (!result.ok) {
       setError(t(`service_errors.${result.error.code}`, { ns: "common", defaultValue: t("service_errors.unknown", { ns: "common" }) }));

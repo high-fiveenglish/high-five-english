@@ -1,30 +1,55 @@
-// Consult-channel mock service layer. Uses the existing "siteSettings" permission —
-// these are site-wide contact settings, the same category as the entry-window timing
-// settings adminService.updateEntryWindowSettings already gates behind "siteSettings".
+// Consult-channel service layer — bridges to the real admin/LMS backend's public API
+// (admin/src/app/api/public/consult-channels). Reading (listActiveConsultChannels) is
+// public, no login required. Writing is done from this site's own mock admin panel
+// (/admin/consult-channels) via adminApiToken (see AuthContext).
 import type { ConsultChannel, ConsultChannelId } from "../lib/community/types";
-import type { Actor, ServiceResult } from "../lib/auth/types";
+import type { AuthErrorCode, ServiceResult } from "../lib/auth/types";
 import { errResult, okResult } from "../lib/auth/types";
-import { requirePermission } from "../lib/auth/permissions";
-import { store } from "./store";
+import { ADMIN_API_URL } from "../lib/adminApi";
 
-export async function listActiveConsultChannels(): Promise<ConsultChannel[]> {
-  return store.consultChannels.filter((c) => c.enabled);
+async function parseErrorCode(res: Response): Promise<AuthErrorCode> {
+  try {
+    const data = (await res.json()) as { error?: string };
+    if (data.error === "forbidden") return "FORBIDDEN_ROLE";
+    if (data.error === "not_found") return "NOT_FOUND";
+    if (data.error === "invalid_url") return "NOT_FOUND";
+  } catch {
+    /* fall through */
+  }
+  return res.status === 401 ? "UNAUTHENTICATED" : "NOT_FOUND";
 }
 
-export async function listAllConsultChannels(actor: Actor | null): Promise<ServiceResult<ConsultChannel[]>> {
-  const guard = requirePermission(actor, "siteSettings");
-  if (!guard.ok) return guard;
-  return okResult([...store.consultChannels]);
+export async function listActiveConsultChannels(): Promise<ConsultChannel[]> {
+  try {
+    const res = await fetch(`${ADMIN_API_URL}/api/public/consult-channels`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()) as ConsultChannel[];
+  } catch (err) {
+    console.warn("[consultChannelService] admin backend unreachable", err);
+    return [];
+  }
+}
+
+export async function listAllConsultChannels(adminApiToken: string | null): Promise<ServiceResult<ConsultChannel[]>> {
+  if (!adminApiToken) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/consult-channels`, {
+      headers: { Authorization: `Bearer ${adminApiToken}` },
+    });
+  } catch {
+    return errResult("NOT_FOUND", "서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
+  }
+  if (!res.ok) return errResult(await parseErrorCode(res), "상담채널을 불러오지 못했습니다.");
+  return okResult((await res.json()) as ConsultChannel[]);
 }
 
 export async function updateConsultChannel(
-  actor: Actor | null,
+  adminApiToken: string | null,
   id: ConsultChannelId,
   input: { displayName: string; value: string; url: string; enabled: boolean },
-): Promise<ServiceResult<ConsultChannel>> {
-  const guard = requirePermission(actor, "siteSettings");
-  if (!guard.ok) return guard;
-
+): Promise<ServiceResult<void>> {
+  if (!adminApiToken) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
   const trimmedUrl = input.url.trim();
   if (trimmedUrl) {
     try {
@@ -34,16 +59,16 @@ export async function updateConsultChannel(
     }
   }
 
-  const existing = store.consultChannels.find((c) => c.id === id);
-  if (!existing) return errResult("NOT_FOUND", "상담 채널을 찾을 수 없습니다.");
-
-  const updated: ConsultChannel = {
-    ...existing,
-    displayName: input.displayName.trim() || existing.displayName,
-    value: input.value.trim(),
-    url: trimmedUrl || undefined,
-    enabled: input.enabled,
-  };
-  store.consultChannels = store.consultChannels.map((c) => (c.id === id ? updated : c));
-  return okResult(updated);
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/consult-channels/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminApiToken}` },
+      body: JSON.stringify(input),
+    });
+  } catch {
+    return errResult("NOT_FOUND", "서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
+  }
+  if (!res.ok) return errResult(await parseErrorCode(res), "상담채널을 수정하지 못했습니다.");
+  return okResult(undefined);
 }

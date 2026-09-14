@@ -1,13 +1,20 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, LogIn } from "lucide-react";
 import { Modal } from "../ui/Modal";
+import { useAuth } from "../../context/AuthContext";
 import { useLanguage } from "../../context/LanguageContext";
 import { getLanguageTimeZone } from "../../i18n/config";
 import { zonedWallTimeToUtcISO, detectLocalTimeZone } from "../../lib/timezone";
 import { MEETING_PLATFORMS, type MeetingPlatformId } from "../../data/meetingPlatforms";
 import { submitLevelTestRequest } from "../../services/levelTestService";
 import type { LessonFrequencyId } from "../../lib/community/types";
+
+// 관리자 classMethod 값("teams"/"zoom"/"tencent")을 이 모달의 MeetingPlatformId
+// ("teams"/"zoom"/"voov")로 되돌리는 매핑 — 학생의 기존 선호 수업방법을 이 팝업의
+// 플랫폼 선택 기본값으로 미리 채워줄 때만 쓴다(반대 방향 매핑은 admin의
+// api/public/level-test/route.ts에 있다).
+const CLASS_METHOD_TO_PLATFORM: Record<string, MeetingPlatformId> = { teams: "teams", zoom: "zoom", tencent: "voov" };
 
 const FREQUENCIES: LessonFrequencyId[] = ["freq2", "freq3", "freq5"];
 const DURATIONS: (25 | 50)[] = [25, 50];
@@ -67,9 +74,23 @@ function SelectCard({
   );
 }
 
-export function LevelTestModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function LevelTestModal({
+  open,
+  onClose,
+  onOpenLogin,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onOpenLogin: () => void;
+}) {
   const { t } = useTranslation(["auth", "home"]);
   const { lang } = useLanguage();
+  const { role, isRealAccount, studentApiToken, studentProfile } = useAuth();
+  // 레벨테스트 신청은 로그인한 실제 학생 계정만 가능하다 — 신청이 그 학생의 studentId에
+  // 바로 연결되어야 관리자 쪽 레벨테스트관리에서 "회원으로 로그인"·연락처 등과 함께
+  // 정상적으로 연동되기 때문이다(데모 계정은 실제 DB 행이 없어 역시 이용할 수 없다).
+  const canSubmit = role === "student" && isRealAccount && !!studentApiToken;
+
   const [form, setFormRaw] = useState<FormState>(EMPTY_FORM);
   const [touched, setTouched] = useState(false);
   const setForm = (next: FormState) => {
@@ -81,6 +102,25 @@ export function LevelTestModal({ open, onClose }: { open: boolean; onClose: () =
   const [submitted, setSubmitted] = useState(false);
 
   const timeZone = useMemo(() => getLanguageTimeZone(lang) ?? detectLocalTimeZone(), [lang]);
+
+  // 모달을 열 때, 로그인한 실제 학생이면 이름/연락처/선호 수업방법을 프로필에서 미리
+  // 채워준다 — 매번 처음부터 다시 입력하지 않아도 된다(그래도 전부 수정 가능하다,
+  // 예: 신청은 학부모 명의 연락처로 하고 싶을 수 있어서).
+  useEffect(() => {
+    if (!open || !canSubmit || !studentProfile) return;
+    setFormRaw((prev) => ({
+      ...prev,
+      name: prev.name || studentProfile.name,
+      contact: prev.contact || studentProfile.mobilePhone || "",
+      studentEnglishName: prev.studentEnglishName || studentProfile.englishName || "",
+      platform:
+        prev.platform ||
+        (studentProfile.preferredClassMethod
+          ? (CLASS_METHOD_TO_PLATFORM[studentProfile.preferredClassMethod] ?? "")
+          : ""),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, canSubmit, studentProfile]);
 
   const isValid =
     form.name.trim() !== "" &&
@@ -105,22 +145,25 @@ export function LevelTestModal({ open, onClose }: { open: boolean; onClose: () =
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValid) return;
+    if (!isValid || !studentApiToken) return;
 
     setSubmitting(true);
     setSubmitError(null);
-    const result = await submitLevelTestRequest({
-      contactName: form.name,
-      contactPhone: form.contact,
-      preferredTimeUTC: zonedWallTimeToUtcISO(form.date, form.time, timeZone),
-      preferredTimeZone: timeZone,
-      lessonFrequency: form.frequency as LessonFrequencyId,
-      lessonDurationMin: form.duration as 25 | 50,
-      meetingPlatform: form.platform as MeetingPlatformId,
-      referredTeacherName: form.referredTeacher || undefined,
-      studentEnglishName: form.studentEnglishName,
-      studentAge: Number(form.studentAge),
-    });
+    const result = await submitLevelTestRequest(
+      {
+        contactName: form.name,
+        contactPhone: form.contact,
+        preferredTimeUTC: zonedWallTimeToUtcISO(form.date, form.time, timeZone),
+        preferredTimeZone: timeZone,
+        lessonFrequency: form.frequency as LessonFrequencyId,
+        lessonDurationMin: form.duration as 25 | 50,
+        meetingPlatform: form.platform as MeetingPlatformId,
+        referredTeacherName: form.referredTeacher || undefined,
+        studentEnglishName: form.studentEnglishName,
+        studentAge: Number(form.studentAge),
+      },
+      studentApiToken,
+    );
     setSubmitting(false);
     if (!result.ok) {
       setSubmitError(
@@ -146,7 +189,23 @@ export function LevelTestModal({ open, onClose }: { open: boolean; onClose: () =
 
   return (
     <Modal open={open} onClose={handleClose} title={t("level_test.title")} maxWidth="max-w-lg">
-      {submitted ? (
+      {!canSubmit ? (
+        <div className="flex flex-col items-center gap-3 py-6 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-500">
+            <LogIn size={26} />
+          </div>
+          <p className="text-sm leading-relaxed text-slate-600">{t("level_test.login_required_desc")}</p>
+          <button
+            onClick={() => {
+              handleClose();
+              onOpenLogin();
+            }}
+            className="mt-2 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+          >
+            {t("level_test.login_cta")}
+          </button>
+        </div>
+      ) : submitted ? (
         <div className="flex flex-col items-center gap-3 py-6 text-center">
           <CheckCircle2 className="text-accent-500" size={40} />
           <p className="text-sm text-slate-600">

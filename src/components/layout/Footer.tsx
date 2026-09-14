@@ -21,19 +21,19 @@ export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
             <dl className="space-y-1.5 text-[13px] leading-relaxed text-white/55">
               <div className="flex gap-1.5">
                 <dt className="shrink-0 text-white/35">{t("footer.biz_name_label")}</dt>
-                <dd>하이파이브 잉글리쉬</dd>
+                <dd>{CONTACT.company.name}</dd>
               </div>
               <div className="flex gap-1.5">
                 <dt className="shrink-0 text-white/35">{t("footer.ceo_label")}</dt>
-                <dd>우종범</dd>
+                <dd>{CONTACT.company.ceo}</dd>
               </div>
               <div className="flex gap-1.5">
                 <dt className="shrink-0 text-white/35">{t("footer.biz_reg_no_label")}</dt>
-                <dd>328-11-02334</dd>
+                <dd>{CONTACT.company.bizRegNo}</dd>
               </div>
               <div className="flex gap-1.5">
                 <dt className="shrink-0 text-white/35">{t("footer.address_label")}</dt>
-                <dd>인천광역시 부평구 충선로 87번길 10</dd>
+                <dd>{CONTACT.company.address}</dd>
               </div>
               <div className="flex items-center gap-1.5 pt-1">
                 <Globe size={13} className="shrink-0 text-accent-400" />

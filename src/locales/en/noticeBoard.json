@@ -1,0 +1,21 @@
+{
+  "eyebrow": "Support · Notices",
+  "title": "Notices",
+  "total": "Total ({{count}})",
+  "new_post": "Write",
+  "table_headers": {
+    "no": "No.",
+    "title": "Title",
+    "name": "Author",
+    "date": "Date",
+    "hit": "Hit"
+  },
+  "empty": "No notices yet.",
+  "loading": "Loading...",
+  "detail": {
+    "list": "List",
+    "edit": "Edit",
+    "delete": "Delete",
+    "hit": "Views: {{count}}"
+  }
+}

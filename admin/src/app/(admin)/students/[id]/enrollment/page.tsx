@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
+import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { EnrollmentCreateForm } from "../../../enrollments/new/EnrollmentCreateForm";
 
 export default async function StudentEnrollmentPage({
@@ -14,7 +15,7 @@ export default async function StudentEnrollmentPage({
 
   const [student, teachers] = await Promise.all([
     prisma.student.findUnique({ where: { id: studentId } }),
-    prisma.teacher.findMany({ where: { siteId: DEFAULT_SITE_ID }, orderBy: { realName: "asc" } }),
+    prisma.teacher.findMany({ where: { siteId: DEFAULT_SITE_ID }, orderBy: { realName: "asc" }, select: TEACHER_SUMMARY_SELECT }),
   ]);
 
   if (!student || student.deletedAt) notFound();
@@ -34,6 +35,8 @@ export default async function StudentEnrollmentPage({
         defaultClassMethod={student.preferredClassMethod}
         lockStudent
         studentLabel={`${student.loginId} (${student.name})`}
+        studentName={student.name}
+        defaultEnglishName={student.englishName}
       />
     </div>
   );

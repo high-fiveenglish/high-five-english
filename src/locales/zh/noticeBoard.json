@@ -1,0 +1,21 @@
+{
+  "eyebrow": "客户中心 · 公告",
+  "title": "公告",
+  "total": "共 {{count}} 篇",
+  "new_post": "写文章",
+  "table_headers": {
+    "no": "No.",
+    "title": "标题",
+    "name": "作者",
+    "date": "日期",
+    "hit": "浏览"
+  },
+  "empty": "暂无公告。",
+  "loading": "加载中...",
+  "detail": {
+    "list": "列表",
+    "edit": "编辑",
+    "delete": "删除",
+    "hit": "浏览 {{count}}"
+  }
+}

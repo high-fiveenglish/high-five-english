@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AuthProvider } from "./context/AuthContext";
+import { listPublicInstructors } from "./services/instructorService";
 import { LanguageProvider } from "./context/LanguageContext";
 import { Header } from "./components/layout/Header";
 import { Footer } from "./components/layout/Footer";
@@ -15,7 +16,11 @@ import { AboutPage } from "./pages/AboutPage";
 import { ProgramPage } from "./pages/ProgramPage";
 import { CurriculumPage } from "./pages/CurriculumPage";
 import { ProcessPage } from "./pages/ProcessPage";
+import { EnrollmentRegisterPage } from "./pages/EnrollmentRegisterPage";
 import { ClassroomPage } from "./pages/ClassroomPage";
+import { SsoLoginPage } from "./pages/SsoLoginPage";
+import { ReviewBoardPage } from "./pages/ReviewBoardPage";
+import { NoticeBoardPage } from "./pages/NoticeBoardPage";
 import { AdminReschedulePage } from "./pages/AdminReschedulePage";
 import { InstallPage } from "./pages/InstallPage";
 import { LegalPage } from "./pages/LegalPage";
@@ -26,12 +31,13 @@ import { AdminHomeNoticesPage } from "./pages/AdminHomeNoticesPage";
 import { AdminReviewsPage } from "./pages/AdminReviewsPage";
 import { AdminLevelTestPage } from "./pages/AdminLevelTestPage";
 import { AdminPricingPage } from "./pages/AdminPricingPage";
-import { AdminInstructorsPage } from "./pages/AdminInstructorsPage";
 import { AdminConsultChannelsPage } from "./pages/AdminConsultChannelsPage";
 import { ConsultPage } from "./pages/ConsultPage";
 import { TeacherDashboardPage } from "./pages/TeacherDashboardPage";
 import { RouteGuard } from "./components/auth/RouteGuard";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { MyInfoPage } from "./pages/MyInfoPage";
+import { ImpersonationBanner } from "./components/layout/ImpersonationBanner";
 
 function App() {
   const [levelTestOpen, setLevelTestOpen] = useState(false);
@@ -43,11 +49,19 @@ function App() {
   const location = useLocation();
   const hideFloatingButtons = location.pathname === "/teacher";
 
+  // "강사소개"는 홈 화면 밖에서 눌러도(다른 페이지 → 홈 이동 + 스크롤) 버퍼링 없이
+  // 바로 보이도록, 어느 페이지에 있든 앱이 뜨자마자 미리 한 번 조회해 캐시를 데운다
+  // (실제 렌더링은 InstructorsSection이 캐시를 읽어서 처리 — services/instructorService).
+  useEffect(() => {
+    listPublicInstructors();
+  }, []);
+
   return (
     <AuthProvider>
       <LanguageProvider>
         <ScrollToHash />
         <div className="flex min-h-screen flex-col">
+          <ImpersonationBanner />
           <Header
             loginOpen={loginOpen}
             onOpenLogin={openLogin}
@@ -67,7 +81,9 @@ function App() {
                   element={<CurriculumPage onOpenLevelTest={openLevelTest} />}
                 />
                 <Route path="process" element={<ProcessPage onOpenLevelTest={openLevelTest} />} />
+                <Route path="enroll" element={<EnrollmentRegisterPage onOpenLogin={openLogin} />} />
                 <Route path="install" element={<InstallPage />} />
+                <Route path="notices" element={<NoticeBoardPage />} />
                 <Route path="counsel" element={<ConsultPage />} />
                 <Route path="terms" element={<LegalPage doc="terms" path="/terms" />} />
                 <Route path="privacy" element={<LegalPage doc="privacy" path="/privacy" />} />
@@ -75,9 +91,14 @@ function App() {
 
               {/* Protected pages: never indexed, so no locale prefix — language comes
                   from the logged-in account's own preference (LanguageContext). */}
+              <Route path="/sso" element={<SsoLoginPage />} />
               <Route
                 path="/classroom"
-                element={<ClassroomPage onOpenLogin={openLogin} />}
+                element={<ClassroomPage onOpenLogin={openLogin} onOpenLevelTest={openLevelTest} />}
+              />
+              <Route
+                path="/reviews"
+                element={<ReviewBoardPage onOpenLogin={openLogin} />}
               />
               <Route
                 path="/teacher"
@@ -98,7 +119,6 @@ function App() {
                         { label: t("admin:home.link_reviews"), to: "/admin/reviews" },
                         { label: t("admin:home.link_level_test"), to: "/admin/level-test-requests" },
                         { label: t("admin:home.link_pricing"), to: "/admin/pricing" },
-                        { label: t("admin:home.link_instructors"), to: "/admin/instructors" },
                         { label: t("admin:home.link_consult_channels"), to: "/admin/consult-channels" },
                       ]}
                     />
@@ -138,14 +158,10 @@ function App() {
                 element={<AdminPricingPage onOpenLogin={openLogin} />}
               />
               <Route
-                path="/admin/instructors"
-                element={<AdminInstructorsPage onOpenLogin={openLogin} />}
-              />
-              <Route
                 path="/admin/consult-channels"
                 element={<AdminConsultChannelsPage onOpenLogin={openLogin} />}
               />
-              <Route path="/mypage" element={<PlaceholderPage title={t("topbar.my_info")} />} />
+              <Route path="/mypage" element={<MyInfoPage />} />
               <Route path="*" element={<PlaceholderPage title={t("errors.not_found_title")} />} />
             </Routes>
           </main>
@@ -159,7 +175,7 @@ function App() {
           )}
         </div>
 
-        <LevelTestModal open={levelTestOpen} onClose={() => setLevelTestOpen(false)} />
+        <LevelTestModal open={levelTestOpen} onClose={() => setLevelTestOpen(false)} onOpenLogin={openLogin} />
         <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
       </LanguageProvider>
     </AuthProvider>

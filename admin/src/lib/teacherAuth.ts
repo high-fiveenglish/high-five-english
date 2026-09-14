@@ -79,4 +79,32 @@ export async function requireTeacher() {
   return teacher;
 }
 
+// 관리자(매니저) 대리 로그인 — studentAuth.ts의 동일 패턴 참고. admin_session은 그대로
+// 두고 teacher_session만 추가 발급하므로 강사 화면을 둘러본 뒤 바로 관리자로 돌아올 수
+// 있다. 이 플래그 쿠키는 배너 표시 용도일 뿐, 값 자체로 권한을 주지 않는다.
+const IMPERSONATION_FLAG = "teacher_impersonation";
+
+export async function startTeacherImpersonation(teacherId: number) {
+  await createTeacherSession(teacherId);
+  const store = await cookies();
+  store.set(IMPERSONATION_FLAG, "1", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+}
+
+export async function stopTeacherImpersonation() {
+  await destroyTeacherSession();
+  const store = await cookies();
+  store.delete(IMPERSONATION_FLAG);
+}
+
+export async function isImpersonatingTeacher(): Promise<boolean> {
+  const store = await cookies();
+  return store.get(IMPERSONATION_FLAG)?.value === "1";
+}
+
 export { COOKIE_NAME as TEACHER_COOKIE_NAME };

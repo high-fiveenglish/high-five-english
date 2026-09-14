@@ -15,7 +15,7 @@ export function HoldRequestForm({ options }: { options: SessionOption[] }) {
     <form action={formAction} className="flex max-w-xl flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5">
       <div className="flex flex-col gap-1">
         <label htmlFor="classSessionId" className="text-xs font-medium text-slate-500">
-          Class (신청 가능한 예정 수업만 표시)
+          Class (only upcoming, requestable classes are shown)
         </label>
         <select
           id="classSessionId"
@@ -23,7 +23,7 @@ export function HoldRequestForm({ options }: { options: SessionOption[] }) {
           required
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
         >
-          <option value="">선택해주세요</option>
+          <option value="">Select a class</option>
           {options.map((o) => (
             <option key={o.id} value={o.id}>
               {o.label}
@@ -34,7 +34,7 @@ export function HoldRequestForm({ options }: { options: SessionOption[] }) {
 
       <div className="flex flex-col gap-1">
         <label htmlFor="reason" className="text-xs font-medium text-slate-500">
-          Reason (선택)
+          Reason (optional)
         </label>
         <input
           id="reason"
@@ -66,7 +66,7 @@ export function HoldRequestForm({ options }: { options: SessionOption[] }) {
         disabled={pending}
         className="w-fit rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
       >
-        {pending ? "처리 중..." : "Submit Hold Request"}
+        {pending ? "Processing..." : "Submit Hold Request"}
       </button>
     </form>
   );

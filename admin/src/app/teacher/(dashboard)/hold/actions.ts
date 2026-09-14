@@ -26,7 +26,7 @@ export async function requestHold(
   const extendedDays = Number.isInteger(extendedDaysRaw) && extendedDaysRaw > 0 ? extendedDaysRaw : 1;
 
   if (!sessionId) {
-    return { error: "수업을 선택해주세요." };
+    return { error: "Please select a class." };
   }
 
   // 클라이언트가 보낸 sessionId를 그대로 믿지 않고, 서버에서 다시 소유권과
@@ -36,21 +36,21 @@ export async function requestHold(
     include: { leaveRequest: true },
   });
   if (!session || session.teacherId !== teacher.id || session.deletedAt) {
-    return { error: "본인에게 배정된 수업만 Hold 신청할 수 있습니다." };
+    return { error: "You can only request a hold for a class assigned to you." };
   }
   if (session.status !== "SCHEDULED") {
-    return { error: "예정된 수업만 Hold 신청할 수 있습니다." };
+    return { error: "You can only request a hold for a scheduled class." };
   }
   if (session.scheduledAt.getTime() < Date.now()) {
-    return { error: "이미 지난 수업은 Hold 신청할 수 없습니다." };
+    return { error: "You cannot request a hold for a class that has already passed." };
   }
 
   const existing = session.leaveRequest;
   if (existing?.status === "PENDING") {
-    return { error: "이미 승인 대기 중인 Hold 신청이 있습니다." };
+    return { error: "A hold request for this class is already pending approval." };
   }
   if (existing?.status === "APPROVED") {
-    return { error: "이미 승인되어 적용된 휴강입니다." };
+    return { error: "This class has already been approved for hold." };
   }
 
   let leaveRequestId: number;

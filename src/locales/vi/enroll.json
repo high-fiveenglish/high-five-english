@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "title": "Đăng ký khóa học | HiFive English",
+    "description": "Chọn phương thức học, chương trình học, thời hạn và tần suất, sau đó gửi yêu cầu đăng ký khóa học."
+  },
+  "hero": {
+    "eyebrow": "Hướng dẫn đăng ký · Đăng ký khóa học",
+    "title": "Đăng ký khóa học",
+    "description": "Vui lòng điền thông tin bên dưới, nhân viên phụ trách sẽ liên hệ sau khi xác nhận. Thanh toán thực tế và lịch học cuối cùng sẽ được xác định qua tư vấn."
+  },
+  "login_required_desc": "Bạn cần đăng nhập để đăng ký khóa học. Vui lòng đăng nhập và thử lại.",
+  "login_cta": "Đăng nhập",
+  "section_platform": {
+    "title": "1. Phương thức học",
+    "teams_id_label": "ID Teams",
+    "teams_id_placeholder": "Nhập ID Microsoft Teams của bạn"
+  },
+  "section_track": {
+    "title": "2. Chương trình học",
+    "junior": "Thiếu nhi",
+    "senior": "Nâng cao",
+    "business": "Thương mại"
+  },
+  "section_plan": {
+    "title": "3. Thời hạn · Tần suất · Thời lượng buổi học",
+    "duration_label": "Thời hạn đăng ký",
+    "frequency_label": "Tần suất mỗi tuần",
+    "lesson_length_label": "Thời lượng buổi học",
+    "lesson_length_option": "{{min}} phút",
+    "zoom_50min_notice": "Buổi học 50 phút qua Zoom sẽ được chia thành 25 phút học · nghỉ 5 phút · 25 phút học. Nếu muốn buổi học 50 phút liên tục không gián đoạn, chúng tôi khuyên dùng VooV Meeting hoặc Teams."
+  },
+  "section_weekday": {
+    "title": "4. Ngày học",
+    "value_label": "Ngày học mặc định theo lựa chọn của bạn",
+    "custom_note": "Nếu muốn học cuối tuần hoặc kết hợp ngày khác, vui lòng liên hệ trực tiếp quản lý qua các kênh bên dưới.",
+    "contact_kakao": "KakaoTalk",
+    "contact_wechat": "WeChat"
+  },
+  "section_points": {
+    "title": "5. Giảm giá bằng điểm thưởng",
+    "balance_label": "Điểm thưởng hiện có",
+    "balance_value": "{{count}}P",
+    "apply_checkbox": "Sử dụng toàn bộ điểm thưởng để giảm giá",
+    "guest_note": "Chỉ tài khoản học viên đã đăng nhập mới có thể kiểm tra và sử dụng điểm thưởng.",
+    "earn_note": "Bạn nhận 5.000P khi bạn bè được bạn giới thiệu đăng ký, và 1.000P khi viết đánh giá khóa học."
+  },
+  "price_preview": {
+    "estimated_label": "Học phí dự kiến",
+    "discount_label": "Giảm giá điểm thưởng",
+    "final_label": "Tổng thanh toán dự kiến",
+    "krw_only_note": "Giảm giá điểm thưởng được tính theo thanh toán bằng KRW.",
+    "disclaimer": "* Số tiền thanh toán thực tế có thể thay đổi sau tư vấn tùy theo chương trình khuyến mãi hoặc giảm giá gia đình."
+  },
+  "section_schedule": {
+    "title": "6. Ngày · Giờ bắt đầu mong muốn",
+    "start_date_label": "Ngày bắt đầu mong muốn",
+    "start_time_label": "Giờ bắt đầu mong muốn",
+    "time_zone_note": "Theo giờ Hàn Quốc (KST), có thể chọn theo bước 30 phút từ 6 giờ sáng đến 12 giờ đêm."
+  },
+  "validation_required": "Mục bắt buộc.",
+  "submitting": "Đang gửi...",
+  "submit": "Gửi yêu cầu đăng ký",
+  "success_title": "Yêu cầu đăng ký khóa học của bạn đã được tiếp nhận.",
+  "success_desc": "Nhân viên phụ trách sẽ sớm liên hệ với bạn.",
+  "confirm": "Xác nhận"
+}

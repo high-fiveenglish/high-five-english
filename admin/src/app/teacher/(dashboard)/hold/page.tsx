@@ -2,14 +2,15 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireTeacher } from "@/lib/teacherAuth";
 import { formatAppDate, formatAppDateTime } from "@/lib/appTime";
+import { studentDisplayName } from "@/lib/teacherPortalLabels";
 
 const fmtDate = formatAppDate;
 const fmtDateTime = formatAppDateTime;
 
 const STATUS_LABEL: Record<string, string> = {
-  PENDING: "대기중",
-  APPROVED: "승인됨",
-  REJECTED: "거부됨",
+  PENDING: "Pending",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
 };
 
 const STATUS_STYLE: Record<string, string> = {
@@ -56,9 +57,9 @@ export default async function TeacherHoldPage() {
             {holdRequests.map((h) => (
               <tr key={h.id} className="border-b border-slate-100 last:border-0">
                 <td className="px-4 py-3 text-slate-900">{fmtDate(h.classSession.scheduledAt)}</td>
-                <td className="px-4 py-3 text-slate-600">{h.student.name}</td>
+                <td className="px-4 py-3 text-slate-600">{studentDisplayName(h.student.name, h.student.englishName)}</td>
                 <td className="px-4 py-3 text-slate-500">{h.reason ?? "-"}</td>
-                <td className="px-4 py-3 text-slate-600">+{h.extendedDays}일</td>
+                <td className="px-4 py-3 text-slate-600">+{h.extendedDays} days</td>
                 <td className="px-4 py-3">
                   <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${STATUS_STYLE[h.status]}`}>
                     {STATUS_LABEL[h.status]}
@@ -70,7 +71,7 @@ export default async function TeacherHoldPage() {
             {holdRequests.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
-                  신청한 Hold 요청이 없습니다.
+                  No hold requests found.
                 </td>
               </tr>
             )}

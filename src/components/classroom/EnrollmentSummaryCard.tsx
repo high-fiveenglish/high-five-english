@@ -4,6 +4,7 @@ import type { Enrollment, Lesson } from "../../lib/scheduling/types";
 import type { ClassroomCourse, LevelTestResult } from "../../data/classroomMock";
 import type { Instructor } from "../../data/instructors";
 import { getMeetingPlatform } from "../../data/meetingPlatforms";
+import { resolveClassTime } from "../../lib/scheduling/engine";
 import type { TeacherMeetingLinks } from "../../services/store";
 import { EnterClassButton } from "./EnterClassButton";
 import { LocalizedLink } from "../i18n/LocalizedLink";
@@ -44,11 +45,13 @@ export function EnrollmentSummaryCard({
 }) {
   const { t } = useTranslation("classroom");
   const weekdayLabels = t("weekdays_short", { returnObjects: true }) as string[];
-  const weeklyDaysLabel = enrollment.weeklyDays
-    .slice()
-    .sort((a, b) => a - b)
-    .map((d) => weekdayLabels[d])
-    .join(", ");
+  const sortedWeeklyDays = enrollment.weeklyDays.slice().sort((a, b) => a - b);
+  const weeklyDaysLabel = sortedWeeklyDays.map((d) => weekdayLabels[d]).join(", ");
+  const hasMixedTimes = Object.keys(enrollment.weeklyTimes ?? {}).length > 0;
+  const perDayTimesLabel = sortedWeeklyDays.map((d) => `${weekdayLabels[d]} ${resolveClassTime(enrollment, d)}`).join(", ");
+  const scheduleValue = hasMixedTimes
+    ? perDayTimesLabel
+    : t("summary_card.class_schedule_value", { days: weeklyDaysLabel, time: enrollment.classTime });
   const platform = getMeetingPlatform(enrollment.meetingPlatform);
   const nextLesson = findNextScheduledLesson(lessons);
 
@@ -77,10 +80,7 @@ export function EnrollmentSummaryCard({
           value={t("summary_card.lesson_count_value", { total: enrollment.totalLessons, remaining: enrollment.remainingLessons })}
         />
         <Field label={t("summary_card.lesson_duration")} value={t("summary_card.lesson_duration_value", { min: enrollment.lessonDurationMin })} />
-        <Field
-          label={t("summary_card.class_schedule")}
-          value={t("summary_card.class_schedule_value", { days: weeklyDaysLabel, time: enrollment.classTime })}
-        />
+        <Field label={t("summary_card.class_schedule")} value={scheduleValue} />
         <Field label={t("summary_card.level_test_result")} value={levelTestResult.level} />
         <Field label={t("summary_card.current_status")} value={t(`enrollment_status.${enrollment.status}`)} />
       </dl>
@@ -134,7 +134,9 @@ export function EnrollmentSummaryCard({
         </div>
         <div className="rounded-xl bg-brand-50/60 p-3">
           <Clock size={16} className="mx-auto text-brand-600" />
-          <p className="mt-1 text-[11px] font-medium text-slate-500">{enrollment.classTime}</p>
+          <p className="mt-1 text-[11px] font-medium text-slate-500">
+            {hasMixedTimes ? perDayTimesLabel : enrollment.classTime}
+          </p>
         </div>
         <div className="rounded-xl bg-brand-50/60 p-3">
           <Repeat size={16} className="mx-auto text-brand-600" />

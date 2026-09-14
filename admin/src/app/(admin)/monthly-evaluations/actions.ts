@@ -9,41 +9,10 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 
 const MAX_LENGTH = 4000;
 
-export async function createMonthlyEvaluation(_prevState: { error?: string } | undefined, formData: FormData) {
-  const actor = await requireBackofficeActor();
-  requirePermission(actor, "monthly_evaluations.create");
-
-  const studentId = Number(formData.get("studentId"));
-  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
-  const teacherIdRaw = String(formData.get("teacherId") ?? "");
-  const content = String(formData.get("content") ?? "").trim();
-
-  if (!studentId || !yearMonth || !content) {
-    return { error: "학생, 대상 월, 내용은 필수입니다." };
-  }
-  if (content.length > MAX_LENGTH) {
-    return { error: `${MAX_LENGTH}자를 초과했습니다. (현재 ${content.length}자)` };
-  }
-
-  const evaluation = await prisma.monthlyEvaluation.upsert({
-    where: { studentId_yearMonth: { studentId, yearMonth } },
-    update: { content, teacherId: teacherIdRaw ? Number(teacherIdRaw) : null },
-    create: {
-      siteId: DEFAULT_SITE_ID,
-      studentId,
-      yearMonth,
-      content,
-      teacherId: teacherIdRaw ? Number(teacherIdRaw) : null,
-    },
-  });
-  await logAudit({ actor, action: "CREATE", targetType: "MonthlyEvaluation", targetId: evaluation.id });
-
-  revalidatePath("/monthly-evaluations");
-  redirect("/monthly-evaluations");
-}
-
-export async function updateMonthlyEvaluation(
-  id: number,
+export async function saveMonthlyEvaluation(
+  enrollmentId: number,
+  cycleNumber: number,
+  sessionsPerCycle: number,
   _prevState: { error?: string } | undefined,
   formData: FormData,
 ) {
@@ -58,11 +27,34 @@ export async function updateMonthlyEvaluation(
     return { error: `${MAX_LENGTH}자를 초과했습니다. (현재 ${content.length}자)` };
   }
 
-  await prisma.monthlyEvaluation.update({ where: { id }, data: { content } });
-  await logAudit({ actor, action: "UPDATE", targetType: "MonthlyEvaluation", targetId: id });
+  const enrollment = await prisma.enrollment.findUnique({ where: { id: enrollmentId } });
+  if (!enrollment) {
+    return { error: "존재하지 않는 수강 건입니다." };
+  }
+
+  const evaluation = await prisma.monthlyEvaluation.upsert({
+    where: { enrollmentId_cycleNumber: { enrollmentId, cycleNumber } },
+    update: { content },
+    create: {
+      siteId: DEFAULT_SITE_ID,
+      studentId: enrollment.studentId,
+      teacherId: enrollment.teacherId,
+      enrollmentId,
+      cycleNumber,
+      sessionsPerCycle,
+      content,
+    },
+  });
+  await logAudit({
+    actor,
+    action: "UPDATE",
+    targetType: "MonthlyEvaluation",
+    targetId: evaluation.id,
+    description: `${cycleNumber}차 회차`,
+  });
 
   revalidatePath("/monthly-evaluations");
-  revalidatePath(`/monthly-evaluations/${id}`);
+  revalidatePath(`/monthly-evaluations/${enrollmentId}/${cycleNumber}`);
   redirect("/monthly-evaluations");
 }
 

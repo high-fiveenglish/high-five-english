@@ -373,7 +373,7 @@ function TeacherDashboardContent() {
                         </button>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
-                        <LessonStatusBadge status={lesson.status} />
+                        <LessonStatusBadge status={lesson.status} reason={lesson.reason} />
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
                         {canHold ? (

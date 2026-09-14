@@ -18,6 +18,7 @@ const PERMISSION_SEED: { key: string; description: string }[] = [
   { key: "teachers.create", description: "강사 등록" },
   { key: "teachers.update", description: "강사 정보 수정" },
   { key: "teachers.delete", description: "강사 비활성화" },
+  { key: "teachers.impersonate", description: "강사로 로그인(임퍼소네이션)" },
   { key: "schedules.view", description: "수업 일정 조회" },
   { key: "schedules.create", description: "수업 등록" },
   { key: "schedules.update", description: "수업 상태/일정 변경" },
@@ -40,121 +41,61 @@ const PERMISSION_SEED: { key: string; description: string }[] = [
   { key: "leave_requests.create", description: "연기신청(본인 수업)" },
   { key: "leave_requests.update", description: "연기 등록/적용(관리자)" },
   { key: "leave_requests.revert", description: "연기 되돌리기" },
+  { key: "academy_closures.view", description: "전체수업휴강(어학원 휴강) 조회" },
+  { key: "academy_closures.create", description: "전체수업휴강(어학원 휴강) 등록" },
+  { key: "academy_closures.revert", description: "전체수업휴강(어학원 휴강) 되돌리기" },
   { key: "pricing.view", description: "가격표 조회" },
   { key: "pricing.update", description: "가격표 수정" },
-  { key: "instructors.view", description: "강사소개(마케팅) 조회" },
-  { key: "instructors.create", description: "강사소개 등록" },
-  { key: "instructors.update", description: "강사소개 수정" },
-  { key: "instructors.delete", description: "강사소개 삭제" },
   { key: "own_schedule.view", description: "본인 수업 일정 조회" },
   { key: "own_evaluations.view", description: "본인 평가서 조회" },
   { key: "own_evaluations.update", description: "본인 담당 수업 평가서 작성/수정" },
   { key: "own_leave_requests.view", description: "본인 Hold 신청 내역 조회" },
   { key: "own_leave_requests.create", description: "본인 담당 수업 Hold 신청" },
+  { key: "own_monthly_evaluations.view", description: "본인 담당 수강생 월평가서 조회" },
+  { key: "own_monthly_evaluations.update", description: "본인 담당 수강생 월평가서 작성/수정" },
+  { key: "own_level_tests.update", description: "본인 담당 레벨테스트 결과(평가서) 작성/수정" },
+  { key: "own_profile.update", description: "본인 프로필 정보 수정" },
   { key: "bulletins.view", description: "공지사항 조회" },
   { key: "bulletins.create", description: "공지사항 작성" },
   { key: "bulletins.update", description: "공지사항 수정" },
   { key: "bulletins.delete", description: "공지사항 삭제" },
+  { key: "enrollment_requests.view", description: "수강신청 조회" },
+  { key: "enrollment_requests.update", description: "수강신청 상태 변경" },
+  { key: "home_notices.view", description: "홈페이지 공지 조회" },
+  { key: "home_notices.create", description: "홈페이지 공지 작성" },
+  { key: "home_notices.update", description: "홈페이지 공지 수정" },
+  { key: "home_notices.delete", description: "홈페이지 공지 삭제" },
+  { key: "consult_channels.view", description: "상담채널 조회" },
+  { key: "consult_channels.update", description: "상담채널 수정" },
+  { key: "reviews.view", description: "수강후기 게시판 조회" },
+  { key: "reviews.delete", description: "수강후기 게시판 글 삭제(모더레이션)" },
 ];
 
 const ROLE_PERMISSION_SEED: Record<Exclude<RoleName, "ADMIN">, string[]> = {
   MANAGER: [
     "students.view", "students.create", "students.update",
-    "teachers.view", "teachers.create", "teachers.update",
+    "teachers.view", "teachers.create", "teachers.update", "teachers.impersonate",
     "schedules.view", "schedules.create", "schedules.update", "schedules.delete",
     "level_tests.view", "level_tests.create", "level_tests.update", "level_tests.delete",
     "enrollments.view", "enrollments.create", "enrollments.update", "enrollments.delete",
     "evaluations.view",
     "monthly_evaluations.view",
     "leave_requests.view", "leave_requests.update", "leave_requests.revert",
+    "academy_closures.view", "academy_closures.create", "academy_closures.revert",
     "bulletins.view",
+    "enrollment_requests.view", "enrollment_requests.update",
+    "home_notices.view", "home_notices.create", "home_notices.update", "home_notices.delete",
+    "consult_channels.view", "consult_channels.update",
+    "reviews.view", "reviews.delete",
   ],
   TEACHER: [
     "own_schedule.view", "own_evaluations.view", "own_evaluations.update",
     "own_leave_requests.view", "own_leave_requests.create",
+    "own_monthly_evaluations.view", "own_monthly_evaluations.update",
+    "own_level_tests.update",
   ],
-  STUDENT: ["own_schedule.view", "own_evaluations.view", "leave_requests.create"],
+  STUDENT: ["own_schedule.view", "own_evaluations.view", "leave_requests.create", "own_profile.update"],
 };
-
-const INSTRUCTOR_SEED = [
-  {
-    slug: "sarah",
-    name: "사라",
-    nameEn: "Sarah T.",
-    country: "미국",
-    flag: "🇺🇸",
-    gradient: "from-brand-500 to-brand-700",
-    audioSrc: "/audio/intro-1.wav",
-    bio: "10년 이상 어린이 영어교육 경력을 가진 강사로, 파닉스부터 리딩까지 단계별 반복훈련을 통해 아이가 스스로 문장을 만들어낼 수 있도록 지도합니다. 칭찬과 격려 중심의 수업으로 첫 화상영어를 시작하는 아이들에게 특히 잘 맞아요.",
-    career: ["TESOL 자격 보유", "초등영어 전문 8년", "하이파이브 강사 평가 최상위"],
-    availableDays: [1, 2, 3, 4, 5],
-    availableHours: "평일 15:00–20:00",
-    classFeatures: ["초등 전문", "발음 교정", "파닉스"],
-    specialties: ["파닉스", "발음 교정", "초등 회화"],
-    levels: ["pre-a1", "a1", "a2"],
-    teachingStyle: "칭찬과 격려 중심의 반복 훈련형 수업",
-    published: true,
-    order: 1,
-  },
-  {
-    slug: "james",
-    name: "제임스",
-    nameEn: "James K.",
-    country: "캐나다",
-    flag: "🇨🇦",
-    gradient: "from-brand-600 to-brand-900",
-    audioSrc: "/audio/intro-2.wav",
-    defaultMeetingPlatform: "zoom",
-    bio: "중고등학생 및 성인 학습자를 대상으로 문법 교정, 에세이 작문, 토론 수업을 진행합니다. 단순 대화에 그치지 않고 문장 단위의 정확한 피드백을 제공해 시험 영어와 실전 영어를 동시에 잡아줍니다.",
-    career: ["캐나다 온타리오 교육학 학사", "중고등 영어 전문 6년", "IELTS/토플 라이팅 코칭"],
-    availableDays: [1, 3, 5],
-    availableHours: "평일 18:00–22:00",
-    classFeatures: ["중고등 전문", "문법/작문", "토론"],
-    specialties: ["문법 교정", "에세이 작문", "토론"],
-    levels: ["b1", "b2", "b2plus"],
-    teachingStyle: "문장 단위의 정확한 피드백 중심 수업",
-    published: true,
-    order: 2,
-  },
-  {
-    slug: "emily",
-    name: "에밀리",
-    nameEn: "Emily R.",
-    country: "영국",
-    flag: "🇬🇧",
-    gradient: "from-accent-400 to-accent-600",
-    audioSrc: "/audio/intro-3.wav",
-    bio: "성인 학습자의 목표에 맞춰 여행, 비즈니스, 일상 회화 등 맞춤형 커리큘럼을 구성합니다. 완벽한 문장보다 '일단 말해보는 용기'를 강조하며, 실수한 표현은 수업 중 바로바로 교정해드립니다.",
-    career: ["영국 브라이튼 대학교 졸업", "비즈니스 영어 코칭 5년", "성인 학습자 만족도 최상위"],
-    availableDays: [1, 2, 3, 4, 5, 6],
-    availableHours: "평일·토요일 19:00–23:00",
-    classFeatures: ["성인 회화", "비즈니스 영어", "프리토킹"],
-    specialties: ["비즈니스 영어", "여행 영어", "프리토킹"],
-    levels: ["a2", "b1", "b2"],
-    teachingStyle: "'일단 말하기'를 강조하는 실전형 수업",
-    published: true,
-    order: 3,
-  },
-  {
-    slug: "daniel",
-    name: "다니엘",
-    nameEn: "Daniel P.",
-    country: "호주",
-    flag: "🇦🇺",
-    gradient: "from-brand-400 to-brand-600",
-    audioSrc: "/audio/intro-4.wav",
-    bio: "유쾌하고 친근한 진행으로 학습자의 긴장을 풀어주는 데 강점이 있습니다. 질문과 답변을 반복하며 즉흥적으로 문장을 만들어내는 훈련을 통해 실제 대화 상황에서의 순발력을 키워줍니다.",
-    career: ["호주 시드니 교육 전공", "전 연령 화상영어 7년", "발음 교정 특화 과정 이수"],
-    availableDays: [2, 4, 6],
-    availableHours: "화·목·토 17:00–21:00",
-    classFeatures: ["전 연령", "프리토킹", "발음 교정"],
-    specialties: ["프리토킹", "발음 교정", "즉흥 회화 훈련"],
-    levels: ["a1", "a2", "b1"],
-    teachingStyle: "질문과 답변을 반복하는 즉흥 대화 훈련형 수업",
-    published: true,
-    order: 4,
-  },
-];
 
 const PRICING_SEED = [
   {
@@ -189,6 +130,14 @@ const PRICING_SEED = [
   },
 ];
 
+// 마케팅 사이트의 기존 정적 CONTACT.kakaoId/wechatId 값을 그대로 옮긴다(src/data/contact.ts
+// 참고) — customerService는 실제 상담 연락처가 아직 없어 기본 비활성.
+const CONSULT_CHANNEL_SEED = [
+  { id: "kakao", displayName: "카카오톡 상담", value: "jongbum1010", url: null, enabled: true },
+  { id: "wechat", displayName: "위챗 상담", value: "wjb5463", url: null, enabled: true },
+  { id: "customerService", displayName: "고객센터", value: "www.hfenglish.co.kr", url: null, enabled: false },
+];
+
 // 협력사 — 학생별로 지정하며, 추후 별도의 협력사 관리 화면에서 CRUD하도록 확장한다.
 const AGENT_SEED = [
   { code: "highfive", name: "직영에이전트" },
@@ -212,14 +161,6 @@ async function main() {
       where: { code: agent.code },
       update: {},
       create: { ...agent, siteId: site.id },
-    });
-  }
-
-  for (const instructor of INSTRUCTOR_SEED) {
-    await prisma.instructor.upsert({
-      where: { slug: instructor.slug },
-      update: {},
-      create: { ...instructor, siteId: site.id },
     });
   }
 
@@ -280,6 +221,14 @@ async function main() {
         create: { ...row, durationId: createdDuration.id },
       });
     }
+  }
+
+  for (const channel of CONSULT_CHANNEL_SEED) {
+    await prisma.consultChannel.upsert({
+      where: { id: channel.id },
+      update: {},
+      create: { ...channel, siteId: site.id },
+    });
   }
 }
 

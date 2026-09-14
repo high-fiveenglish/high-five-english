@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission, logAudit } from "@/lib/rbac";
+import { startTeacherImpersonation, stopTeacherImpersonation } from "@/lib/teacherAuth";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import type { AccountStatus, ApprovalStatus, Sex, TeacherGrade } from "@/generated/prisma/client";
 
@@ -73,10 +74,10 @@ export async function updateTeacher(id: number, _prevState: { error?: string } |
   const schoolName = String(formData.get("schoolName") ?? "").trim();
   const major = String(formData.get("major") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
-  const availableTimeText = String(formData.get("availableTimeText") ?? "").trim();
   const availableHours = formData.getAll("availableHours").map((h) => Number(h));
   const mobilePhone = String(formData.get("mobilePhone") ?? "").trim();
   const teamsId = String(formData.get("teamsId") ?? "").trim();
+  const teamsUrl = String(formData.get("teamsUrl") ?? "").trim();
   const zoomUrl = String(formData.get("zoomUrl") ?? "").trim();
   const zoomPw = String(formData.get("zoomPw") ?? "").trim();
   const tencentUrl = String(formData.get("tencentUrl") ?? "").trim();
@@ -107,10 +108,10 @@ export async function updateTeacher(id: number, _prevState: { error?: string } |
       schoolName: schoolName || null,
       major: major || null,
       address: address || null,
-      availableTimeText: availableTimeText || null,
       availableHours,
       mobilePhone: mobilePhone || null,
       teamsId: teamsId || null,
+      teamsUrl: teamsUrl || null,
       zoomUrl: zoomUrl || null,
       zoomPw: zoomPw || null,
       tencentUrl: tencentUrl || null,
@@ -142,6 +143,29 @@ export async function deleteTeacher(id: number) {
   await prisma.teacher.update({ where: { id }, data: { accountStatus: "INACTIVE" } });
   await logAudit({ actor, action: "ACCOUNT_DISABLED", targetType: "Teacher", targetId: id, description: "강사 비활성화" });
   revalidatePath("/teachers");
+}
+
+// 관리자(매니저)가 강사 계정 화면을 그대로 확인하기 위한 대리 로그인. 강사 대시보드는
+// 학생용과 달리 admin과 같은 Next.js 앱 안에 있으므로(admin/src/app/teacher/(dashboard)),
+// 별도 SSO 브릿지 없이 teacher_session 쿠키만 추가로 발급하고 같은 앱 내에서 이동한다.
+// admin_session은 그대로 남아있어 강사 화면에서 바로 관리자로 돌아올 수 있다.
+export async function impersonateTeacher(id: number) {
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "teachers.impersonate");
+  const teacher = await prisma.teacher.findUnique({ where: { id } });
+  if (!teacher || teacher.accountStatus !== "ACTIVE") {
+    throw new Error("대리 로그인할 수 없는 강사입니다.");
+  }
+  await startTeacherImpersonation(id);
+  await logAudit({ actor, action: "IMPERSONATION_STARTED", targetType: "Teacher", targetId: id, description: `${actor.name}이(가) 강사 ${teacher.realName}(${teacher.loginId})으로 대리 로그인 시작` });
+  redirect("/teacher");
+}
+
+export async function endTeacherImpersonation() {
+  const actor = await requireBackofficeActor();
+  await stopTeacherImpersonation();
+  await logAudit({ actor, action: "IMPERSONATION_ENDED", targetType: "Teacher", description: `${actor.name}이(가) 강사 대리 로그인 종료` });
+  redirect("/teachers");
 }
 
 export async function updateTeacherAccountStatus(id: number, accountStatus: AccountStatus) {

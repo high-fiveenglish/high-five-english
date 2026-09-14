@@ -7,15 +7,11 @@ import {
   INITIAL_TEACHER_MEETING_LINKS,
   CLOSURES,
   TEACHER_UNAVAILABILITY,
+  STUDENT_POINTS_SEED,
 } from "../data/classroomMock";
 import { MEETING_PLATFORMS, type MeetingPlatformId } from "../data/meetingPlatforms";
 import { DEFAULT_ENTRY_WINDOW, type EntryWindowSettings } from "../data/siteSettings";
 import { SEED_NOTICES } from "../data/noticesSeed";
-import { SEED_HOME_NOTICES } from "../data/homeNoticesSeed";
-import { SEED_STUDENT_REVIEWS } from "../data/reviewsSeed";
-import { PRICING_SEED, type PricingDuration } from "../data/pricing";
-import { SEED_CONSULT_CHANNELS } from "../data/consultChannelsSeed";
-import { INSTRUCTORS, type Instructor } from "../data/instructors";
 import type {
   ClosureDate,
   DailyEvaluation,
@@ -25,13 +21,7 @@ import type {
   TeacherUnavailability,
 } from "../lib/scheduling/types";
 import type { PermissionKey } from "../lib/auth/types";
-import type {
-  ConsultChannel,
-  HomeNotice,
-  LevelTestRequest,
-  Notice,
-  StudentReview,
-} from "../lib/community/types";
+import type { LevelTestRequest, Notice } from "../lib/community/types";
 
 export type TeacherMeetingLinks = Partial<Record<MeetingPlatformId, string>>;
 
@@ -58,26 +48,9 @@ export const store = {
   // overlays Account.preferredLanguage rather than mutating the static ACCOUNTS array.
   preferredLanguageOverrides: {} as Record<string, string>,
   notices: [...SEED_NOTICES] as Notice[],
-  homeNotices: [...SEED_HOME_NOTICES] as HomeNotice[],
-  studentReviews: [...SEED_STUDENT_REVIEWS] as StudentReview[],
   levelTestRequests: [] as LevelTestRequest[],
-  // Deep-cloned (not just spread) since each row's price25/price50 are themselves nested
-  // objects an admin edit needs to replace without mutating the static seed.
-  pricing: PRICING_SEED.map((d) => ({
-    ...d,
-    rows: d.rows.map((r) => ({ ...r, price25: { ...r.price25 }, price50: { ...r.price50 } })),
-  })) as PricingDuration[],
-  // Deep-cloned so admin edits to career/classFeatures/etc. (array fields) never mutate
-  // the static INSTRUCTORS seed that classroomMock.ts still reads directly by id.
-  instructors: INSTRUCTORS.map((i) => ({
-    ...i,
-    career: [...i.career],
-    availableDays: [...i.availableDays],
-    classFeatures: [...i.classFeatures],
-    specialties: [...i.specialties],
-    levels: [...i.levels],
-  })) as Instructor[],
-  consultChannels: [...SEED_CONSULT_CHANNELS] as ConsultChannel[],
+  // Overlay pattern, same as adminPermissionOverrides above — keyed by studentId.
+  studentPoints: { ...STUDENT_POINTS_SEED } as Record<string, number>,
 };
 
 function cloneLinks(

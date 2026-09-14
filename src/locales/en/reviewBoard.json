@@ -1,0 +1,35 @@
+{
+  "eyebrow": "My Page · Board",
+  "title": "Review Board",
+  "total": "Total ({{count}})",
+  "new_post": "Write",
+  "table_headers": {
+    "no": "No.",
+    "title": "Title",
+    "name": "Name",
+    "date": "Date",
+    "hit": "Hit"
+  },
+  "reply_prefix": "RE",
+  "empty": "No posts yet.",
+  "real_account_required": "You must log in with a real member account to view the board.",
+  "loading": "Loading...",
+  "detail": {
+    "list": "List",
+    "reply": "Reply",
+    "edit": "Edit",
+    "delete": "Delete",
+    "hit": "Views: {{count}}"
+  },
+  "form": {
+    "new_title": "Write",
+    "reply_title": "Reply",
+    "edit_title": "Edit Post",
+    "field_title": "Title",
+    "field_content": "Content",
+    "content_placeholder": "Feel free to share your review.",
+    "validation_error": "Please enter both a title and content.",
+    "submitting": "Saving...",
+    "submit": "Post"
+  }
+}

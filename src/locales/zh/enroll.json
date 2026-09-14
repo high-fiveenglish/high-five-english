@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "title": "课程报名 | HiFive English",
+    "description": "选择上课方式、课程体系、报名周期与频率，提交课程报名申请。"
+  },
+  "hero": {
+    "eyebrow": "报名指南 · 课程报名",
+    "title": "课程报名申请",
+    "description": "请填写以下信息，负责人确认后会与您联系。实际付款及最终课程安排将在咨询后确定。"
+  },
+  "login_required_desc": "课程报名需要先登录会员账号。请登录后再试。",
+  "login_cta": "登录",
+  "section_platform": {
+    "title": "1. 上课方式",
+    "teams_id_label": "Teams 账号",
+    "teams_id_placeholder": "请输入您的 Microsoft Teams 账号"
+  },
+  "section_track": {
+    "title": "2. 课程体系",
+    "junior": "青少年",
+    "senior": "高级",
+    "business": "商务"
+  },
+  "section_plan": {
+    "title": "3. 报名周期 · 频率 · 上课时长",
+    "duration_label": "报名周期",
+    "frequency_label": "每周频率",
+    "lesson_length_label": "上课时长",
+    "lesson_length_option": "{{min}} 分钟",
+    "zoom_50min_notice": "使用 Zoom 上50分钟课程时，将分为25分钟上课 · 休息5分钟 · 25分钟上课进行。如需不间断的50分钟课程，建议选择 VooV Meeting 或 Teams。"
+  },
+  "section_weekday": {
+    "title": "4. 上课日",
+    "value_label": "所选条件的默认上课日",
+    "custom_note": "如需周末上课或其他日期组合，请通过以下渠道直接联系负责人。",
+    "contact_kakao": "KakaoTalk",
+    "contact_wechat": "微信"
+  },
+  "section_points": {
+    "title": "5. 积分折扣",
+    "balance_label": "持有积分",
+    "balance_value": "{{count}} 积分",
+    "apply_checkbox": "使用全部持有积分抵扣",
+    "guest_note": "仅登录学员账号可查看并使用积分。",
+    "earn_note": "好友经您推荐报名后，您可获得 5,000 积分；发布学习评价可获得 1,000 积分。"
+  },
+  "price_preview": {
+    "estimated_label": "预估学费",
+    "discount_label": "积分折扣",
+    "final_label": "预估应付金额",
+    "krw_only_note": "积分折扣按韩元(KRW)付款标准计算。",
+    "disclaimer": "* 实际付款金额可能因促销、家庭折扣等在咨询后有所不同。"
+  },
+  "section_schedule": {
+    "title": "6. 希望开始日期 · 时间",
+    "start_date_label": "希望开始日期",
+    "start_time_label": "希望开始时间",
+    "time_zone_note": "以韩国时间(KST)为准，可在早上6点至凌晨12点之间以30分钟为单位选择。"
+  },
+  "validation_required": "必填项目。",
+  "submitting": "提交中...",
+  "submit": "提交报名申请",
+  "success_title": "您的课程报名申请已收到。",
+  "success_desc": "负责人将尽快与您联系。",
+  "confirm": "确认"
+}

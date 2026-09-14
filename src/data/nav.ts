@@ -42,6 +42,7 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { labelKey: "nav.pricing", href: "/", scrollTo: "pricing" },
       { labelKey: "nav.process", href: "/process" },
+      { labelKey: "nav.enrollment_register", href: "/enroll" },
     ],
   },
   {
@@ -62,8 +63,8 @@ export const NAV_ITEMS: NavItem[] = [
   {
     labelKey: "nav.customer_center",
     children: [
-      { labelKey: "nav.notice", href: "/", scrollTo: "notices" },
-      { labelKey: "nav.reviews", href: "/", scrollTo: "reviews" },
+      { labelKey: "nav.notice", href: "/notices" },
+      { labelKey: "nav.reviews", href: "/reviews" },
       { labelKey: "nav.counsel", href: "/counsel" },
     ],
   },

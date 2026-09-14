@@ -1,0 +1,21 @@
+{
+  "eyebrow": "고객센터 · 공지사항",
+  "title": "공지사항",
+  "total": "전체 {{count}}건",
+  "new_post": "글쓰기",
+  "table_headers": {
+    "no": "No.",
+    "title": "제목",
+    "name": "작성자",
+    "date": "날짜",
+    "hit": "조회"
+  },
+  "empty": "등록된 공지사항이 없습니다.",
+  "loading": "불러오는 중입니다...",
+  "detail": {
+    "list": "목록",
+    "edit": "수정",
+    "delete": "삭제",
+    "hit": "조회 {{count}}"
+  }
+}

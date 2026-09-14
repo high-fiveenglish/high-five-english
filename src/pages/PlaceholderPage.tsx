@@ -5,9 +5,13 @@ import { LocalizedLink } from "../components/i18n/LocalizedLink";
 
 export function PlaceholderPage({
   title,
+  description,
   links,
 }: {
   title: string;
+  /** 기본 "준비 중입니다" 문구 대신 보여줄 설명 — 특정 상황(예: 데모 계정 한계)을
+   * 안내해야 할 때만 넘긴다. */
+  description?: string;
   links?: { label: string; to: string }[];
 }) {
   const { t } = useTranslation("common");
@@ -18,7 +22,7 @@ export function PlaceholderPage({
       </div>
       <h1 className="mt-6 text-2xl font-bold text-brand-950">{title}</h1>
       <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-500">
-        {t("errors.in_preparation_title")}
+        {description ?? t("errors.in_preparation_title")}
       </p>
 
       {links && links.length > 0 && (

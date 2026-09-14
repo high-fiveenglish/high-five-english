@@ -1,25 +1,31 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
+import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { DeleteButton } from "../DeleteButton";
+import { ImpersonateButton } from "../students/ImpersonateButton";
 import { deleteLevelTest } from "./actions";
-import { ProgressSelect } from "./ProgressSelect";
-import { TeacherAssignSelect } from "./TeacherAssignSelect";
-import { formatAppDateTime } from "@/lib/appTime";
+import { SUBJECT_OPTIONS } from "@/lib/levelTestOptions";
+import { formatAppDate, formatAppDateTime } from "@/lib/appTime";
+
+const SUBJECT_LABEL: Record<string, string> = Object.fromEntries(SUBJECT_OPTIONS.map((o) => [o.value, o.label]));
+
+// 진행상태는 더 이상 목록에서 직접 고르는 값이 아니다 — 담당강사·수업일자와 마찬가지로
+// "수정" 화면에서 확정/처리한 결과만 여기서는 배지로 보여준다.
+const PROGRESS_BADGE_STYLE: Record<string, string> = {
+  접수: "bg-slate-100 text-slate-600",
+  수업확정: "bg-blue-100 text-blue-700",
+  수업완료: "bg-emerald-100 text-emerald-700",
+  결석: "bg-red-100 text-red-700",
+  취소: "bg-slate-200 text-slate-500",
+};
 
 export default async function LevelTestsPage() {
-  const [levelTests, teachers] = await Promise.all([
-    prisma.levelTest.findMany({
-      where: { siteId: DEFAULT_SITE_ID },
-      orderBy: { id: "desc" },
-      include: { student: true, teacher: true },
-    }),
-    // 신규 배정 시 선택 가능한 강사는 ACTIVE만 노출한다 — 이미 배정된 레벨테스트가
-    // INACTIVE/SUSPENDED 강사를 가리키는 경우는 아래에서 행 단위로 별도 처리한다.
-    prisma.teacher.findMany({ where: { siteId: DEFAULT_SITE_ID, accountStatus: "ACTIVE" }, orderBy: { realName: "asc" } }),
-  ]);
-
-  const teacherOptions = teachers.map((t) => ({ id: t.id, label: t.realName }));
+  const levelTests = await prisma.levelTest.findMany({
+    where: { siteId: DEFAULT_SITE_ID },
+    orderBy: { id: "desc" },
+    include: { student: true, teacher: { select: TEACHER_SUMMARY_SELECT } },
+  });
 
   return (
     <div>
@@ -33,31 +39,37 @@ export default async function LevelTestsPage() {
         </Link>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+        <table className="w-full min-w-[1300px] text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
               <th className="px-4 py-3">구분</th>
               <th className="px-4 py-3">이름</th>
+              <th className="px-4 py-3">아이디</th>
+              <th className="px-4 py-3" />
               <th className="px-4 py-3">연락처</th>
+              <th className="px-4 py-3">과목</th>
               <th className="px-4 py-3">방식</th>
-              <th className="px-4 py-3">신청일</th>
-              <th className="px-4 py-3">일정</th>
+              <th className="px-4 py-3">신청일자</th>
+              <th className="px-4 py-3">테스트예정일</th>
+              <th className="px-4 py-3">수업일자</th>
               <th className="px-4 py-3">담당 강사</th>
-              <th className="px-4 py-3">진행 상태</th>
+              <th className="px-4 py-3">진행상태</th>
+              <th className="px-4 py-3">레벨테스트결과</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
             {levelTests.map((lt) => {
               const isLead = !lt.studentId;
-              const name = lt.student?.name ?? lt.leadStudentEnglishName ?? "-";
+              const name = lt.student?.name ?? lt.leadStudentEnglishName ?? lt.leadContactName ?? "-";
               const method = lt.classMethod ?? lt.leadMeetingPlatform ?? "-";
-              const schedule = lt.scheduledTestDate
+              const testDate = lt.scheduledTestDate
                 ? formatAppDateTime(lt.scheduledTestDate)
                 : lt.leadPreferredTimeUTC
                   ? `${formatAppDateTime(lt.leadPreferredTimeUTC)} (희망)`
                   : "-";
+              const classDate = lt.scheduledClassDatetime ? formatAppDateTime(lt.scheduledClassDatetime) : "-";
               return (
                 <tr key={lt.id} className="border-b border-slate-100 last:border-0">
                   <td className="px-4 py-3">
@@ -69,37 +81,72 @@ export default async function LevelTestsPage() {
                       {isLead ? "리드" : "정식"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-medium text-slate-900">{name}</td>
-                  <td className="px-4 py-3 text-slate-600">{lt.leadContactPhone ?? "-"}</td>
-                  <td className="px-4 py-3 text-slate-600">{method}</td>
-                  <td className="px-4 py-3 text-slate-500">{lt.appliedAt.toISOString().slice(0, 10)}</td>
-                  <td className="px-4 py-3 text-slate-500">{schedule}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900">
+                    <Link href={`/level-tests/${lt.id}`} className="hover:underline">
+                      {name}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-slate-500">{lt.student?.loginId ?? "-"}</td>
                   <td className="px-4 py-3">
-                    <TeacherAssignSelect
-                      id={lt.id}
-                      teacherId={lt.teacherId}
-                      teachers={
-                        // 현재 배정된 강사가 이미 비활성 상태라면, 선택 목록에서 사라져 값이
-                        // 깨져 보이지 않도록 그 강사만 예외적으로 옵션에 추가한다(재선택 가능
-                        // 여부와 무관하게 "지금 배정된 사람이 누구인지"는 항상 보여야 한다).
-                        lt.teacher && lt.teacher.accountStatus !== "ACTIVE"
-                          ? [...teacherOptions, { id: lt.teacher.id, label: `${lt.teacher.realName} (비활성)` }]
-                          : teacherOptions
-                      }
-                    />
+                    {lt.studentId && <ImpersonateButton studentId={lt.studentId} studentName={name} />}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{lt.student?.mobilePhone ?? lt.leadContactPhone ?? "-"}</td>
+                  <td className="px-4 py-3 text-slate-600">{SUBJECT_LABEL[lt.subject ?? ""] ?? lt.subject ?? "-"}</td>
+                  <td className="px-4 py-3 text-slate-600">{method}</td>
+                  <td className="px-4 py-3 text-slate-500">{formatAppDate(lt.appliedAt)}</td>
+                  <td className="px-4 py-3 text-slate-500">{testDate}</td>
+                  <td className="px-4 py-3 text-slate-500">{classDate}</td>
+                  {/* 담당 강사 배정·"찾아보기"는 이제 "수정" 상세 화면에서만 한다 — 여기는
+                      그 결과(확정된 강사 이름)만 보여준다. */}
+                  <td className="px-4 py-3 text-slate-600">{lt.teacher?.realName ?? "미배정"}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                        PROGRESS_BADGE_STYLE[lt.progressStatus ?? "접수"] ?? "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {lt.progressStatus ?? "접수"}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
-                    <ProgressSelect id={lt.id} progressStatus={lt.progressStatus} />
+                    <div className="flex items-center gap-1.5">
+                      {lt.resultContent ? (
+                        <Link
+                          href={`/level-tests/${lt.id}/result`}
+                          className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-bold text-blue-700 hover:underline"
+                        >
+                          확인
+                        </Link>
+                      ) : (
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-400">
+                          미작성
+                        </span>
+                      )}
+                      <Link
+                        href={`/level-tests/${lt.id}#result`}
+                        className="rounded-full border border-slate-200 px-2 py-0.5 text-[11px] font-bold text-slate-600 hover:bg-slate-50"
+                      >
+                        수정
+                      </Link>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <DeleteButton action={deleteLevelTest.bind(null, lt.id)} />
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Link
+                        href={`/level-tests/${lt.id}`}
+                        className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                      >
+                        수정
+                      </Link>
+                      <DeleteButton action={deleteLevelTest.bind(null, lt.id)} />
+                    </div>
                   </td>
                 </tr>
               );
             })}
             {levelTests.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={14} className="px-4 py-10 text-center text-slate-400">
                   등록된 레벨테스트 신청이 없습니다.
                 </td>
               </tr>

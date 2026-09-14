@@ -61,7 +61,18 @@ export interface Enrollment {
   remainingLessons: number;
   lessonDurationMin: number;
   weeklyDays: WeekDay[];
+  /** The shared time used for every day in `weeklyDays` — this is what the standard
+   * patterns (주2회 화목/주3회 월수금/주5회 월~금) always use. */
   classTime: ISOTime;
+  /** Per-weekday time overrides, for an admin registering a genuinely mixed schedule
+   * (e.g. Mon 19:00, Wed 20:00, Fri 18:30) — keyed by WeekDay, only for days that
+   * differ from `classTime`. Absent (or missing a given day) falls back to
+   * `classTime` for that day. Always resolve via
+   * lib/scheduling/engine.resolveClassTime rather than reading either field directly,
+   * and validate a proposed set with engine.findWeeklyScheduleConflicts before
+   * registering — the scheduling engine itself only prevents date-level double-
+   * booking once lessons exist, not a same-teacher recurring-slot clash up front. */
+  weeklyTimes?: Partial<Record<WeekDay, ISOTime>>;
   status: EnrollmentStatus;
   /** Which video-meeting program this enrollment's classes use. Set at enrollment
    * creation (optionally pre-filled from the teacher's default) and shown as-is to
@@ -97,6 +108,11 @@ export interface Lesson {
    * alongside `progress` in the same quick "Evaluation" entry. Shown to the student on
    * this lesson once set. */
   teacherComment?: string;
+  /** Why this lesson was rescheduled/closed (student's own reason, or the school's
+   * closure reason) — only ever set on a non-"scheduled"/"completed" lesson. Currently
+   * only populated for real accounts (see realStudentBridge.ts); the mock engine has no
+   * concept of this and always leaves it undefined. */
+  reason?: string;
 }
 
 export interface DailyEvaluation {

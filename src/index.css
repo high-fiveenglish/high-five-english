@@ -70,3 +70,24 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background-color: var(--color-brand-300);
 }
+
+/* Printable documents (영수증/출석증): the "인쇄" button calls window.print() with the
+   document's content marked .print-area — everything else on the page is hidden (but
+   still visibility:hidden, not display:none, so this needs no JS coordination with
+   whatever else happens to be open), and the print target is pulled out of normal flow
+   so it always starts flush at the top of the printed page regardless of on-screen
+   scroll position. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+  }
+}

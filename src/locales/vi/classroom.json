@@ -9,11 +9,11 @@
   "lesson_status": {
     "scheduled": "Sắp diễn ra",
     "completed": "Có mặt",
-    "absent": "Vắng mặt",
-    "rescheduled": "Đã dời lịch",
-    "teacher_absent": "Giáo viên vắng mặt",
-    "academy_closed": "Nghỉ học",
-    "admin_cancelled": "Quản trị viên hủy"
+    "absent": "Học viên vắng mặt",
+    "rescheduled": "Học viên dời lịch",
+    "teacher_absent": "Quản trị viên dời lịch",
+    "academy_closed": "Quản trị viên dời lịch",
+    "admin_cancelled": "Quản trị viên dời lịch"
   },
   "summary_card": {
     "enrollment_period": "Thời gian học",
@@ -49,7 +49,8 @@
     "link_pending": "Liên kết chưa sẵn sàng",
     "reschedule_cta": "Dời lịch học",
     "reschedule_closed": "Hết hạn dời lịch",
-    "reschedule_closed_tooltip": "Chỉ có thể dời lịch trước khi buổi học bắt đầu 4 tiếng"
+    "reschedule_closed_tooltip": "Chỉ có thể dời lịch trước khi buổi học bắt đầu 4 tiếng",
+    "empty": "Không có buổi học nào vào ngày đã chọn."
   },
   "calendar": {
     "title": "Lịch học",
@@ -61,8 +62,7 @@
     "evaluation_in_progress": "Đang soạn đánh giá",
     "holiday_title": "Holiday / No Class",
     "teacher_unavailable": "Nghỉ học do giáo viên có việc bận.",
-    "no_lesson": "Không có buổi học nào được lên lịch.",
-    "select_date_prompt": "Chọn một ngày để xem chi tiết."
+    "no_lesson": "Không có buổi học nào được lên lịch."
   },
   "enter_button": {
     "class_ended": "Buổi học đã kết thúc",
@@ -73,11 +73,15 @@
     "enter_now": "Vào lớp {{platform}} ngay"
   },
   "textbook_card": {
-    "title": "Thông tin giáo trình",
-    "view_online": "Xem trực tuyến",
-    "download": "Tải xuống",
-    "view_online_notice": "Tính năng xem trực tuyến sắp ra mắt.",
-    "download_notice": "Tệp tải xuống giáo trình chưa sẵn sàng."
+    "title": "Thông tin giáo trình"
+  },
+  "reschedule_allowance": {
+    "title": "Tình trạng dời lịch",
+    "total": "Tổng số lần được dời",
+    "used_by_student": "Học viên đã dùng",
+    "used_by_admin": "Quản trị viên dời lịch",
+    "count_value": "{{count}} lần",
+    "admin_note": "Lượt dời lịch do quản trị viên thực hiện không bị trừ vào số lần được dời của học viên."
   },
   "reschedule_modal": {
     "title": "Dời lịch học",
@@ -107,20 +111,52 @@
     "eyebrow": "Trang cá nhân",
     "title": "Lớp học của tôi",
     "loading": "Đang tải...",
+    "refreshing": "Đang làm mới...",
     "not_found": "Không tìm thấy thông tin khóa học.",
     "schedule_table_title": "Bảng lịch học",
-    "write_review_cta": "Viết đánh giá"
+    "review_board_cta": "Bảng đánh giá",
+    "enrollment_select_label": "Chọn khóa học",
+    "enrollment_option_prefix": "Tiếng Anh trực tuyến",
+    "enrollment_option_suffix": " lớp học",
+    "timeline": {
+      "ended": "Đã kết thúc",
+      "in_progress": "Đang học",
+      "upcoming": "Sắp bắt đầu"
+    },
+    "tab_classroom": "Lớp học của tôi",
+    "tab_level_test_apply": "Đăng ký kiểm tra trình độ",
+    "tab_level_test_result": "Kết quả kiểm tra trình độ",
+    "tab_enroll": "Đăng ký khóa học",
+    "tab_history": "Lịch sử khóa học"
   },
-  "review_modal": {
-    "title": "Viết đánh giá",
-    "intro": "Đánh giá của bạn sẽ được hiển thị trên trang chủ sau khi quản trị viên duyệt. Tên giáo viên và tên của bạn được tự động điền và không thể chỉnh sửa.",
-    "teacher_label": "Giáo viên phụ trách",
-    "content_label": "Nội dung đánh giá",
-    "content_placeholder": "Hãy chia sẻ cảm nhận của bạn về buổi học.",
-    "validation_error": "Vui lòng nhập nội dung đánh giá.",
-    "submitting": "Đang gửi...",
-    "submit": "Gửi đánh giá",
-    "success": "Cảm ơn đánh giá quý báu của bạn. Đánh giá sẽ hiển thị trên trang chủ sau khi được duyệt.",
-    "confirm_ok": "Xác nhận"
+  "history_table": {
+    "headers": {
+      "name": "Tên lớp",
+      "period": "Thời gian",
+      "receipt": "Biên lai",
+      "certificate": "Giấy chứng nhận"
+    },
+    "empty": "Chưa có lịch sử khóa học."
+  },
+  "level_test_status": {
+    "접수": "Đã tiếp nhận",
+    "수업확정": "Đã xác nhận",
+    "수업완료": "Hoàn thành",
+    "결석": "Vắng mặt",
+    "취소": "Đã hủy"
+  },
+  "level_test_apply_tab": {
+    "real_account_required": "Chỉ có thể đăng ký kiểm tra trình độ khi đăng nhập bằng tài khoản thành viên thực.",
+    "eligible_desc": "Bạn có thể đăng ký kiểm tra trình độ mới. Vui lòng chọn ngày và giờ mong muốn.",
+    "cta": "Đăng ký kiểm tra trình độ",
+    "pending_desc": "Bạn đã có yêu cầu kiểm tra trình độ đang được tiếp nhận hoặc đang tiến hành. Bạn không thể đăng ký lại cho đến khi có kết quả.",
+    "cooldown_desc": "Kỳ kiểm tra trình độ gần nhất của bạn đã hoàn thành vào ngày {{lastConductedAt}}. Bạn chỉ có thể đăng ký lại sau 6 tháng kể từ khi kiểm tra, tức là từ ngày {{eligibleAt}}.",
+    "view_results_cta": "Xem kết quả kiểm tra trình độ"
+  },
+  "level_test_result_tab": {
+    "empty": "Chưa có kỳ kiểm tra trình độ nào được thực hiện.",
+    "recommended_level": "Trình độ đề xuất",
+    "recommended_textbook": "Giáo trình đề xuất",
+    "not_written": "Kết quả chưa được ghi lại."
   }
 }

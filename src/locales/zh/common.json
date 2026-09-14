@@ -10,6 +10,7 @@
     "enrollment_guide": "报名指南",
     "pricing": "课程费用",
     "process": "报名流程",
+    "enrollment_register": "课程报名",
     "instructors": "教师介绍",
     "learning_system": "学习系统",
     "my_classroom": "我的教室",
@@ -68,6 +69,9 @@
     "leveltest_line1": "水平测试",
     "leveltest_line2": "申请",
     "leveltest_aria": "申请免费水平测试",
+    "classroom_line1": "我的",
+    "classroom_line2": "教室",
+    "classroom_aria": "前往我的教室",
     "scroll_top_aria": "回到顶部"
   },
   "service_errors": {
@@ -93,6 +97,7 @@
     "forbidden_desc": "当前账号没有查看此页面的权限。如有需要，请向管理员申请权限。",
     "not_found_title": "找不到页面",
     "in_preparation_title": "该页面正在准备中，我们将尽快为您呈现详细内容。",
+    "demo_account_no_profile": "这是体验用演示账号，暂不支持保存资料修改。如果您是实际在读学员，请联系管理员为您更新信息。",
     "back_to_home": "返回首页"
   }
 }

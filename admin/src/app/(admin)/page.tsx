@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
+import { TERMINAL_PROGRESS_STATUSES } from "@/lib/levelTestOptions";
 
 async function getCounts() {
   const [students, teachers, activeEnrollments, pendingLevelTests, todaySessions] =
@@ -10,7 +11,7 @@ async function getCounts() {
         where: { siteId: DEFAULT_SITE_ID, status: { in: ["ACTIVE", "PAID"] } },
       }),
       prisma.levelTest.count({
-        where: { siteId: DEFAULT_SITE_ID, progressStatus: { not: "완료" } },
+        where: { siteId: DEFAULT_SITE_ID, progressStatus: { notIn: [...TERMINAL_PROGRESS_STATUSES] } },
       }),
       prisma.classSession.count({
         where: {

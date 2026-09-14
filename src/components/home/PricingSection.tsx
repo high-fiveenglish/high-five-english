@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Sparkles, Users } from "lucide-react";
+import { Sparkles, Users, ClipboardCheck } from "lucide-react";
 import { Container } from "../ui/Container";
 import { SectionHeading } from "../ui/SectionHeading";
+import { LocalizedLink } from "../i18n/LocalizedLink";
 import { useLanguage } from "../../context/LanguageContext";
 import { getLanguageCurrency } from "../../i18n/config";
 import { formatPrice } from "../../data/currencies";
@@ -167,12 +168,20 @@ export function PricingSection({
             </div>
 
             <div className="mt-10 flex flex-col items-center gap-4">
-              <button
-                onClick={onOpenLevelTest}
-                className="inline-flex items-center gap-2 rounded-xl bg-accent-500 px-8 py-3.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(248,114,26,0.3)] transition hover:-translate-y-0.5 hover:bg-accent-600"
-              >
-                <Sparkles size={16} /> {t("pricing.cta")}
-              </button>
+              <div className="flex flex-col items-center gap-3 sm:flex-row">
+                <button
+                  onClick={onOpenLevelTest}
+                  className="inline-flex items-center gap-2 rounded-xl bg-accent-500 px-8 py-3.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(248,114,26,0.3)] transition hover:-translate-y-0.5 hover:bg-accent-600"
+                >
+                  <Sparkles size={16} /> {t("pricing.cta")}
+                </button>
+                <LocalizedLink
+                  to="/enroll"
+                  className="inline-flex items-center gap-2 rounded-xl border-2 border-brand-600 px-8 py-3.5 text-sm font-bold text-brand-700 transition hover:-translate-y-0.5 hover:bg-brand-50"
+                >
+                  <ClipboardCheck size={16} /> {t("pricing.enroll_cta")}
+                </LocalizedLink>
+              </div>
               <p className="text-center text-xs text-slate-400">
                 {t("pricing.disclaimer")}
               </p>

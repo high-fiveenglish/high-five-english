@@ -7,9 +7,16 @@ import { RouteGuard } from "../components/auth/RouteGuard";
 import { useAuth } from "../context/AuthContext";
 import { listAllConsultChannels, updateConsultChannel } from "../services/consultChannelService";
 import type { ConsultChannel } from "../lib/community/types";
-import type { Actor } from "../lib/auth/types";
 
-function ChannelRow({ actor, channel, onSaved }: { actor: Actor; channel: ConsultChannel; onSaved: () => void }) {
+function ChannelRow({
+  adminApiToken,
+  channel,
+  onSaved,
+}: {
+  adminApiToken: string | null;
+  channel: ConsultChannel;
+  onSaved: () => void;
+}) {
   const { t } = useTranslation("admin");
   const [displayName, setDisplayName] = useState(channel.displayName);
   const [value, setValue] = useState(channel.value);
@@ -28,7 +35,7 @@ function ChannelRow({ actor, channel, onSaved }: { actor: Actor; channel: Consul
   const handleSave = async () => {
     setSaving(true);
     setError(null);
-    const result = await updateConsultChannel(actor, channel.id, { displayName, value, url, enabled });
+    const result = await updateConsultChannel(adminApiToken, channel.id, { displayName, value, url, enabled });
     setSaving(false);
     if (!result.ok) {
       setError(
@@ -99,20 +106,17 @@ function ChannelRow({ actor, channel, onSaved }: { actor: Actor; channel: Consul
 }
 
 function AdminConsultChannelsContent() {
-  const { actor } = useAuth();
+  const { adminApiToken } = useAuth();
   const { t } = useTranslation("admin");
   const [channels, setChannels] = useState<ConsultChannel[]>([]);
 
   const load = () => {
-    if (!actor) return;
-    listAllConsultChannels(actor).then((res) => {
+    listAllConsultChannels(adminApiToken).then((res) => {
       if (res.ok) setChannels(res.value);
     });
   };
 
-  useEffect(load, [actor]);
-
-  if (!actor) return null;
+  useEffect(load, [adminApiToken]);
 
   return (
     <section className="bg-slate-50/60 py-12 sm:py-16">
@@ -124,7 +128,7 @@ function AdminConsultChannelsContent() {
 
         <div className="mt-6 space-y-3">
           {channels.map((c) => (
-            <ChannelRow key={c.id} actor={actor} channel={c} onSaved={load} />
+            <ChannelRow key={c.id} adminApiToken={adminApiToken} channel={c} onSaved={load} />
           ))}
         </div>
       </Container>

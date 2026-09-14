@@ -8,7 +8,7 @@ import { DEFAULT_ENTRY_WINDOW, type EntryWindowSettings } from "../../data/siteS
 import { addDays, addMonths, dayOfWeek, firstOfMonth, toEpochDay, todayIso } from "../../lib/scheduling/dateUtils";
 import { getEntryWindowSettings } from "../../services/classroomService";
 import type { TeacherMeetingLinks } from "../../services/store";
-import { LessonStatusBadge, LESSON_STATUS_DOT_CLASSES } from "./LessonStatusBadge";
+import { LessonStatusBadge, LESSON_STATUS_TAG_CLASSES } from "./LessonStatusBadge";
 import { EnterClassButton } from "./EnterClassButton";
 
 export function LessonCalendar({
@@ -20,6 +20,8 @@ export function LessonCalendar({
   teacherMeetingLinks,
   meetingPlatform,
   onOpenEvaluation,
+  selectedDate,
+  onSelectDate,
 }: {
   lessons: Lesson[];
   closures: ClosureDate[];
@@ -29,12 +31,19 @@ export function LessonCalendar({
   teacherMeetingLinks: TeacherMeetingLinks;
   meetingPlatform: MeetingPlatformId;
   onOpenEvaluation: (lesson: Lesson) => void;
+  /** Controlled by the parent (ClassroomPage) so the schedule table below can filter
+   * to the same date — this calendar no longer owns the selection itself. */
+  selectedDate: string;
+  onSelectDate: (date: string) => void;
 }) {
   const { t, i18n } = useTranslation("classroom");
   const weekdayLabels = t("weekdays_short", { returnObjects: true }) as string[];
   const today = todayIso();
-  const [month, setMonth] = useState(() => firstOfMonth(today));
-  const [selectedDate, setSelectedDate] = useState<string | null>(today);
+  // Seeded from the (already-clamped) selectedDate rather than always "today" — when the
+  // parent switches to a past/upcoming enrollment via the history dropdown and remounts
+  // this component (see ClassroomPage's key={enrollment.id}), the calendar opens on a
+  // month that actually has classes instead of always jumping back to the real month.
+  const [month, setMonth] = useState(() => firstOfMonth(selectedDate));
   const [entryWindow, setEntryWindow] = useState<EntryWindowSettings>(DEFAULT_ENTRY_WINDOW);
 
   const formatMonthLabel = (value: string) => {
@@ -75,9 +84,9 @@ export function LessonCalendar({
   }, [month]);
 
   const platformLabel = getMeetingPlatform(meetingPlatform).shortName;
-  const selectedLessons = selectedDate ? lessonsByDate.get(selectedDate) ?? [] : [];
-  const selectedClosure = selectedDate ? closureByDate.get(selectedDate) : undefined;
-  const selectedUnavailable = !!selectedDate && unavailableDates.has(selectedDate) && selectedLessons.length === 0;
+  const selectedLessons = lessonsByDate.get(selectedDate) ?? [];
+  const selectedClosure = closureByDate.get(selectedDate);
+  const selectedUnavailable = unavailableDates.has(selectedDate) && selectedLessons.length === 0;
 
   return (
     <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_8px_24px_rgba(20,44,88,0.06)]">
@@ -115,28 +124,42 @@ export function LessonCalendar({
           const isSelected = date === selectedDate;
           const isToday = date === today;
 
+          // 칸 안에 표시할 상태 태그 — 하루에 여러 수업이 있어도(드묾) 대표로 첫 수업의
+          // 상태만 보여준다. 예전에는 색깔 점만 찍어서 무슨 뜻인지 한눈에 안 보였는데,
+          // 짧은 텍스트 라벨로 바꿔 색을 몰라도 바로 의미를 알 수 있게 했다.
+          const tagLabel = dayLessons[0]
+            ? dayLessons[0].status === "academy_closed" && dayLessons[0].reason
+              ? dayLessons[0].reason
+              : t(`lesson_status.${dayLessons[0].status}`)
+            : closure
+              ? closure.label
+              : isUnavailable
+                ? t("lesson_status.academy_closed")
+                : null;
+          const tagClass = dayLessons[0]
+            ? LESSON_STATUS_TAG_CLASSES[dayLessons[0].status]
+            : LESSON_STATUS_TAG_CLASSES.academy_closed;
+
           return (
             <button
               key={date}
-              onClick={() => setSelectedDate(date)}
-              className={`flex h-14 flex-col items-center justify-start gap-1 rounded-lg pt-1.5 text-xs transition ${
+              onClick={() => onSelectDate(date)}
+              className={`flex h-16 flex-col items-center justify-start gap-1 rounded-lg pt-1.5 text-xs transition ${
                 !inMonth ? "text-slate-300" : "text-slate-600"
               } ${isSelected ? "bg-brand-600 text-white" : "hover:bg-brand-50"} ${
                 isToday && !isSelected ? "font-bold text-brand-600" : ""
               }`}
             >
               <span>{Number(date.slice(8, 10))}</span>
-              <span className="flex h-2 items-center gap-0.5">
-                {dayLessons.map((l) => (
-                  <span
-                    key={l.id}
-                    className={`h-1.5 w-1.5 rounded-full ${isSelected ? "bg-white" : LESSON_STATUS_DOT_CLASSES[l.status]}`}
-                  />
-                ))}
-                {(closure || isUnavailable) && dayLessons.length === 0 && (
-                  <span className={`h-1.5 w-1.5 rounded-full ${isSelected ? "bg-white" : "bg-orange-400"}`} />
-                )}
-              </span>
+              {tagLabel && (
+                <span
+                  className={`w-[90%] truncate rounded px-1 py-0.5 text-center text-[9px] font-bold leading-none ${
+                    isSelected ? "bg-white/20 text-white" : tagClass
+                  }`}
+                >
+                  {tagLabel}
+                </span>
+              )}
             </button>
           );
         })}
@@ -150,11 +173,15 @@ export function LessonCalendar({
                 <p className="text-sm font-bold text-brand-950">
                   {selectedDate} {lesson.scheduledTime} · {courseName}
                 </p>
-                <LessonStatusBadge status={lesson.status} />
+                <LessonStatusBadge status={lesson.status} reason={lesson.reason} />
               </div>
               <p className="mt-1 text-xs text-slate-500">
                 {t("calendar.teacher_prefix")} {teacherName} · {platformLabel}
               </p>
+
+              {lesson.reason && lesson.status !== "academy_closed" && (
+                <p className="mt-1 text-xs text-slate-500">— {lesson.reason}</p>
+              )}
 
               {lesson.status === "completed" && (
                 <div className="mt-2">
@@ -198,9 +225,7 @@ export function LessonCalendar({
         )}
 
         {selectedLessons.length === 0 && !selectedClosure && !selectedUnavailable && (
-          <p className="text-sm text-slate-400">
-            {selectedDate ? t("calendar.no_lesson") : t("calendar.select_date_prompt")}
-          </p>
+          <p className="text-sm text-slate-400">{t("calendar.no_lesson")}</p>
         )}
       </div>
     </div>

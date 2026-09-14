@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { LevelTestForm } from "./LevelTestForm";
 
 export default async function StudentLevelTestPage({
@@ -12,12 +11,8 @@ export default async function StudentLevelTestPage({
   const { id } = await params;
   const studentId = Number(id);
 
-  const [student, teachers, previousLevelTest] = await Promise.all([
+  const [student, previousLevelTest] = await Promise.all([
     prisma.student.findUnique({ where: { id: studentId } }),
-    prisma.teacher.findMany({
-      where: { siteId: DEFAULT_SITE_ID, approvalStatus: "APPROVED", accountStatus: "ACTIVE" },
-      orderBy: { realName: "asc" },
-    }),
     prisma.levelTest.findFirst({
       where: { studentId },
       orderBy: { id: "desc" },
@@ -44,9 +39,9 @@ export default async function StudentLevelTestPage({
           email: student.email,
           teamsId: student.teamsId,
           kakaoId: student.kakaoId,
+          wechatId: student.wechatId,
           preferredClassMethod: student.preferredClassMethod,
         }}
-        teachers={teachers.map((t) => ({ id: t.id, label: t.realName }))}
         defaultEnglishLevel={previousLevelTest?.englishLevel ?? null}
         defaultAgeGroup={previousLevelTest?.ageGroup ?? null}
         defaultInterestTopic={previousLevelTest?.interestTopic ?? null}

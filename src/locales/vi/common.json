@@ -10,6 +10,7 @@
     "enrollment_guide": "Hướng dẫn đăng ký",
     "pricing": "Học phí",
     "process": "Quy trình đăng ký",
+    "enrollment_register": "Đăng ký khóa học",
     "instructors": "Giáo viên",
     "learning_system": "Hệ thống học tập",
     "my_classroom": "Lớp học của tôi",
@@ -68,6 +69,9 @@
     "leveltest_line1": "Kiểm tra",
     "leveltest_line2": "trình độ",
     "leveltest_aria": "Đăng ký kiểm tra trình độ miễn phí",
+    "classroom_line1": "Lớp học",
+    "classroom_line2": "của tôi",
+    "classroom_aria": "Đi đến lớp học của tôi",
     "scroll_top_aria": "Lên đầu trang"
   },
   "service_errors": {
@@ -93,6 +97,7 @@
     "forbidden_desc": "Tài khoản hiện tại không có quyền xem trang này. Vui lòng liên hệ quản trị viên nếu bạn cần quyền truy cập.",
     "not_found_title": "Không tìm thấy trang",
     "in_preparation_title": "Trang này hiện đang được chuẩn bị. Chúng tôi sẽ sớm cập nhật nội dung chi tiết.",
+    "demo_account_no_profile": "Đây là tài khoản demo nên không thể lưu thay đổi thông tin. Nếu bạn là học viên thực tế, vui lòng liên hệ quản trị viên để cập nhật thông tin.",
     "back_to_home": "Về trang chủ"
   }
 }

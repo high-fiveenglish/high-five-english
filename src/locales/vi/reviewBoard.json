@@ -1,0 +1,35 @@
+{
+  "eyebrow": "Trang cá nhân · Bảng tin",
+  "title": "Bảng đánh giá",
+  "total": "Tổng cộng ({{count}})",
+  "new_post": "Viết bài",
+  "table_headers": {
+    "no": "No.",
+    "title": "Tiêu đề",
+    "name": "Tên",
+    "date": "Ngày",
+    "hit": "Lượt xem"
+  },
+  "reply_prefix": "RE",
+  "empty": "Chưa có bài viết nào.",
+  "real_account_required": "Bạn cần đăng nhập bằng tài khoản hội viên thực để xem bảng tin.",
+  "loading": "Đang tải...",
+  "detail": {
+    "list": "Danh sách",
+    "reply": "Trả lời",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "hit": "Lượt xem: {{count}}"
+  },
+  "form": {
+    "new_title": "Viết bài",
+    "reply_title": "Trả lời",
+    "edit_title": "Sửa bài viết",
+    "field_title": "Tiêu đề",
+    "field_content": "Nội dung",
+    "content_placeholder": "Hãy tự do chia sẻ đánh giá của bạn.",
+    "validation_error": "Vui lòng nhập cả tiêu đề và nội dung.",
+    "submitting": "Đang lưu...",
+    "submit": "Đăng"
+  }
+}

@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireTeacher } from "@/lib/teacherAuth";
@@ -10,7 +9,7 @@ const MAX_LENGTH = 2000;
 
 export async function saveEvaluation(
   sessionId: number,
-  _prevState: { error?: string } | undefined,
+  _prevState: { error?: string; success?: true } | undefined,
   formData: FormData,
 ) {
   const teacher = await requireTeacher();
@@ -19,10 +18,10 @@ export async function saveEvaluation(
 
   const content = String(formData.get("content") ?? "").trim();
   if (!content) {
-    return { error: "내용을 입력해주세요." };
+    return { error: "Please enter the evaluation content." };
   }
   if (content.length > MAX_LENGTH) {
-    return { error: `${MAX_LENGTH}자를 초과했습니다. (현재 ${content.length}자)` };
+    return { error: `Exceeded ${MAX_LENGTH} characters. (currently ${content.length})` };
   }
 
   // 세션 렌더 시점뿐 아니라 저장 시점에도 다시 소유권을 확인한다 — 폼 자체는 누구나
@@ -30,10 +29,16 @@ export async function saveEvaluation(
   // 클라이언트를 신뢰하지 않고 여기서도 검증해야 한다.
   const session = await prisma.classSession.findUnique({ where: { id: sessionId } });
   if (!session || session.teacherId !== teacher.id) {
-    return { error: "본인이 진행한 수업만 평가서를 작성할 수 있습니다." };
+    return { error: "You can only write evaluations for your own classes." };
   }
-  if (session.status !== "COMPLETED") {
-    return { error: "완료된 수업만 평가서를 작성할 수 있습니다." };
+  // 관리자가 수동으로 COMPLETED 처리해야만 평가서를 쓸 수 있던 기존 방식 대신, 수업
+  // 시작 시각이 지나면 강사가 직접 평가서를 작성할 수 있다 — 평가서 저장 자체가
+  // "수업이 진행되었다"는 확정 신호이므로 아래에서 상태를 COMPLETED로 전환한다.
+  if (session.status === "CANCELLED" || session.status === "LEAVE") {
+    return { error: "Evaluations cannot be written for a cancelled or hold class." };
+  }
+  if (session.scheduledAt.getTime() > Date.now()) {
+    return { error: "You can write an evaluation once the class time has arrived." };
   }
 
   const existing = await prisma.lessonEvaluation.findUnique({ where: { classSessionId: sessionId } });
@@ -42,6 +47,9 @@ export async function saveEvaluation(
     update: { content },
     create: { classSessionId: sessionId, content },
   });
+  if (session.status !== "COMPLETED") {
+    await prisma.classSession.update({ where: { id: sessionId }, data: { status: "COMPLETED" } });
+  }
   await logAudit({
     actor,
     action: existing ? "EVALUATION_UPDATED" : "EVALUATION_CREATED",
@@ -49,7 +57,8 @@ export async function saveEvaluation(
     targetId: sessionId,
   });
 
-  revalidatePath("/teacher/sessions");
+  revalidatePath("/teacher/schedule");
+  revalidatePath("/teacher");
   revalidatePath(`/teacher/sessions/${sessionId}`);
-  redirect("/teacher/sessions");
+  return { success: true as const };
 }

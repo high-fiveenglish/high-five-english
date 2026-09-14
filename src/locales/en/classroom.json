@@ -9,11 +9,11 @@
   "lesson_status": {
     "scheduled": "Scheduled",
     "completed": "Attended",
-    "absent": "Absent",
-    "rescheduled": "Rescheduled",
-    "teacher_absent": "Teacher Absent",
-    "academy_closed": "Academy Closed",
-    "admin_cancelled": "Cancelled by Admin"
+    "absent": "Student Absent",
+    "rescheduled": "Student Rescheduled",
+    "teacher_absent": "Admin Rescheduled",
+    "academy_closed": "Admin Rescheduled",
+    "admin_cancelled": "Admin Rescheduled"
   },
   "summary_card": {
     "enrollment_period": "Enrollment Period",
@@ -49,7 +49,8 @@
     "link_pending": "Link not ready yet",
     "reschedule_cta": "Reschedule",
     "reschedule_closed": "Reschedule closed",
-    "reschedule_closed_tooltip": "Rescheduling is only available until 4 hours before the class starts"
+    "reschedule_closed_tooltip": "Rescheduling is only available until 4 hours before the class starts",
+    "empty": "No classes scheduled for the selected date."
   },
   "calendar": {
     "title": "Class Calendar",
@@ -61,8 +62,7 @@
     "evaluation_in_progress": "Evaluation in progress",
     "holiday_title": "Holiday / No Class",
     "teacher_unavailable": "No class — teacher unavailable.",
-    "no_lesson": "No class scheduled.",
-    "select_date_prompt": "Select a date to see details."
+    "no_lesson": "No class scheduled."
   },
   "enter_button": {
     "class_ended": "Class Ended",
@@ -73,11 +73,15 @@
     "enter_now": "Enter {{platform}} Class Now"
   },
   "textbook_card": {
-    "title": "Textbook",
-    "view_online": "View Online",
-    "download": "Download",
-    "view_online_notice": "Online preview coming soon.",
-    "download_notice": "Download file isn't available yet."
+    "title": "Textbook"
+  },
+  "reschedule_allowance": {
+    "title": "Reschedule Status",
+    "total": "Total Allowed",
+    "used_by_student": "Used by Student",
+    "used_by_admin": "Rescheduled by Admin",
+    "count_value": "{{count}}",
+    "admin_note": "Admin-initiated reschedules don't count against the student's allowance."
   },
   "reschedule_modal": {
     "title": "Reschedule Class",
@@ -107,20 +111,52 @@
     "eyebrow": "My Page",
     "title": "My Classroom",
     "loading": "Loading...",
+    "refreshing": "Refreshing...",
     "not_found": "Enrollment information not found.",
     "schedule_table_title": "Class Schedule",
-    "write_review_cta": "Write a Review"
+    "review_board_cta": "Review Board",
+    "enrollment_select_label": "Select Enrollment",
+    "enrollment_option_prefix": "Online English",
+    "enrollment_option_suffix": " Class",
+    "timeline": {
+      "ended": "Ended",
+      "in_progress": "In Progress",
+      "upcoming": "Upcoming"
+    },
+    "tab_classroom": "My Classroom",
+    "tab_level_test_apply": "Apply for Level Test",
+    "tab_level_test_result": "Level Test Results",
+    "tab_enroll": "Enroll",
+    "tab_history": "Enrollment History"
   },
-  "review_modal": {
-    "title": "Write a Review",
-    "intro": "Your review will be shown on the homepage once an admin approves it. Your teacher's name and your own name are filled in automatically and can't be edited.",
-    "teacher_label": "Your Teacher",
-    "content_label": "Review",
-    "content_placeholder": "Share what you've enjoyed about your classes.",
-    "validation_error": "Please enter your review.",
-    "submitting": "Submitting...",
-    "submit": "Submit Review",
-    "success": "Thank you for your review! It will appear on the homepage once approved.",
-    "confirm_ok": "OK"
+  "history_table": {
+    "headers": {
+      "name": "Class",
+      "period": "Period",
+      "receipt": "Receipt",
+      "certificate": "Certificate"
+    },
+    "empty": "No enrollment history yet."
+  },
+  "level_test_status": {
+    "접수": "Received",
+    "수업확정": "Confirmed",
+    "수업완료": "Completed",
+    "결석": "Absent",
+    "취소": "Cancelled"
+  },
+  "level_test_apply_tab": {
+    "real_account_required": "Applying for a level test is only available when signed in with a real member account.",
+    "eligible_desc": "You can apply for a new level test. Please choose your preferred date and time.",
+    "cta": "Apply for Level Test",
+    "pending_desc": "You already have a level test request that has been received or is in progress. You can't apply again until it's finished.",
+    "cooldown_desc": "Your most recent level test was completed on {{lastConductedAt}}. You can apply again 6 months after it was conducted — from {{eligibleAt}}.",
+    "view_results_cta": "View Level Test Results"
+  },
+  "level_test_result_tab": {
+    "empty": "No level tests have been conducted yet.",
+    "recommended_level": "Recommended Level",
+    "recommended_textbook": "Recommended Textbook",
+    "not_written": "No result has been written yet."
   }
 }

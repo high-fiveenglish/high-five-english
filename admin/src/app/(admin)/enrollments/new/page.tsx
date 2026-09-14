@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
+import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { EnrollmentCreateForm } from "./EnrollmentCreateForm";
 
 export default async function NewEnrollmentPage({
@@ -11,7 +12,7 @@ export default async function NewEnrollmentPage({
 
   const [students, teachers] = await Promise.all([
     prisma.student.findMany({ where: { siteId: DEFAULT_SITE_ID, deletedAt: null }, orderBy: { name: "asc" } }),
-    prisma.teacher.findMany({ where: { siteId: DEFAULT_SITE_ID }, orderBy: { realName: "asc" } }),
+    prisma.teacher.findMany({ where: { siteId: DEFAULT_SITE_ID }, orderBy: { realName: "asc" }, select: TEACHER_SUMMARY_SELECT }),
   ]);
 
   // 학생관리 목록의 "수강등록"에서 넘어온 경우 해당 학생이 미리 선택되고, 회원정보에
@@ -22,10 +23,17 @@ export default async function NewEnrollmentPage({
     <div>
       <h1 className="mb-6 text-xl font-bold text-slate-900">수강신청 등록</h1>
       <EnrollmentCreateForm
-        students={students.map((s) => ({ id: s.id, label: `${s.name} (${s.loginId})` }))}
+        students={students.map((s) => ({
+          id: s.id,
+          label: `${s.name} (${s.loginId})`,
+          name: s.name,
+          englishName: s.englishName,
+        }))}
         teachers={teachers.map((t) => ({ id: t.id, label: t.realName }))}
         defaultStudentId={preselected?.id ?? null}
         defaultClassMethod={preselected?.preferredClassMethod ?? null}
+        studentName={preselected?.name ?? ""}
+        defaultEnglishName={preselected?.englishName ?? null}
       />
     </div>
   );

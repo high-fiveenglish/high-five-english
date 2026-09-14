@@ -12,6 +12,7 @@ export type CalendarSession = {
   progressNote: string | null;
   teacherName: string;
   evaluationId: number | null;
+  isSupplement: boolean;
 };
 
 const STATUS_LABEL: Record<CalendarSession["status"], string> = {
@@ -127,6 +128,15 @@ export function CalendarView({
                   }`}
                 >
                   {fmtTime(s.scheduledAt)} {s.teacherName}
+                  {s.isSupplement && (
+                    <span
+                      className={`ml-1 rounded px-1 py-0.5 text-[9px] font-bold ${
+                        selectedId === s.id ? "bg-amber-300 text-amber-950" : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      보충
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -136,7 +146,14 @@ export function CalendarView({
 
       {selected && (
         <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p className="mb-2 text-sm font-bold text-slate-900">수업 상세</p>
+          <p className="mb-2 text-sm font-bold text-slate-900">
+            수업 상세
+            {selected.isSupplement && (
+              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                보충수업
+              </span>
+            )}
+          </p>
           <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
             <InfoItem label="수업 날짜" value={fmtDate(selected.scheduledAt)} />
             <InfoItem

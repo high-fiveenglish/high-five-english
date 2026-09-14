@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
+import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { restoreClassSession } from "../schedule/actions";
 import { RestoreButton } from "./RestoreButton";
 import { formatAppDateTime } from "@/lib/appTime";
@@ -10,7 +11,7 @@ export default async function DeletedSessionsPage() {
   const sessions = await prisma.classSession.findMany({
     where: { siteId: DEFAULT_SITE_ID, deletedAt: { not: null } },
     orderBy: { deletedAt: "desc" },
-    include: { student: true, teacher: true },
+    include: { student: true, teacher: { select: TEACHER_SUMMARY_SELECT } },
     take: 200,
   });
 

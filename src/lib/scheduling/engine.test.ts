@@ -3,10 +3,12 @@ import {
   computeTailDate,
   extendSchedule,
   findNextAvailableDate,
+  findWeeklyScheduleConflicts,
   generateInitialSchedule,
   isEnrollmentExhausted,
   markAttendance,
   overrideLessonDateInPlace,
+  resolveClassTime,
   validateReschedule,
 } from "./engine";
 import { addDays, dayOfWeek } from "./dateUtils";
@@ -397,7 +399,7 @@ describe("findNextAvailableDate safety", () => {
   it("returns an error instead of looping forever when weeklyDays is empty", () => {
     const result = findNextAvailableDate({
       afterDate: "2026-08-01",
-      classTime: "19:00",
+      resolveTime: () => "19:00",
       weeklyDays: [],
       blockedDates: new Set(),
       existingDates: new Set(),
@@ -405,6 +407,83 @@ describe("findNextAvailableDate safety", () => {
     });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("INVALID_WEEKLY_DAYS");
+  });
+});
+
+describe("resolveClassTime", () => {
+  it("falls back to classTime when weeklyTimes has no override for the day", () => {
+    const enrollment = makeEnrollment({ classTime: "19:00" });
+    expect(resolveClassTime(enrollment, 1)).toBe("19:00"); // Mon, no override
+  });
+
+  it("uses the weeklyTimes override for a specific day", () => {
+    const enrollment = makeEnrollment({ classTime: "20:00", weeklyTimes: { 3: "20:30" } });
+    expect(resolveClassTime(enrollment, 3)).toBe("20:30"); // Wed override
+    expect(resolveClassTime(enrollment, 1)).toBe("20:00"); // Mon falls back
+    expect(resolveClassTime(enrollment, 5)).toBe("20:00"); // Fri falls back
+  });
+});
+
+describe("findWeeklyScheduleConflicts", () => {
+  it("reports no conflicts when the proposed pattern doesn't overlap another enrollment", () => {
+    const other = makeEnrollment({ id: "enr-2", teacherId: "teacher-1", weeklyDays: [2, 4], classTime: "20:00" });
+    const conflicts = findWeeklyScheduleConflicts({
+      teacherId: "teacher-1",
+      weeklyDays: [1, 3, 5],
+      lessonDurationMin: 25,
+      resolveTime: () => "20:00",
+      teacherEnrollments: [other],
+    });
+    expect(conflicts).toHaveLength(0);
+  });
+
+  it("detects an overlapping time on a shared weekday for the same teacher", () => {
+    const other = makeEnrollment({ id: "enr-2", teacherId: "teacher-1", weeklyDays: [1, 3, 5], classTime: "20:00", lessonDurationMin: 25 });
+    const conflicts = findWeeklyScheduleConflicts({
+      teacherId: "teacher-1",
+      weeklyDays: [1, 3, 5],
+      lessonDurationMin: 25,
+      resolveTime: () => "20:00",
+      teacherEnrollments: [other],
+    });
+    expect(conflicts).toHaveLength(3);
+    expect(conflicts[0]).toMatchObject({ day: 1, time: "20:00", conflictingEnrollmentId: "enr-2" });
+  });
+
+  it("respects per-weekday overrides on the other enrollment when checking overlap", () => {
+    // Other enrollment shares Mon/Wed/Fri at 20:00, but overrides Wednesday to 20:30 —
+    // a new pattern that only touches Wed 20:00-20:25 should NOT conflict on that day.
+    const other = makeEnrollment({
+      id: "enr-2",
+      teacherId: "teacher-1",
+      weeklyDays: [1, 3, 5],
+      classTime: "20:00",
+      weeklyTimes: { 3: "20:30" },
+      lessonDurationMin: 25,
+    });
+    const conflicts = findWeeklyScheduleConflicts({
+      teacherId: "teacher-1",
+      weeklyDays: [3],
+      lessonDurationMin: 25,
+      resolveTime: () => "20:00",
+      teacherEnrollments: [other],
+    });
+    expect(conflicts).toHaveLength(0);
+  });
+
+  it("ignores enrollments for a different teacher, inactive enrollments, and the excluded id", () => {
+    const otherTeacher = makeEnrollment({ id: "enr-2", teacherId: "teacher-9", weeklyDays: [1], classTime: "20:00" });
+    const paused = makeEnrollment({ id: "enr-3", teacherId: "teacher-1", weeklyDays: [1], classTime: "20:00", status: "paused" });
+    const self = makeEnrollment({ id: "enr-4", teacherId: "teacher-1", weeklyDays: [1], classTime: "20:00" });
+    const conflicts = findWeeklyScheduleConflicts({
+      teacherId: "teacher-1",
+      weeklyDays: [1],
+      lessonDurationMin: 25,
+      resolveTime: () => "20:00",
+      teacherEnrollments: [otherTeacher, paused, self],
+      excludeEnrollmentId: "enr-4",
+    });
+    expect(conflicts).toHaveLength(0);
   });
 });
 

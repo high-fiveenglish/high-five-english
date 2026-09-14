@@ -19,14 +19,12 @@ export type StudentEditValues = {
   occupation: string | null;
   region: string | null;
   address: string | null;
-  landlinePhone: string | null;
   mobilePhone: string | null;
   etcNote: string | null;
-  parentName: string | null;
-  parentContact: string | null;
   preferredClassMethod: string | null;
-  smsOptIn: boolean;
   teamsId: string | null;
+  kakaoId: string | null;
+  wechatId: string | null;
   referrerId: string | null;
 };
 
@@ -114,22 +112,14 @@ export function StudentEditForm({
           <Field label="주소 (선택)">
             <input name="address" defaultValue={s.address ?? ""} className="input" />
           </Field>
-          <Field label="일반전화번호 (선택)">
-            <input name="landlinePhone" defaultValue={s.landlinePhone ?? ""} className="input" />
-          </Field>
           <Field label="휴대전화 (선택)">
             <input name="mobilePhone" defaultValue={s.mobilePhone ?? ""} className="input" />
           </Field>
-        </div>
-      </Section>
-
-      <Section title="보호자 정보">
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="부모님 이름 (선택)">
-            <input name="parentName" defaultValue={s.parentName ?? ""} className="input" />
+          <Field label="카카오톡 ID (선택)">
+            <input name="kakaoId" defaultValue={s.kakaoId ?? ""} className="input" />
           </Field>
-          <Field label="부모님 연락처 (선택)">
-            <input name="parentContact" defaultValue={s.parentContact ?? ""} className="input" />
+          <Field label="위챗 ID (선택)">
+            <input name="wechatId" defaultValue={s.wechatId ?? ""} className="input" />
           </Field>
         </div>
       </Section>
@@ -137,21 +127,17 @@ export function StudentEditForm({
       <Section title="수업 관련">
         <div className="grid grid-cols-2 gap-4">
           <Field label="희망 수업 방법 (선택)">
-            <input
-              name="preferredClassMethod"
-              defaultValue={s.preferredClassMethod ?? ""}
-              placeholder="teams / zoom / tencent"
-              className="input"
-            />
+            <select name="preferredClassMethod" defaultValue={s.preferredClassMethod ?? ""} className="input">
+              <option value="">선택 안 함</option>
+              <option value="teams">Teams</option>
+              <option value="zoom">Zoom</option>
+              <option value="tencent">Tencent (VooV Meeting)</option>
+            </select>
           </Field>
           <Field label="Teams ID (선택)">
             <input name="teamsId" defaultValue={s.teamsId ?? ""} className="input" />
           </Field>
         </div>
-        <label className="flex items-center gap-2 text-sm font-medium text-slate-600">
-          <input type="checkbox" name="smsOptIn" defaultChecked={s.smsOptIn} />
-          SMS 수신 동의
-        </label>
       </Section>
 
       <Section title="포인트 / 할인">

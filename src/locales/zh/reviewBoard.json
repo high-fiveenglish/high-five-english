@@ -1,0 +1,35 @@
+{
+  "eyebrow": "我的页面 · 公告板",
+  "title": "学习评价公告板",
+  "total": "共 {{count}} 篇",
+  "new_post": "写文章",
+  "table_headers": {
+    "no": "No.",
+    "title": "标题",
+    "name": "姓名",
+    "date": "日期",
+    "hit": "浏览"
+  },
+  "reply_prefix": "RE",
+  "empty": "暂无发布的文章。",
+  "real_account_required": "需要使用真实会员账号登录才能查看公告板。",
+  "loading": "加载中...",
+  "detail": {
+    "list": "列表",
+    "reply": "回复",
+    "edit": "编辑",
+    "delete": "删除",
+    "hit": "浏览 {{count}}"
+  },
+  "form": {
+    "new_title": "写文章",
+    "reply_title": "回复",
+    "edit_title": "编辑文章",
+    "field_title": "标题",
+    "field_content": "内容",
+    "content_placeholder": "请自由分享您的评价。",
+    "validation_error": "请输入标题和内容。",
+    "submitting": "保存中...",
+    "submit": "发布"
+  }
+}

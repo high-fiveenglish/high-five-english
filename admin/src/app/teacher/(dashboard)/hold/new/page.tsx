@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireTeacher } from "@/lib/teacherAuth";
 import { formatAppDateTime } from "@/lib/appTime";
+import { studentDisplayName } from "@/lib/teacherPortalLabels";
 import { HoldRequestForm } from "./HoldRequestForm";
 
 const fmtDateTime = formatAppDateTime;
@@ -28,7 +29,7 @@ export default async function NewHoldRequestPage() {
       <HoldRequestForm
         options={sessions.map((s) => ({
           id: s.id,
-          label: `${fmtDateTime(s.scheduledAt)} · ${s.student.name} 학생`,
+          label: `${fmtDateTime(s.scheduledAt)} · ${studentDisplayName(s.student.name, s.student.englishName)}`,
         }))}
       />
     </div>

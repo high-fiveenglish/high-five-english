@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { formatAppDateTime } from "./appTime";
+import { TEACHER_SUMMARY_SELECT } from "./teacherSelect";
 
 // 레벨테스트에는 별도 소요시간 필드가 없어 충돌 판정용으로 고정값을 쓴다.
 export const LEVEL_TEST_DURATION_MIN = 30;
@@ -83,7 +84,7 @@ export type OverlappingSessionPair = {
 export async function findAllOverlappingSessions(siteId: number): Promise<OverlappingSessionPair[]> {
   const sessions = await prisma.classSession.findMany({
     where: { siteId, status: { in: ["SCHEDULED", "COMPLETED"] }, deletedAt: null },
-    include: { student: true, teacher: true },
+    include: { student: true, teacher: { select: TEACHER_SUMMARY_SELECT } },
     orderBy: { scheduledAt: "asc" },
   });
 

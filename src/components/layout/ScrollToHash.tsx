@@ -9,10 +9,23 @@ export function ScrollToHash() {
     if (scrollTo) {
       let attempts = 0;
       let timer: ReturnType<typeof setTimeout>;
+      // Sections above the target (e.g. HomeNoticesSection/ReviewsSection) render null
+      // until their async mock-service fetch resolves, so on a fresh mount (navigating
+      // here from another page) the target can sit much higher in the layout than its
+      // final position. Scrolling once as soon as the element merely EXISTS then landed
+      // short once those sections popped in above it and pushed everything down — so
+      // keep re-correcting for a settle window after the first scroll instead of firing
+      // once and walking away.
+      const settleDelays = [150, 400, 800, 1400];
+      const correctScroll = (el: HTMLElement, remaining: number[]) => {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (remaining.length === 0) return;
+        timer = setTimeout(() => correctScroll(el, remaining.slice(1)), remaining[0]);
+      };
       const tryScroll = () => {
         const el = document.getElementById(scrollTo);
         if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
+          correctScroll(el, settleDelays);
           return;
         }
         attempts += 1;

@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
+import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { ClassSessionCreateForm } from "./ClassSessionCreateForm";
 
 export default async function NewClassSessionPage() {
   const enrollments = await prisma.enrollment.findMany({
     where: { siteId: DEFAULT_SITE_ID, teacherId: { not: null } },
     orderBy: { id: "desc" },
-    include: { student: true, teacher: true },
+    include: { student: true, teacher: { select: TEACHER_SUMMARY_SELECT } },
   });
 
   return (
