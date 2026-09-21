@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "HiFive English | 1:1 Video English Tutoring",
+    "title": "{{brandName}} | 1:1 Video English Tutoring",
     "description": "12 years of 1:1 video English tutoring. Speak from day one with native and expert foreign teachers, backed by real feedback."
   },
   "hero": {
-    "badge": "12 Years, One Path: HiFive English Video Tutoring",
+    "badge": "12 Years, One Path: {{brandName}} Video Tutoring",
     "headline": {
       "line1": "No more just listening to English —",
       "emphasis1": "speak it yourself",
@@ -38,8 +38,8 @@
   },
   "whyUs": {
     "eyebrow": "WHY HIFIVE",
-    "title": "Why HiFive English?",
-    "description": "Principles refined over 12 years of working with countless learners and parents are woven into every HiFive English lesson.",
+    "title": "Why {{brandName}}?",
+    "description": "Principles refined over 12 years of working with countless learners and parents are woven into every {{brandName}} lesson.",
     "reasons": {
       "output": {
         "title": "Output-Focused Listening & Speaking Lessons",
@@ -89,9 +89,17 @@
     "loading": "Loading pricing...",
     "disclaimer": "* The tuition above is for private 1:1 lessons. Promotions and sibling discounts are available through a 1:1 consultation.",
     "durations": {
-      "1m": { "label": "1 Month" },
-      "3m": { "label": "3 Months", "badge": "Popular" },
-      "6m": { "label": "6 Months", "badge": "Best Value" }
+      "1m": {
+        "label": "1 Month"
+      },
+      "3m": {
+        "label": "3 Months",
+        "badge": "Popular"
+      },
+      "6m": {
+        "label": "6 Months",
+        "badge": "Best Value"
+      }
     },
     "frequency": {
       "freq5": "5x/week",
@@ -104,28 +112,40 @@
     "title": "From Free Level Test to Your First Class",
     "description": "Start your personalized video English class in just 4 simple steps.",
     "steps": {
-      "consult": { "title": "Request a Consultation", "desc": "Leave a few basic details through our website or KakaoTalk channel." },
-      "leveltest": { "title": "Free Level Test", "desc": "A professional teacher accurately assesses your current level 1:1." },
-      "matching": { "title": "Personalized Teacher Matching", "desc": "We assign a dedicated teacher suited to your goals and personality." },
-      "start": { "title": "Begin Regular Classes", "desc": "Book a time that works for you and start your video class." }
+      "consult": {
+        "title": "Request a Consultation",
+        "desc": "Leave a few basic details through our website or KakaoTalk channel."
+      },
+      "leveltest": {
+        "title": "Free Level Test",
+        "desc": "A professional teacher accurately assesses your current level 1:1."
+      },
+      "matching": {
+        "title": "Personalized Teacher Matching",
+        "desc": "We assign a dedicated teacher suited to your goals and personality."
+      },
+      "start": {
+        "title": "Begin Regular Classes",
+        "desc": "Book a time that works for you and start your video class."
+      }
     },
     "cta": "Request Your Free Level Test Now"
   },
   "notices": {
     "eyebrow": "Support · Notices",
     "title": "Notices",
-    "description": "Check the latest news and announcements from HiFive English.",
+    "description": "Check the latest news and announcements from {{brandName}}.",
     "empty": "No notices yet."
   },
   "reviews": {
     "eyebrow": "Support · Reviews",
     "title": "Proven by Reviews, Not Ads",
-    "description": "HiFive English has grown through reviews from parents and students who've experienced our lessons firsthand, instead of ad spending."
+    "description": "{{brandName}} has grown through reviews from parents and students who've experienced our lessons firsthand, instead of ad spending."
   },
   "instructors": {
     "eyebrow": "Our Teachers",
     "title": "Verified, Professional Teachers by Your Side",
-    "description": "From selection to training to regular evaluations — these teachers have passed the standards HiFive English has refined over 12 years. Click a photo to hear their voice introduction and see their detailed background.",
+    "description": "From selection to training to regular evaluations — these teachers have passed the standards {{brandName}} has refined over 12 years. Click a photo to hear their voice introduction and see their detailed background.",
     "listen_hover": "Listen to Introduction",
     "empty": "Instructor profiles are being prepared.",
     "tesol_badge": "TESOL Certified",
@@ -146,28 +166,60 @@
     },
     "bios": {
       "sarah": {
-        "tags": ["Elementary Specialist", "Pronunciation Coaching", "Phonics"],
+        "tags": [
+          "Elementary Specialist",
+          "Pronunciation Coaching",
+          "Phonics"
+        ],
         "intro": "An elementary specialist who uses bright energy to help kids open up and start speaking.",
         "detail": "With over 10 years of experience teaching English to children, Sarah guides kids to build sentences on their own through step-by-step repeated practice, from phonics to reading. Her praise-and-encouragement teaching style is especially well suited for children starting video English for the first time.",
-        "career": ["TESOL Certified", "8 Years Specializing in Elementary English", "Top-Rated in HiFive Teacher Evaluations"]
+        "career": [
+          "TESOL Certified",
+          "8 Years Specializing in Elementary English",
+          "Top-Rated in {{brandName}} Teacher Evaluations"
+        ]
       },
       "james": {
-        "tags": ["Secondary Specialist", "Grammar & Writing", "Debate"],
+        "tags": [
+          "Secondary Specialist",
+          "Grammar & Writing",
+          "Debate"
+        ],
         "intro": "A secondary-school specialist who rapidly improves students' skills with logical, structured feedback.",
         "detail": "James teaches grammar correction, essay writing, and debate to secondary school and adult learners. Going beyond simple conversation, he provides precise, sentence-level feedback that strengthens both exam English and practical English at the same time.",
-        "career": ["B.Ed. in Education, Ontario, Canada", "6 Years Specializing in Secondary English", "IELTS/TOEFL Writing Coaching"]
+        "career": [
+          "B.Ed. in Education, Ontario, Canada",
+          "6 Years Specializing in Secondary English",
+          "IELTS/TOEFL Writing Coaching"
+        ]
       },
       "emily": {
-        "tags": ["Adult Conversation", "Business English", "Free Talking"],
+        "tags": [
+          "Adult Conversation",
+          "Business English",
+          "Free Talking"
+        ],
         "intro": "A teacher who builds confidence with expressions you can use immediately in everyday life and at work.",
         "detail": "Emily builds a customized curriculum around each adult learner's goals — travel, business, or everyday conversation. She emphasizes the courage to \"just try speaking\" over perfect sentences, correcting mistakes on the spot during class.",
-        "career": ["Graduate of University of Brighton, UK", "5 Years of Business English Coaching", "Top Satisfaction Ratings from Adult Learners"]
+        "career": [
+          "Graduate of University of Brighton, UK",
+          "5 Years of Business English Coaching",
+          "Top Satisfaction Ratings from Adult Learners"
+        ]
       },
       "daniel": {
-        "tags": ["All Ages", "Free Talking", "Pronunciation Coaching"],
+        "tags": [
+          "All Ages",
+          "Free Talking",
+          "Pronunciation Coaching"
+        ],
         "intro": "A teacher who builds the ability to think in English in a relaxed, comfortable atmosphere.",
         "detail": "Daniel excels at putting learners at ease with a cheerful, friendly teaching style. Through repeated Q&A practice that builds sentences on the spot, he sharpens students' quick thinking for real conversation situations.",
-        "career": ["Education Major, Sydney, Australia", "7 Years Teaching Video English to All Ages", "Completed Specialized Pronunciation Coaching Program"]
+        "career": [
+          "Education Major, Sydney, Australia",
+          "7 Years Teaching Video English to All Ages",
+          "Completed Specialized Pronunciation Coaching Program"
+        ]
       }
     }
   },
@@ -194,12 +246,12 @@
   "aboutTeaser": {
     "eyebrow": "About Us",
     "quote": "\"We grow through the results of our teaching and our customers' trust — not advertising.\"",
-    "quote_sub": "This is the most important principle HiFive English has upheld for 12 years.",
+    "quote_sub": "This is the most important principle {{brandName}} has upheld for 12 years.",
     "ceo_display": "{{name}}, CEO",
-    "company_tagline": "HiFive English · 12 Years in Video English Education",
+    "company_tagline": "{{brandName}} · 12 Years in Video English Education",
     "heading": "English Education Optimized for EFL Learners — That Actually Works",
-    "paragraph1": "Simply listening and reading a lot isn't enough to become fluent in English. Through interactive video English lessons with native and expert foreign teachers, HiFive English runs a program where learners immediately apply what they learn during class, naturally improving their listening and speaking skills in the process.",
+    "paragraph1": "Simply listening and reading a lot isn't enough to become fluent in English. Through interactive video English lessons with native and expert foreign teachers, {{brandName}} runs a program where learners immediately apply what they learn during class, naturally improving their listening and speaking skills in the process.",
     "paragraph2": "Rather than simply finishing a set textbook on schedule, we place the highest priority on building English learners can actually use — through repeated practice, Q&A, free conversation, sentence correction, and diverse feedback tailored to each learner's level and goals.",
-    "more_link": "Read More About HiFive English"
+    "more_link": "Read More About {{brandName}}"
   }
 }

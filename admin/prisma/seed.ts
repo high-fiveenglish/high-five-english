@@ -78,6 +78,19 @@ const PERMISSION_SEED: { key: string; description: string }[] = [
   { key: "agencies.update", description: "협력사 관리(브랜딩/회사정보) 수정" },
 ];
 
+// 협력사 관리자(AGENT) 전용 — own_profile.update는 STUDENT와 함께 재사용(본인 계정
+// 정보 수정이라는 의미가 동일).
+const AGENT_PERMISSIONS = [
+  "schedules.view",
+  "level_tests.view",
+  "students.view", "students.create", "students.update",
+  "enrollments.view", "enrollments.create", "enrollments.update",
+  "pricing.view", "pricing.update",
+  "academy_closures.view", "academy_closures.create", "academy_closures.revert",
+  "teachers.view",
+  "own_profile.update",
+];
+
 const ROLE_PERMISSION_SEED: Record<Exclude<RoleName, "ADMIN">, string[]> = {
   MANAGER: [
     "students.view", "students.create", "students.update",
@@ -110,6 +123,7 @@ const ROLE_PERMISSION_SEED: Record<Exclude<RoleName, "ADMIN">, string[]> = {
     "own_profile.update",
     "own_enrollment.hold_release",
   ],
+  AGENT: AGENT_PERMISSIONS,
 };
 
 const PRICING_SEED = [
@@ -216,6 +230,30 @@ async function main() {
         },
       });
     }
+  }
+
+  // 협력사 관리자 계정 — 기본 비밀번호 0000, 협력사가 관리자 화면(정보수정)에서 직접
+  // 바꿀 수 있다. 이미 만들어진 계정은 건드리지 않는다(비밀번호를 바꿔놨는데 재시드로
+  // 0000으로 덮어쓰면 안 됨).
+  const AGENT_ADMIN_SEED = [
+    { loginId: "mnmenglish", agentCode: "mnmenglish", name: "맘앤맘화상영어" },
+    { loginId: "synergyenglish", agentCode: "synergyenglish", name: "시너지잉글리쉬" },
+  ];
+  for (const seed of AGENT_ADMIN_SEED) {
+    const existing = await prisma.adminUser.findUnique({ where: { loginId: seed.loginId } });
+    if (existing) continue;
+    const agent = await prisma.agent.findUnique({ where: { code: seed.agentCode } });
+    if (!agent) continue;
+    await prisma.adminUser.create({
+      data: {
+        siteId: site.id,
+        loginId: seed.loginId,
+        passwordHash: await bcrypt.hash("0000", 10),
+        name: seed.name,
+        role: "AGENT",
+        agentId: agent.id,
+      },
+    });
   }
 
   // agentId가 null인 행(본사 기본값)은 Prisma의 복합 unique where 단축 문법으로 조회할

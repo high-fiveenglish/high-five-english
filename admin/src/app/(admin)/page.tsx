@@ -6,6 +6,7 @@ import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { parseAppDateTime, formatAppDate, appDayStart, appDayEnd } from "@/lib/appTime";
 import { buildTeacherStats } from "@/lib/teacherStats";
 import { closeExpiredEnrollments } from "@/lib/enrollmentLifecycle";
+import { redirect } from "next/navigation";
 
 async function getCounts() {
   await closeExpiredEnrollments();
@@ -88,6 +89,9 @@ export default async function DashboardPage({
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
   const actor = await requireBackofficeActor();
+  // 이 대시보드는 전사(모든 협력사 합산) 통계라 AGENT에게 보여주면 안 된다 — 로그인
+  // 즉시 자기 화면으로 보낸다.
+  if (actor.role === "AGENT") redirect("/schedule");
   const canViewTeacherStats = actor.role === "ADMIN" || actor.permissions.includes("teacher_stats.view");
 
   const [{ counts, teacherSessionsToday }, { from, to }] = await Promise.all([getCounts(), searchParams]);

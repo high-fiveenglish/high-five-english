@@ -47,7 +47,7 @@ export const INSTRUCTORS: Instructor[] = [
     gradient: "from-brand-500 to-brand-700",
     audioSrc: "/audio/intro-1.wav",
     bio: "10년 이상 어린이 영어교육 경력을 가진 강사로, 파닉스부터 리딩까지 단계별 반복훈련을 통해 아이가 스스로 문장을 만들어낼 수 있도록 지도합니다. 칭찬과 격려 중심의 수업으로 첫 화상영어를 시작하는 아이들에게 특히 잘 맞아요.",
-    career: ["TESOL 자격 보유", "초등영어 전문 8년", "하이파이브 강사 평가 최상위"],
+    career: ["TESOL 자격 보유", "초등영어 전문 8년", "강사 평가 최상위"],
     availableDays: [1, 2, 3, 4, 5],
     availableHours: "평일 15:00–20:00",
     classFeatures: ["초등 전문", "발음 교정", "파닉스"],

@@ -1,19 +1,19 @@
 {
   "meta": {
-    "title": "Giới thiệu | HiFive English",
-    "description": "Tìm hiểu triết lý giáo dục và 12 năm uy tín của HiFive English."
+    "title": "Giới thiệu | {{brandName}}",
+    "description": "Tìm hiểu triết lý giáo dục và 12 năm uy tín của {{brandName}}."
   },
   "page_header": {
     "eyebrow": "Giới thiệu",
-    "title": "Câu chuyện của HiFive English",
-    "subtitle": "Đây là những trăn trở của người sáng lập {{ceoName}} trong suốt 12 năm điều hành chương trình tiếng Anh trực tuyến, và những gì HiFive English đang xây dựng ngay lúc này."
+    "title": "Câu chuyện của {{brandName}}",
+    "subtitle": "Đây là những trăn trở của người sáng lập {{ceoName}} trong suốt 12 năm điều hành chương trình tiếng Anh trực tuyến, và những gì {{brandName}} đang xây dựng ngay lúc này."
   },
   "ceo_letter": {
     "avatar_initial": "{{ceoName}}",
     "author_label": "Tâm thư từ nhà sáng lập {{ceoName}}",
-    "author_sub": "HiFive English · 12 năm trong lĩnh vực giáo dục tiếng Anh trực tuyến",
+    "author_sub": "{{brandName}} · 12 năm trong lĩnh vực giáo dục tiếng Anh trực tuyến",
     "paragraphs_1": [
-      "Xin chào, tôi là {{ceoName}}, nhà sáng lập HiFive English.",
+      "Xin chào, tôi là {{ceoName}}, nhà sáng lập {{brandName}}.",
       "Tính đến năm 2026, đã 12 năm kể từ khi tôi bắt đầu sự nghiệp giáo dục tiếng Anh trực tuyến này.",
       "Trong suốt thời gian đó, tôi đã gặp gỡ vô số học sinh, phụ huynh, và các giáo viên từng đồng hành cùng mình. Trong ngần ấy thời gian, có một câu hỏi mà tôi luôn trăn trở nhiều nhất."
     ],
@@ -29,19 +29,19 @@
       "Có cách nào để phụ huynh hiểu rõ hơn về buổi học của con mình so với hiện tại không?"
     ],
     "paragraphs_3": [
-      "12 năm qua chính là hành trình đi tìm câu trả lời cho những câu hỏi này, và HiFive English là kết quả của việc không ngừng thay đổi hình hài trong suốt hành trình đó.",
+      "12 năm qua chính là hành trình đi tìm câu trả lời cho những câu hỏi này, và {{brandName}} là kết quả của việc không ngừng thay đổi hình hài trong suốt hành trình đó.",
       "Tôi cũng có suy nghĩ tương tự về mức học phí. Đắt tiền không có nghĩa là chất lượng tốt, và rẻ cũng không nên là mục tiêu duy nhất. Cắt giảm những chi phí không liên quan đến bản chất của việc giảng dạy, rồi dùng chính phần tiết kiệm được đó để đầu tư vào chất lượng buổi học — đó là mức học phí hợp lý theo quan điểm của tôi.",
-      "HiFive English sẽ không dừng lại ở hình hài hiện tại, mà sẽ tiếp tục thay đổi trong thời gian tới."
+      "{{brandName}} sẽ không dừng lại ở hình hài hiện tại, mà sẽ tiếp tục thay đổi trong thời gian tới."
     ],
-    "signoff_label": "Nhà sáng lập HiFive English",
+    "signoff_label": "Nhà sáng lập {{brandName}}",
     "signoff_name": "{{ceoName}}"
   },
   "trust_section": {
     "title": "Chúng tôi được biết đến qua những đánh giá thực tế, thay vì quảng cáo",
     "paragraphs": [
-      "Thay vì chi nhiều tiền cho quảng cáo, HiFive English đã tiếp cận những học viên mới chủ yếu thông qua câu chuyện của các phụ huynh và học sinh đã từng học tại đây.",
+      "Thay vì chi nhiều tiền cho quảng cáo, {{brandName}} đã tiếp cận những học viên mới chủ yếu thông qua câu chuyện của các phụ huynh và học sinh đã từng học tại đây.",
       "Đây không phải là một quyết định cố tình né tránh quảng cáo. Chỉ đơn giản là chúng tôi tin rằng, đối với một dịch vụ như giáo dục, lời nói của người đã trực tiếp trải nghiệm buổi học chính là quảng cáo chính xác nhất. Lời quảng cáo có thể được viết hay đến đâu cũng được, nhưng câu nói của một đứa trẻ ngay sau buổi học, hay lời đánh giá mà phụ huynh để lại sau vài tháng, thì không thể nào giả tạo được.",
-      "Vì vậy, thay vì tập trung thu hút học viên mới, HiFive English dành thời gian để làm cho buổi học của từng học viên hiện tại trở nên tốt hơn."
+      "Vì vậy, thay vì tập trung thu hút học viên mới, {{brandName}} dành thời gian để làm cho buổi học của từng học viên hiện tại trở nên tốt hơn."
     ]
   },
   "philosophy_section": {
@@ -49,11 +49,11 @@
     "paragraphs": [
       "Học sinh học tiếng Anh trong môi trường EFL — tức là môi trường hầu như không có cơ hội sử dụng tiếng Anh trong đời sống hằng ngày — phải đối mặt với một khó khăn đặc biệt: thời gian học tiếng Anh thì nhiều, nhưng thời gian thực sự sử dụng tiếng Anh lại quá ít.",
       "Dù biết rất nhiều từ vựng và ngữ pháp, nhưng khi đứng trước người nước ngoài lại không thể mở miệng — lý do phần lớn không phải vì năng lực kém, mà vì các em thiếu \"trải nghiệm thực sự sử dụng\" những từ vựng và ngữ pháp đó.",
-      "Buổi học của HiFive English bắt đầu từ chính điểm này. Chúng tôi không dừng lại ở việc nghe và hiểu, mà lặp đi lặp lại trong buổi học quá trình: học sinh tự suy nghĩ và diễn đạt bằng lời nói, giáo viên sửa ngay tại chỗ, rồi học sinh nói lại bằng cách diễn đạt đã được chỉnh sửa."
+      "Buổi học của {{brandName}} bắt đầu từ chính điểm này. Chúng tôi không dừng lại ở việc nghe và hiểu, mà lặp đi lặp lại trong buổi học quá trình: học sinh tự suy nghĩ và diễn đạt bằng lời nói, giáo viên sửa ngay tại chỗ, rồi học sinh nói lại bằng cách diễn đạt đã được chỉnh sửa."
     ],
     "closing_paragraphs": [
       "Khi vòng lặp này được lặp lại nhiều lần trong một buổi học, biểu đạt đã học mới thực sự chuyển từ \"biết\" thành \"có thể sử dụng được\".",
-      "Đó là lý do vì sao giáo viên của HiFive English không chỉ tập trung vào việc hoàn thành giáo trình theo đúng tiến độ. Họ dành nhiều thời gian hơn để đặt câu hỏi phù hợp với trình độ và mục tiêu của từng học sinh, duy trì cuộc hội thoại, sửa câu, và cho học sinh luyện tập cùng một cách diễn đạt nhiều lần trong các tình huống khác nhau."
+      "Đó là lý do vì sao giáo viên của {{brandName}} không chỉ tập trung vào việc hoàn thành giáo trình theo đúng tiến độ. Họ dành nhiều thời gian hơn để đặt câu hỏi phù hợp với trình độ và mục tiêu của từng học sinh, duy trì cuộc hội thoại, sửa câu, và cho học sinh luyện tập cùng một cách diễn đạt nhiều lần trong các tình huống khác nhau."
     ]
   },
   "output_steps": {
@@ -70,7 +70,7 @@
     "items": [
       {
         "q": "Con tôi có thực sự nói nhiều tiếng Anh trong buổi học không?",
-        "a": "Câu hỏi này rất khó xác nhận nếu không trực tiếp dự giờ. Vì vậy, ngay từ khâu đào tạo giáo viên, HiFive English đã coi \"tỷ lệ thời gian học sinh nói\" là một tiêu chí quan trọng. Chúng tôi thiết kế buổi học sao cho thời gian học sinh tự nói dài hơn thời gian giáo viên giải thích, và tiêu chí này cũng được đưa vào đánh giá giáo viên."
+        "a": "Câu hỏi này rất khó xác nhận nếu không trực tiếp dự giờ. Vì vậy, ngay từ khâu đào tạo giáo viên, {{brandName}} đã coi \"tỷ lệ thời gian học sinh nói\" là một tiêu chí quan trọng. Chúng tôi thiết kế buổi học sao cho thời gian học sinh tự nói dài hơn thời gian giáo viên giải thích, và tiêu chí này cũng được đưa vào đánh giá giáo viên."
       },
       {
         "q": "Giáo viên có đang dạy phù hợp với con tôi không?",

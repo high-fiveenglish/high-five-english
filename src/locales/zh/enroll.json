@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "课程报名 | HiFive English",
+    "title": "课程报名 | {{brandName}}",
     "description": "选择上课方式、课程体系、报名周期与频率，提交课程报名申请。"
   },
   "hero": {

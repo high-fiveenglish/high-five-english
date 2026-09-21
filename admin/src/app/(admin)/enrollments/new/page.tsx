@@ -3,6 +3,7 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { parseScheduleDaysLabel } from "../scheduleUtils";
 import { EnrollmentCreateForm, type EnrollmentInitialValues } from "./EnrollmentCreateForm";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
 
 // 마케팅 사이트 수강신청 리드(EnrollmentRequest)의 값 → 이 폼의 값으로 변환하는 표 —
 // api/public/enrollment-requests/route.ts가 받아들이는 값의 집합과 정확히 맞춰야 한다.
@@ -34,10 +35,15 @@ export default async function NewEnrollmentPage({
 }: {
   searchParams: Promise<{ studentId?: string; fromRequest?: string; renewFrom?: string; fromReservation?: string }>;
 }) {
+  const actor = await requireBackofficeActor();
+  const scopeAgentId = actor.role === "AGENT" ? actor.agentId : undefined;
   const { studentId, fromRequest, renewFrom, fromReservation } = await searchParams;
 
   const [students, teachers, request, renewSource, reservation] = await Promise.all([
-    prisma.student.findMany({ where: { siteId: DEFAULT_SITE_ID, deletedAt: null }, orderBy: { name: "asc" } }),
+    prisma.student.findMany({
+      where: { siteId: DEFAULT_SITE_ID, ...(scopeAgentId ? { agentId: scopeAgentId } : {}), deletedAt: null },
+      orderBy: { name: "asc" },
+    }),
     prisma.teacher.findMany({ where: { siteId: DEFAULT_SITE_ID }, orderBy: { realName: "asc" }, select: TEACHER_SUMMARY_SELECT }),
     fromRequest
       ? prisma.enrollmentRequest.findUnique({ where: { id: Number(fromRequest) }, include: { student: true } })

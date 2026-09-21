@@ -8,6 +8,7 @@ import { ImpersonateButton } from "./ImpersonateButton";
 import { StudentDeleteButton } from "./StudentDeleteButton";
 import { RestoreStudentButton } from "./RestoreStudentButton";
 import { formatAppDateTime } from "@/lib/appTime";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
 
 const fmtDateTime = formatAppDateTime;
 const CONSULT_ROUTE_LABEL: Record<string, string> = { WECHAT: "위챗", KAKAOTALK: "카카오톡" };
@@ -24,6 +25,8 @@ export default async function StudentsPage({
 }: {
   searchParams: Promise<{ filter?: string; notice?: string; q?: string; page?: string }>;
 }) {
+  const actor = await requireBackofficeActor();
+  const scopeAgentId = actor.role === "AGENT" ? actor.agentId : undefined;
   const { filter, notice, q, page: pageParam } = await searchParams;
   const showDeleted = filter === "deleted";
   const noticeText = notice ? NOTICE_LABEL[notice] : undefined;
@@ -32,6 +35,7 @@ export default async function StudentsPage({
 
   const listWhere = {
     siteId: DEFAULT_SITE_ID,
+    ...(scopeAgentId ? { agentId: scopeAgentId } : {}),
     deletedAt: showDeleted ? { not: null } : null,
     ...(query
       ? { OR: [{ name: { contains: query, mode: "insensitive" as const } }, { loginId: { contains: query, mode: "insensitive" as const } }] }
@@ -50,8 +54,8 @@ export default async function StudentsPage({
         enrollments: { orderBy: { id: "desc" }, take: 1 },
       },
     }),
-    prisma.student.count({ where: { siteId: DEFAULT_SITE_ID, deletedAt: null } }),
-    prisma.student.count({ where: { siteId: DEFAULT_SITE_ID, deletedAt: { not: null } } }),
+    prisma.student.count({ where: { siteId: DEFAULT_SITE_ID, ...(scopeAgentId ? { agentId: scopeAgentId } : {}), deletedAt: null } }),
+    prisma.student.count({ where: { siteId: DEFAULT_SITE_ID, ...(scopeAgentId ? { agentId: scopeAgentId } : {}), deletedAt: { not: null } } }),
     prisma.student.count({ where: listWhere }),
   ]);
   const totalPages = Math.max(1, Math.ceil(matchingCount / PAGE_SIZE));

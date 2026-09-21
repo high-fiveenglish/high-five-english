@@ -52,7 +52,7 @@
     "counsel_cta": "Get a 1:1 Consultation",
     "bank_transfer_title": "Bank Transfer Info",
     "account_holder": "Account Holder",
-    "copyright": "© {{year}} HiFive English. All rights reserved.",
+    "copyright": "© {{year}} {{brandName}}. All rights reserved.",
     "terms": "Terms of Service",
     "privacy": "Privacy Policy",
     "in_preparation": "Coming soon"
@@ -63,7 +63,7 @@
   "aria": {
     "open_menu": "Open menu",
     "close_menu": "Close menu",
-    "home_logo": "HiFive English home",
+    "home_logo": "{{brandName}} home",
     "modal_close": "Close"
   },
   "floating": {

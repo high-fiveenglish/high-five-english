@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { Container } from "../components/ui/Container";
 import { SectionHeading } from "../components/ui/SectionHeading";
+import { useTenant } from "../context/TenantContext";
 
 // 회원가입 화면. MyInfoPage(정보변경)와 같은 이유로 다국어 처리 없이 한국어로만
 // 작성한다 — 둘 다 admin의 실제 Student DB에 바로 쓰는 "기능 화면"이지, 검색엔진에
@@ -47,6 +48,8 @@ const INITIAL_FORM: FormState = {
 export function SignupPage() {
   const { signup } = useAuth();
   const { lang } = useLanguage();
+  const tenant = useTenant();
+  const brandName = tenant.isHeadquarters ? "하이파이브 잉글리쉬" : tenant.name;
   const navigate = useNavigate();
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [agreeTerms, setAgreeTerms] = useState(false);
@@ -113,7 +116,7 @@ export function SignupPage() {
       <SectionHeading
         align="left"
         eyebrow="회원가입"
-        title="하이파이브 잉글리쉬 회원가입"
+        title={`${brandName} 회원가입`}
         description="가입은 무료이며, 가입 즉시 레벨테스트를 신청하실 수 있습니다."
       />
 

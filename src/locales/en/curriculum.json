@@ -1,12 +1,12 @@
 {
   "meta": {
-    "title": "Curriculum | HiFive English",
+    "title": "Curriculum | {{brandName}}",
     "description": "A leveled curriculum and proven textbooks that build real English ability, step by step."
   },
   "hero": {
     "eyebrow": "Curriculum",
     "heading": "A Seamless Path from Practical English to Advanced Fluency",
-    "paragraph": "HiFive English has reorganized the 200+ textbooks we've gathered over 12 years by age, level, and purpose. Start at the stage that matches your current ability and goals, and move naturally on to the next."
+    "paragraph": "{{brandName}} has reorganized the 200+ textbooks we've gathered over 12 years by age, level, and purpose. Start at the stage that matches your current ability and goals, and move naturally on to the next."
   },
   "roadmap": {
     "eyebrow": "Level Roadmap",
@@ -18,31 +18,51 @@
       "name": "Phonics · First English",
       "ageRange": "Preschool – Grade 1",
       "goal": "Learn the alphabet and sound rules, and listen to and repeat short sentences.",
-      "focus": ["Alphabet/Phonics", "Listening & Speaking Short Sentences", "Basic Vocabulary"]
+      "focus": [
+        "Alphabet/Phonics",
+        "Listening & Speaking Short Sentences",
+        "Basic Vocabulary"
+      ]
     },
     "basic-conversation": {
       "name": "Basic Conversation · Starting Readers",
       "ageRange": "Grades 1–3",
       "goal": "Exchange short conversations using everyday expressions and begin picture-book-level reading.",
-      "focus": ["Everyday Conversation", "Picture Book Reading", "Question & Answer Patterns"]
+      "focus": [
+        "Everyday Conversation",
+        "Picture Book Reading",
+        "Question & Answer Patterns"
+      ]
     },
     "reading-smalltalk": {
       "name": "Reading Development · Small Talk",
       "ageRange": "Grades 3–6",
       "goal": "Read paragraph-length texts and share your own opinion on a topic in a few sentences.",
-      "focus": ["Paragraph Reading", "Topic-Based Small Talk", "Basic Writing"]
+      "focus": [
+        "Paragraph Reading",
+        "Topic-Based Small Talk",
+        "Basic Writing"
+      ]
     },
     "conversation-debate": {
       "name": "Advanced Conversation · Debate",
       "ageRange": "Upper Elementary – Middle School",
       "goal": "Hold conversations with accurate grammar and logically express your opinions with supporting reasons.",
-      "focus": ["Grammar-Based Conversation", "Expressing Opinions", "Intro to Debate"]
+      "focus": [
+        "Grammar-Based Conversation",
+        "Expressing Opinions",
+        "Intro to Debate"
+      ]
     },
     "advanced-discussion": {
       "name": "Advanced Conversation · Current-Affairs Discussion · Business",
       "ageRange": "High School – Adult",
       "goal": "Discuss current events and specialized topics, and practice the English used in presentations and professional settings.",
-      "focus": ["Current-Affairs Discussion", "Presentations", "Professional English"]
+      "focus": [
+        "Current-Affairs Discussion",
+        "Presentations",
+        "Professional English"
+      ]
     }
   },
   "catalogSection": {
@@ -94,7 +114,14 @@
     "allLevels": "All Levels",
     "allAges": "All Ages",
     "countLabel": "Showing {{filtered}} / {{total}}",
-    "tableHeaders": ["Title", "Folder", "Category", "Level", "Age Group", "Highlights"],
+    "tableHeaders": [
+      "Title",
+      "Folder",
+      "Category",
+      "Level",
+      "Age Group",
+      "Highlights"
+    ],
     "emptyState": "No textbooks match your criteria.",
     "footnote": "Levels and age groups are practical reference points based on each series' typical curriculum placement; actual placement is based primarily on the student's test results. Titles marked (?) could not be definitively confirmed for publisher or contents from the folder name alone, so checking the actual cover and table of contents is recommended."
   }

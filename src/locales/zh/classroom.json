@@ -1,5 +1,13 @@
 {
-  "weekdays_short": ["周日", "周一", "周二", "周三", "周四", "周五", "周六"],
+  "weekdays_short": [
+    "周日",
+    "周一",
+    "周二",
+    "周三",
+    "周四",
+    "周五",
+    "周六"
+  ],
   "enrollment_status": {
     "active": "学习中",
     "completed": "已完成",

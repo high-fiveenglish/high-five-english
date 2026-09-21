@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Đăng ký khóa học | HiFive English",
+    "title": "Đăng ký khóa học | {{brandName}}",
     "description": "Chọn phương thức học, chương trình học, thời hạn và tần suất, sau đó gửi yêu cầu đăng ký khóa học."
   },
   "hero": {

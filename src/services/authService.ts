@@ -194,11 +194,46 @@ export async function loginWithKakao(code: string, redirectUri: string): Promise
   return { ok: true, value: loginResultFromRealStudent(data) };
 }
 
+// 협력사 관리자(mnmenglish/synergyenglish 등) 로그인 — 데모 계정 목록(ACCOUNTS)에도
+// 학생 테이블에도 없는 진짜 AdminUser(role=AGENT) 계정만 여기로 들어온다. HQ의
+// general_admin/general_manager 브릿지(bridgeAdminSession)와 달리, 이 로그인 자체가
+// admin-login 성공 여부로 판정된다(별도 데모 자격증명이 없으므로).
+async function loginAsRealAdmin(loginId: string, password: string): Promise<LoginResult | null> {
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/admin-login`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ loginId, password }),
+    });
+  } catch {
+    return null;
+  }
+  if (!res.ok) return null;
+  const data = (await res.json()) as { apiToken?: string; bridgeToken?: string; role?: string; name?: string };
+  if (data.role !== "AGENT") return null; // ADMIN/MANAGER 계정은 이 경로로 로그인하지 않는다(별도 데모 계정 흐름).
+
+  const actor: Actor = { role: "agent", accountId: `agent:${loginId}`, linkedId: null, permissions: [] };
+  return {
+    actor,
+    displayName: data.name ?? loginId,
+    preferredLanguage: undefined,
+    isRealAccount: false,
+    apiToken: null,
+    profile: null,
+    adminApiToken: data.apiToken ?? null,
+    adminBridgeToken: data.bridgeToken ?? null,
+  };
+}
+
 export async function login(id: string, password: string): Promise<ServiceResult<LoginResult>> {
   const account = ACCOUNTS.find((a) => a.id === id);
   if (!account) {
     const real = await loginAsRealStudent(id, password);
     if (real) return okResult(real);
+    const realAdmin = await loginAsRealAdmin(id, password);
+    if (realAdmin) return okResult(realAdmin);
     return errResult("INVALID_CREDENTIALS", "아이디 또는 비밀번호가 올바르지 않습니다.");
   }
   if (account.password !== password) {

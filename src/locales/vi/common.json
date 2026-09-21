@@ -52,7 +52,7 @@
     "counsel_cta": "Đăng ký tư vấn 1:1",
     "bank_transfer_title": "Thông tin chuyển khoản",
     "account_holder": "Chủ tài khoản",
-    "copyright": "© {{year}} HiFive English. All rights reserved.",
+    "copyright": "© {{year}} {{brandName}}. All rights reserved.",
     "terms": "Điều khoản dịch vụ",
     "privacy": "Chính sách bảo mật",
     "in_preparation": "Sắp ra mắt"
@@ -63,7 +63,7 @@
   "aria": {
     "open_menu": "Mở menu",
     "close_menu": "Đóng menu",
-    "home_logo": "Trang chủ HiFive English",
+    "home_logo": "Trang chủ {{brandName}}",
     "modal_close": "Đóng"
   },
   "floating": {

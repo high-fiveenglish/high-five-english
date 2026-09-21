@@ -3,6 +3,7 @@ import { Modal } from "../ui/Modal";
 import { CONTACT } from "../../data/contact";
 import { formatPrice } from "../../data/currencies";
 import { findStudentEnglishName, findStudentName, type EnrollmentHistoryRow } from "../../services/classroomService";
+import { useTenant } from "../../context/TenantContext";
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -14,9 +15,23 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 export function ReceiptModal({ row, onClose }: { row: EnrollmentHistoryRow | null; onClose: () => void }) {
+  const tenant = useTenant();
   if (!row) return null;
   const { enrollment, teacher, stats } = row;
   const studentName = `${findStudentName(enrollment.studentId)} (${findStudentEnglishName(enrollment.studentId)})`;
+  // 영수증은 실제 계약/결제 상대방을 보여줘야 하므로, 협력사 학생이면 그 협력사의
+  // 사업자 정보로 대체한다(값이 없는 항목만 본사 기본값으로 떨어짐) — Footer.tsx와
+  // 동일한 병합 규칙.
+  const company = {
+    name: tenant.biz.name ?? CONTACT.company.name,
+    ceo: tenant.biz.ceo ?? CONTACT.company.ceo,
+    bizRegNo: tenant.biz.regNo ?? CONTACT.company.bizRegNo,
+    address: tenant.biz.address ?? CONTACT.company.address,
+  };
+  const bank = {
+    bankName: tenant.bank.name ?? CONTACT.bank.bankName,
+    accountNumber: tenant.bank.accountNumber ?? CONTACT.bank.accountNumber,
+  };
 
   return (
     <Modal open={!!row} onClose={onClose} title="결제 영수증" maxWidth="max-w-lg">
@@ -36,7 +51,7 @@ export function ReceiptModal({ row, onClose }: { row: EnrollmentHistoryRow | nul
               label="결제금액"
               value={row.estimatedPriceKRW !== undefined ? formatPrice(row.estimatedPriceKRW, "KRW") : "-"}
             />
-            <Row label="결제방법" value={`${CONTACT.bank.bankName} ${CONTACT.bank.accountNumber} ${CONTACT.company.name}`} />
+            <Row label="결제방법" value={`${bank.bankName} ${bank.accountNumber} ${company.name}`} />
             <Row label="결제상태" value="결제완료" />
           </dl>
         </div>
@@ -44,14 +59,14 @@ export function ReceiptModal({ row, onClose }: { row: EnrollmentHistoryRow | nul
         <div className="mt-5">
           <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-accent-600">공급자</p>
           <dl>
-            <Row label="사업자등록번호" value={CONTACT.company.bizRegNo} />
-            <Row label="상호" value={CONTACT.company.name} />
-            <Row label="대표자" value={CONTACT.company.ceo} />
-            <Row label="사업자소재지" value={CONTACT.company.address} />
+            <Row label="사업자등록번호" value={company.bizRegNo} />
+            <Row label="상호" value={company.name} />
+            <Row label="대표자" value={company.ceo} />
+            <Row label="사업자소재지" value={company.address} />
           </dl>
         </div>
 
-        <p className="mt-6 text-center text-sm font-bold text-brand-950 print:block hidden">대표 {CONTACT.company.ceo}</p>
+        <p className="mt-6 text-center text-sm font-bold text-brand-950 print:block hidden">대표 {company.ceo}</p>
         <p className="mt-1 text-center text-[11px] text-slate-400 print:block hidden">
           ※ 본 영수증은 회사 제출용으로도 사용 가능합니다 ※
         </p>

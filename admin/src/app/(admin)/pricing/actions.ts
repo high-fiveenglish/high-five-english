@@ -21,6 +21,13 @@ export async function updatePricingCell(rowId: number, field: FieldName, amount:
   if (!FIELD_NAMES.includes(field)) throw new Error("잘못된 필드입니다.");
   if (!Number.isFinite(amount) || amount < 0) throw new Error("가격은 0 이상의 숫자여야 합니다.");
 
+  if (actor.role === "AGENT") {
+    const row = await prisma.pricingRow.findUnique({ where: { id: rowId }, select: { duration: { select: { agentId: true } } } });
+    if (!row || row.duration.agentId !== actor.agentId) {
+      throw new Error("해당 가격표에 접근할 권한이 없습니다.");
+    }
+  }
+
   await prisma.pricingRow.update({ where: { id: rowId }, data: { [field]: Math.round(amount) } });
   await logAudit({ actor, action: "UPDATE", targetType: "PricingRow", targetId: rowId, description: `${field} = ${amount}` });
   revalidatePath("/pricing");
@@ -33,6 +40,9 @@ export async function updatePricingCell(rowId: number, field: FieldName, amount:
 export async function ensureAgentPricing(agentId: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "pricing.update");
+  if (actor.role === "AGENT" && agentId !== actor.agentId) {
+    throw new Error("해당 협력사 가격표에 접근할 권한이 없습니다.");
+  }
 
   const existingCount = await prisma.pricingDuration.count({ where: { agentId } });
   if (existingCount > 0) return;
@@ -66,5 +76,8 @@ export async function ensureAgentPricing(agentId: number) {
     }
   }
   await logAudit({ actor, action: "CREATE", targetType: "PricingDuration", targetId: agentId, description: `협력사 가격표 본사 기준 초기화` });
-  revalidatePath("/pricing");
+  // revalidatePath 불필요/금지 — 이 함수는 pricing/page.tsx의 렌더 도중(서버 액션이
+  // 아니라 페이지 컴포넌트 본문에서) 직접 호출되고, 바로 다음 줄에서 같은 요청 안에서
+  // pricingDuration을 다시 조회하므로 캐시를 갱신할 필요가 없다. 렌더 중 revalidatePath
+  // 호출은 Next.js 16에서 에러가 난다.
 }

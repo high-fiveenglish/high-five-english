@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "HiFive English | Tiếng Anh trực tuyến 1:1",
+    "title": "{{brandName}} | Tiếng Anh trực tuyến 1:1",
     "description": "12 năm kinh nghiệm dạy tiếng Anh trực tuyến 1:1. Nói tiếng Anh ngay từ buổi học đầu tiên cùng giáo viên bản ngữ và giáo viên nước ngoài chuyên nghiệp."
   },
   "hero": {
-    "badge": "12 năm chỉ theo một con đường: HiFive English",
+    "badge": "12 năm chỉ theo một con đường: {{brandName}}",
     "headline": {
       "line1": "Đừng chỉ nghe tiếng Anh nữa,",
       "emphasis1": "tự mình nói",
@@ -38,8 +38,8 @@
   },
   "whyUs": {
     "eyebrow": "WHY HIFIVE",
-    "title": "Vì sao nên chọn HiFive English?",
-    "description": "Những nguyên tắc được đúc kết qua 12 năm đồng hành cùng vô số học viên và phụ huynh được thể hiện trong từng buổi học của HiFive English.",
+    "title": "Vì sao nên chọn {{brandName}}?",
+    "description": "Những nguyên tắc được đúc kết qua 12 năm đồng hành cùng vô số học viên và phụ huynh được thể hiện trong từng buổi học của {{brandName}}.",
     "reasons": {
       "output": {
         "title": "Lớp học tập trung vào nghe – nói (Output)",
@@ -89,9 +89,17 @@
     "loading": "Đang tải bảng giá...",
     "disclaimer": "* Học phí trên áp dụng cho lớp học cá nhân 1:1. Các chương trình khuyến mãi và ưu đãi anh chị em sẽ được tư vấn qua buổi tư vấn 1:1.",
     "durations": {
-      "1m": { "label": "1 tháng" },
-      "3m": { "label": "3 tháng", "badge": "Phổ biến" },
-      "6m": { "label": "6 tháng", "badge": "Ưu đãi lớn nhất" }
+      "1m": {
+        "label": "1 tháng"
+      },
+      "3m": {
+        "label": "3 tháng",
+        "badge": "Phổ biến"
+      },
+      "6m": {
+        "label": "6 tháng",
+        "badge": "Ưu đãi lớn nhất"
+      }
     },
     "frequency": {
       "freq5": "5 buổi/tuần",
@@ -104,28 +112,40 @@
     "title": "Từ kiểm tra trình độ miễn phí đến khi bắt đầu học",
     "description": "Bạn có thể bắt đầu lớp học tiếng Anh qua video được cá nhân hóa chỉ với 4 bước đơn giản, không thủ tục phức tạp.",
     "steps": {
-      "consult": { "title": "Đăng ký tư vấn", "desc": "Để lại một vài thông tin cơ bản qua trang web hoặc kênh KakaoTalk." },
-      "leveltest": { "title": "Kiểm tra trình độ miễn phí", "desc": "Giáo viên chuyên nghiệp đánh giá chính xác trình độ hiện tại của bạn theo hình thức 1:1." },
-      "matching": { "title": "Ghép giáo viên phù hợp", "desc": "Chúng tôi phân công giáo viên phụ trách phù hợp với mục tiêu và tính cách của bạn." },
-      "start": { "title": "Bắt đầu học chính thức", "desc": "Đặt lịch vào thời gian bạn mong muốn và bắt đầu buổi học qua video." }
+      "consult": {
+        "title": "Đăng ký tư vấn",
+        "desc": "Để lại một vài thông tin cơ bản qua trang web hoặc kênh KakaoTalk."
+      },
+      "leveltest": {
+        "title": "Kiểm tra trình độ miễn phí",
+        "desc": "Giáo viên chuyên nghiệp đánh giá chính xác trình độ hiện tại của bạn theo hình thức 1:1."
+      },
+      "matching": {
+        "title": "Ghép giáo viên phù hợp",
+        "desc": "Chúng tôi phân công giáo viên phụ trách phù hợp với mục tiêu và tính cách của bạn."
+      },
+      "start": {
+        "title": "Bắt đầu học chính thức",
+        "desc": "Đặt lịch vào thời gian bạn mong muốn và bắt đầu buổi học qua video."
+      }
     },
     "cta": "Đăng ký kiểm tra trình độ miễn phí ngay"
   },
   "notices": {
     "eyebrow": "Hỗ trợ khách hàng · Thông báo",
     "title": "Thông báo",
-    "description": "Xem tin tức và thông báo mới nhất từ HiFive English.",
+    "description": "Xem tin tức và thông báo mới nhất từ {{brandName}}.",
     "empty": "Chưa có thông báo nào."
   },
   "reviews": {
     "eyebrow": "Hỗ trợ khách hàng · Đánh giá học viên",
     "title": "Minh chứng bằng đánh giá, không phải quảng cáo",
-    "description": "HiFive English đã phát triển nhờ đánh giá của phụ huynh và học viên đã thực sự trải nghiệm lớp học, thay vì chi tiêu cho quảng cáo."
+    "description": "{{brandName}} đã phát triển nhờ đánh giá của phụ huynh và học viên đã thực sự trải nghiệm lớp học, thay vì chi tiêu cho quảng cáo."
   },
   "instructors": {
     "eyebrow": "Giáo viên",
     "title": "Đội ngũ giáo viên chuyên nghiệp đã được kiểm chứng",
-    "description": "Từ tuyển chọn, đào tạo đến đánh giá định kỳ — đây là những giáo viên đã vượt qua tiêu chuẩn mà HiFive English đúc kết suốt 12 năm. Nhấp vào ảnh để nghe phần giới thiệu bằng giọng nói và xem lý lịch chi tiết.",
+    "description": "Từ tuyển chọn, đào tạo đến đánh giá định kỳ — đây là những giáo viên đã vượt qua tiêu chuẩn mà {{brandName}} đúc kết suốt 12 năm. Nhấp vào ảnh để nghe phần giới thiệu bằng giọng nói và xem lý lịch chi tiết.",
     "listen_hover": "Nghe giới thiệu",
     "empty": "Thông tin giáo viên đang được chuẩn bị.",
     "tesol_badge": "Chứng chỉ TESOL",
@@ -146,28 +166,60 @@
     },
     "bios": {
       "sarah": {
-        "tags": ["Chuyên tiểu học", "Sửa phát âm", "Ngữ âm (Phonics)"],
+        "tags": [
+          "Chuyên tiểu học",
+          "Sửa phát âm",
+          "Ngữ âm (Phonics)"
+        ],
         "intro": "Giáo viên chuyên tiểu học với năng lượng tươi sáng, giúp các bé mạnh dạn mở lời nói tiếng Anh.",
         "detail": "Là giáo viên có hơn 10 năm kinh nghiệm dạy tiếng Anh cho trẻ em, cô hướng dẫn trẻ tự đặt câu thông qua luyện tập lặp lại theo từng giai đoạn, từ ngữ âm đến đọc hiểu. Phong cách dạy tập trung vào khen ngợi và động viên, đặc biệt phù hợp với trẻ mới bắt đầu học tiếng Anh qua video.",
-        "career": ["Có chứng chỉ TESOL", "8 năm chuyên dạy tiếng Anh tiểu học", "Xếp hạng cao nhất trong đánh giá giáo viên HiFive"]
+        "career": [
+          "Có chứng chỉ TESOL",
+          "8 năm chuyên dạy tiếng Anh tiểu học",
+          "Xếp hạng cao nhất trong đánh giá giáo viên {{brandName}}"
+        ]
       },
       "james": {
-        "tags": ["Chuyên THCS-THPT", "Ngữ pháp/Viết luận", "Tranh biện"],
+        "tags": [
+          "Chuyên THCS-THPT",
+          "Ngữ pháp/Viết luận",
+          "Tranh biện"
+        ],
         "intro": "Giáo viên chuyên THCS-THPT giúp nâng cao trình độ nhanh chóng nhờ phản hồi logic, rõ ràng.",
         "detail": "Thầy giảng dạy sửa ngữ pháp, viết luận và tranh biện cho học sinh THCS-THPT và người trưởng thành. Không chỉ dừng ở hội thoại đơn thuần, thầy còn đưa ra phản hồi chính xác từng câu, giúp nắm vững cả tiếng Anh thi cử lẫn tiếng Anh thực tế.",
-        "career": ["Cử nhân Giáo dục học, Ontario, Canada", "6 năm chuyên dạy tiếng Anh THCS-THPT", "Huấn luyện viết IELTS/TOEFL"]
+        "career": [
+          "Cử nhân Giáo dục học, Ontario, Canada",
+          "6 năm chuyên dạy tiếng Anh THCS-THPT",
+          "Huấn luyện viết IELTS/TOEFL"
+        ]
       },
       "emily": {
-        "tags": ["Hội thoại người lớn", "Tiếng Anh thương mại", "Nói tự do"],
+        "tags": [
+          "Hội thoại người lớn",
+          "Tiếng Anh thương mại",
+          "Nói tự do"
+        ],
         "intro": "Giáo viên giúp học viên tự tin hơn với những cách diễn đạt có thể dùng ngay trong cuộc sống và công việc.",
         "detail": "Cô xây dựng chương trình học riêng theo mục tiêu của từng học viên người lớn: du lịch, thương mại hay hội thoại hằng ngày. Thay vì yêu cầu câu văn hoàn hảo, cô đề cao \"sự dũng cảm cứ nói trước\", và sửa ngay các lỗi diễn đạt trong giờ học.",
-        "career": ["Tốt nghiệp Đại học Brighton, Anh Quốc", "5 năm huấn luyện tiếng Anh thương mại", "Mức độ hài lòng cao nhất từ học viên người lớn"]
+        "career": [
+          "Tốt nghiệp Đại học Brighton, Anh Quốc",
+          "5 năm huấn luyện tiếng Anh thương mại",
+          "Mức độ hài lòng cao nhất từ học viên người lớn"
+        ]
       },
       "daniel": {
-        "tags": ["Mọi lứa tuổi", "Nói tự do", "Sửa phát âm"],
+        "tags": [
+          "Mọi lứa tuổi",
+          "Nói tự do",
+          "Sửa phát âm"
+        ],
         "intro": "Giáo viên giúp rèn luyện khả năng tư duy bằng tiếng Anh trong không khí thoải mái.",
         "detail": "Thầy có thế mạnh giúp học viên thoải mái, bớt căng thẳng nhờ phong cách giảng dạy vui vẻ, thân thiện. Thông qua luyện tập hỏi đáp lặp đi lặp lại để đặt câu ngẫu hứng, thầy giúp rèn luyện phản xạ nhanh trong các tình huống hội thoại thực tế.",
-        "career": ["Chuyên ngành Giáo dục, Sydney, Úc", "7 năm dạy tiếng Anh qua video cho mọi lứa tuổi", "Hoàn thành khóa đào tạo chuyên sâu về sửa phát âm"]
+        "career": [
+          "Chuyên ngành Giáo dục, Sydney, Úc",
+          "7 năm dạy tiếng Anh qua video cho mọi lứa tuổi",
+          "Hoàn thành khóa đào tạo chuyên sâu về sửa phát âm"
+        ]
       }
     }
   },
@@ -194,12 +246,12 @@
   "aboutTeaser": {
     "eyebrow": "Giới thiệu",
     "quote": "\"Chúng tôi phát triển nhờ kết quả giáo dục và niềm tin của khách hàng, chứ không phải quảng cáo.\"",
-    "quote_sub": "Đây là nguyên tắc quan trọng nhất mà HiFive English đã gìn giữ suốt 12 năm.",
+    "quote_sub": "Đây là nguyên tắc quan trọng nhất mà {{brandName}} đã gìn giữ suốt 12 năm.",
     "ceo_display": "{{name}}, Giám đốc",
-    "company_tagline": "HiFive English · 12 năm trong lĩnh vực giáo dục tiếng Anh qua video",
+    "company_tagline": "{{brandName}} · 12 năm trong lĩnh vực giáo dục tiếng Anh qua video",
     "heading": "Giáo dục tiếng Anh tối ưu cho môi trường EFL, thực sự hiệu quả",
-    "paragraph1": "Để giỏi tiếng Anh, chỉ nghe và đọc nhiều thôi là chưa đủ. HiFive English vận hành chương trình học thông qua các buổi học tiếng Anh qua video tương tác với giáo viên bản ngữ và giáo viên nước ngoài chuyên nghiệp, giúp học viên áp dụng ngay tiếng Anh đã học trong giờ học, đồng thời tự nhiên nâng cao khả năng nghe và nói.",
+    "paragraph1": "Để giỏi tiếng Anh, chỉ nghe và đọc nhiều thôi là chưa đủ. {{brandName}} vận hành chương trình học thông qua các buổi học tiếng Anh qua video tương tác với giáo viên bản ngữ và giáo viên nước ngoài chuyên nghiệp, giúp học viên áp dụng ngay tiếng Anh đã học trong giờ học, đồng thời tự nhiên nâng cao khả năng nghe và nói.",
     "paragraph2": "Chúng tôi không đơn thuần hoàn thành giáo trình theo tiến độ, mà coi trọng nhất việc tạo ra khả năng tiếng Anh có thể sử dụng thực tế, thông qua luyện tập lặp lại, hỏi đáp, giao tiếp tự do, chỉnh sửa câu và nhiều hình thức phản hồi phù hợp với trình độ và mục tiêu của từng học viên.",
-    "more_link": "Xem thêm câu chuyện của HiFive English"
+    "more_link": "Xem thêm câu chuyện của {{brandName}}"
   }
 }

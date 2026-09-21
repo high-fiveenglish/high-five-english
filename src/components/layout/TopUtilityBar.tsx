@@ -17,7 +17,7 @@ export function TopUtilityBar({
   const { isLoggedIn, userName, role, logout, adminBridgeToken } = useAuth();
   const { t } = useTranslation("common");
   const location = useLocation();
-  const isAdminLike = role === "general_manager" || role === "general_admin";
+  const isAdminLike = role === "general_manager" || role === "general_admin" || role === "agent";
 
   // Public pages support all 4 languages; admin/teacher areas ship a smaller, role-
   // appropriate set (see plan §1/§9) — the student /classroom area still gets all 4.

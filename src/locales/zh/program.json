@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "视频英语项目介绍 | HiFive English",
-    "description": "了解HiFive English的1对1互动视频英语项目，即学即说，获得实时反馈。"
+    "title": "视频英语项目介绍 | {{brandName}}",
+    "description": "了解{{brandName}}的1对1互动视频英语项目，即学即说，获得实时反馈。"
   },
   "cta": {
     "startLevelTest": "免费测试，立即开始",
@@ -55,7 +55,7 @@
         ]
       },
       "right": {
-        "label": "Hi Five老师",
+        "label": "{{brandName}}老师",
         "points": [
           "面对意料之外的提问和情况也能自然应对",
           "根据学生的性格和当天状态调整教学方式",

@@ -10,7 +10,18 @@ import { startStudentImpersonation, stopStudentImpersonation } from "@/lib/stude
 import { createSsoToken } from "@/lib/sso";
 import { DEFAULT_SITE_ID, HIGHFIVE_AGENT_CODE } from "@/lib/constants";
 import { syncTeacherScheduleToGoogleSheet } from "@/lib/teacherScheduleSheet";
+import type { Actor } from "@/lib/rbac";
 import type { StudentGrade, StudentStatus, Sex, ResidenceRegion, ConsultRoute } from "@/generated/prisma/client";
+
+// AGENT는 자기 협력사 소속 학생만 만질 수 있다 — URL을 직접 조작해 다른 협력사 학생
+// 페이지로 들어와도(목록 화면의 필터는 UX 편의일 뿐) 서버 단에서 한 번 더 막는다.
+async function assertOwnsStudent(actor: Actor, studentId: number): Promise<void> {
+  if (actor.role !== "AGENT") return;
+  const student = await prisma.student.findUnique({ where: { id: studentId }, select: { agentId: true } });
+  if (!student || student.agentId !== actor.agentId) {
+    throw new Error("해당 학생에 접근할 권한이 없습니다.");
+  }
+}
 
 // 회원등급이 GENERAL(일반회원)이고 협력사를 명시적으로 고르지 않았다면 직영에이전트를
 // 기본값으로 채운다. 다른 등급이거나 협력사를 명시적으로 골랐다면 그 값을 그대로 쓴다.
@@ -68,7 +79,7 @@ export async function createStudent(_prevState: { error?: string } | undefined, 
       grade,
       status,
       discountRate,
-      agentId: await resolveAgentId(grade, agentIdRaw),
+      agentId: actor.role === "AGENT" ? actor.agentId : await resolveAgentId(grade, agentIdRaw),
       consultRoute: consultRouteRaw ? (consultRouteRaw as ConsultRoute) : null,
       englishName: englishName || null,
       sex: sexRaw ? (sexRaw as Sex) : null,
@@ -95,6 +106,7 @@ export async function createStudent(_prevState: { error?: string } | undefined, 
 export async function updateStudent(id: number, _prevState: { error?: string } | undefined, formData: FormData) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "students.update");
+  await assertOwnsStudent(actor, id);
 
   const name = String(formData.get("name") ?? "").trim();
   const grade = String(formData.get("grade") ?? "GENERAL") as StudentGrade;
@@ -145,7 +157,7 @@ export async function updateStudent(id: number, _prevState: { error?: string } |
       wechatId: wechatId || null,
       consultRoute: consultRouteRaw ? (consultRouteRaw as ConsultRoute) : null,
       referrerId: referrerId || null,
-      agentId: await resolveAgentId(grade, agentIdRaw),
+      agentId: actor.role === "AGENT" ? actor.agentId : await resolveAgentId(grade, agentIdRaw),
       ...(newPassword ? { passwordHash: await bcrypt.hash(newPassword, 10) } : {}),
     },
   });
@@ -162,6 +174,7 @@ export async function updateStudent(id: number, _prevState: { error?: string } |
 export async function deleteStudent(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "students.delete");
+  await assertOwnsStudent(actor, id);
   await prisma.student.update({ where: { id }, data: { deletedAt: new Date() } });
   await logAudit({ actor, action: "DELETE", targetType: "Student", targetId: id, description: "학생 삭제(소프트)" });
   revalidatePath("/students");
@@ -178,6 +191,7 @@ export async function restoreStudent(id: number) {
 export async function addConsultationNote(studentId: number, formData: FormData) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "students.update");
+  await assertOwnsStudent(actor, studentId);
   const content = String(formData.get("content") ?? "").trim();
   if (!content) return;
 
@@ -193,6 +207,7 @@ export async function addConsultationNote(studentId: number, formData: FormData)
 export async function updateConsultationNote(studentId: number, noteId: number, content: string) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "students.update");
+  await assertOwnsStudent(actor, studentId);
   const trimmed = content.trim();
   if (!trimmed) return;
 
@@ -206,6 +221,7 @@ export async function updateConsultationNote(studentId: number, noteId: number, 
 export async function deleteConsultationNote(studentId: number, noteId: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "students.update");
+  await assertOwnsStudent(actor, studentId);
   await prisma.consultationNote.delete({ where: { id: noteId } });
   await logAudit({ actor, action: "UPDATE", targetType: "Student", targetId: studentId, description: "상담노트 삭제" });
   revalidatePath(`/students/${studentId}`);

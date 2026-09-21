@@ -1,5 +1,13 @@
 {
-  "weekdays_short": ["일", "월", "화", "수", "목", "금", "토"],
+  "weekdays_short": [
+    "일",
+    "월",
+    "화",
+    "수",
+    "목",
+    "금",
+    "토"
+  ],
   "enrollment_status": {
     "active": "수강중",
     "completed": "수강완료",

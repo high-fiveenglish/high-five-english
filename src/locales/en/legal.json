@@ -1,10 +1,10 @@
 {
   "privacy": {
     "meta_title": "Privacy Policy",
-    "meta_description": "HiFive English's privacy policy.",
+    "meta_description": "{{brandName}}'s privacy policy.",
     "title": "Privacy Policy",
     "translation_note": "This is a translation of the original Korean-language Privacy Policy, provided for reference. In the event of any discrepancy, the Korean original governs.",
-    "intro": "HiFive English (\"the Company\") places great importance on protecting users' personal information. The Company complies with the personal information protection provisions of the Act on Promotion of Information and Communications Network Utilization and Information Protection, and the Personal Information Protection Guidelines established by the Ministry of Information and Communication, and has established this Privacy Policy in accordance with applicable law to do its utmost to protect users' rights and interests.",
+    "intro": "{{brandName}} (\"the Company\") places great importance on protecting users' personal information. The Company complies with the personal information protection provisions of the Act on Promotion of Information and Communications Network Utilization and Information Protection, and the Personal Information Protection Guidelines established by the Ministry of Information and Communication, and has established this Privacy Policy in accordance with applicable law to do its utmost to protect users' rights and interests.",
     "toc": [
       "1. General Provisions",
       "2. Personal Information Collected and Collection Methods",
@@ -115,10 +115,10 @@
         "paragraphs": [
           "The Company designates a Personal Information Manager and staff responsible for collecting opinions on and handling complaints regarding personal information. Their contact details are as follows.",
           "▶ Personal Information Manager",
-          "- Name: Woo Jong-beom",
+          "- Name: {{ceoName}}",
           "- Affiliation/Title: CEO",
-          "- Email: jongbum1010@hanmail.net",
-          "- Phone: 010-2777-5463",
+          "- Email: {{brandEmail}}",
+          "- Phone: {{brandPhone}}",
           "You may report any personal-information-related complaints arising from your use of the Company's services to the Personal Information Manager or the responsible department. The Company will respond promptly and thoroughly to users' reports.",
           "If you need to report or seek consultation regarding any other personal information infringement, please contact the following organizations.",
           "1. Personal Information Dispute Mediation Committee (www.1336.or.kr / 1336)",
@@ -133,93 +133,93 @@
   },
   "terms": {
     "meta_title": "Terms of Service",
-    "meta_description": "HiFive English's Terms of Service.",
+    "meta_description": "{{brandName}}'s Terms of Service.",
     "title": "Terms of Service",
     "translation_note": "This is a translation of the original Korean-language Terms of Service, provided for reference. In the event of any discrepancy, the Korean original governs.",
     "sections": [
       {
         "heading": "Article 1 (Purpose)",
         "paragraphs": [
-          "The purpose of these Terms is to set out the rights, obligations, and responsibilities of users and HiFive English in connection with the use of the internet-related services (the \"Service\") provided by HiFive English through its website (http://www.hfenglish.co.kr)."
+          "The purpose of these Terms is to set out the rights, obligations, and responsibilities of users and {{brandName}} in connection with the use of the internet-related services (the \"Service\") provided by {{brandName}} through its website (http://www.hfenglish.co.kr)."
         ]
       },
       {
         "heading": "Article 2 (Effect and Amendment of the Terms)",
         "paragraphs": [
           "① These Terms take effect when they are posted on the service screen and the user agrees to them.",
-          "② HiFive English may amend these Terms when a reasonable cause arises, and where the Terms are amended, HiFive English will announce the change in the same manner as set out in Paragraph 1 at least 7 days in advance.",
+          "② {{brandName}} may amend these Terms when a reasonable cause arises, and where the Terms are amended, {{brandName}} will announce the change in the same manner as set out in Paragraph 1 at least 7 days in advance.",
           "③ Unless otherwise specifically stated, any new service that is launched will be provided in accordance with these Terms."
         ]
       },
       {
         "heading": "Article 3 (Definition of User)",
         "paragraphs": [
-          "\"User\" means a person who accesses the \"Site\" and receives services provided by HiFive English."
+          "\"User\" means a person who accesses the \"Site\" and receives services provided by {{brandName}}."
         ]
       },
       {
         "heading": "Article 4 (Membership Registration)",
         "paragraphs": [
-          "① A person who wishes to become a \"Member\" applies for membership by entering member information according to the registration form set by HiFive English and clicking the \"Register\" button.",
-          "② HiFive English registers an applicant under Paragraph 1 as a member unless the applicant falls under any of the following.",
-          "1. Where the applicant has previously lost membership status under Article 6, Paragraph 3 of these Terms. However, this does not apply where more than one year has passed since the loss of membership status under Article 6, Paragraph 3, and HiFive English has approved the applicant's re-registration.",
+          "① A person who wishes to become a \"Member\" applies for membership by entering member information according to the registration form set by {{brandName}} and clicking the \"Register\" button.",
+          "② {{brandName}} registers an applicant under Paragraph 1 as a member unless the applicant falls under any of the following.",
+          "1. Where the applicant has previously lost membership status under Article 6, Paragraph 3 of these Terms. However, this does not apply where more than one year has passed since the loss of membership status under Article 6, Paragraph 3, and {{brandName}} has approved the applicant's re-registration.",
           "2. Where the registered information contains false statements, omissions, or errors.",
-          "3. Where HiFive English determines that registering the applicant as a member would significantly interfere with its technical operations.",
-          "③ A membership agreement is formed at the point when HiFive English's approval reaches the applicant.",
+          "3. Where {{brandName}} determines that registering the applicant as a member would significantly interfere with its technical operations.",
+          "③ A membership agreement is formed at the point when {{brandName}}'s approval reaches the applicant.",
           "④ If any change occurs to the member information entered under Paragraph 1, the member must immediately correct and update the information."
         ]
       },
       {
         "heading": "Article 5 (Suspension of Service)",
         "paragraphs": [
-          "① HiFive English may temporarily suspend the provision of the Service in the event of maintenance, replacement, or failure of computers or other information and communications equipment, or a communications outage, and may completely discontinue the currently provided Service due to a replacement with a new service or any other reason HiFive English deems appropriate.",
-          "② In the case of service suspension under Paragraph 1, HiFive English will notify users in the manner set out in Article 7, Paragraph 2. However, this does not apply where prior notice is not possible due to a cause beyond HiFive English's control (e.g., a disk failure or system outage not caused by the intent or negligence of the system administrator)."
+          "① {{brandName}} may temporarily suspend the provision of the Service in the event of maintenance, replacement, or failure of computers or other information and communications equipment, or a communications outage, and may completely discontinue the currently provided Service due to a replacement with a new service or any other reason {{brandName}} deems appropriate.",
+          "② In the case of service suspension under Paragraph 1, {{brandName}} will notify users in the manner set out in Article 7, Paragraph 2. However, this does not apply where prior notice is not possible due to a cause beyond {{brandName}}'s control (e.g., a disk failure or system outage not caused by the intent or negligence of the system administrator)."
         ]
       },
       {
         "heading": "Article 6 (Withdrawal and Loss of Membership Status)",
         "paragraphs": [
-          "① A user may request HiFive English at any time to cancel their membership registration (withdrawal), and HiFive English will proceed to cancel that user's membership registration immediately upon receiving such a request.",
-          "② Where a user falls under any of the following, HiFive English may restrict, suspend, or revoke that user's membership status by an appropriate method.",
+          "① A user may request {{brandName}} at any time to cancel their membership registration (withdrawal), and {{brandName}} will proceed to cancel that user's membership registration immediately upon receiving such a request.",
+          "② Where a user falls under any of the following, {{brandName}} may restrict, suspend, or revoke that user's membership status by an appropriate method.",
           "1. Where the user registered false information at the time of applying for membership.",
           "2. Where the user interferes with another person's use of the \"Service\" or misappropriates another person's information, thereby threatening the order of electronic transactions.",
           "3. Where the user uses the \"Service\" to engage in conduct prohibited by law or these Terms, or conduct contrary to public order and good morals.",
-          "① Where HiFive English decides to revoke a user's membership status, it will cancel the member's registration. In this case, HiFive English will notify the member before canceling the registration and give the member an opportunity to explain.",
-          "② Where a \"User\" who has registered as a member under these Terms has no login record for the \"Service\" for a continuous period of 1 year, HiFive English may revoke that user's membership status."
+          "① Where {{brandName}} decides to revoke a user's membership status, it will cancel the member's registration. In this case, {{brandName}} will notify the member before canceling the registration and give the member an opportunity to explain.",
+          "② Where a \"User\" who has registered as a member under these Terms has no login record for the \"Service\" for a continuous period of 1 year, {{brandName}} may revoke that user's membership status."
         ]
       },
       {
         "heading": "Article 7 (Notices to Users)",
         "paragraphs": [
-          "① HiFive English may give notice to a specific user at the email address provided by that user to HiFive English.",
-          "② Where HiFive English gives notice to an unspecified number of users, it may substitute individual notice by posting the notice on the HiFive English bulletin board for at least 7 days."
+          "① {{brandName}} may give notice to a specific user at the email address provided by that user to {{brandName}}.",
+          "② Where {{brandName}} gives notice to an unspecified number of users, it may substitute individual notice by posting the notice on the {{brandName}} bulletin board for at least 7 days."
         ]
       },
       {
         "heading": "Article 8 (Protection of Users' Personal Information)",
         "paragraphs": [
-          "HiFive English endeavors to protect users' personal information, including registered user information, in accordance with applicable law. Matters concerning the protection of users' personal information are governed by applicable law and HiFive English's Privacy Policy."
+          "{{brandName}} endeavors to protect users' personal information, including registered user information, in accordance with applicable law. Matters concerning the protection of users' personal information are governed by applicable law and {{brandName}}'s Privacy Policy."
         ]
       },
       {
         "heading": "Article 9 (Retention and Use Period of Personal Information)",
         "paragraphs": [
-          "① Personal information is retained until the member cancels their membership, and HiFive English retains member information until the point of cancellation.",
+          "① Personal information is retained until the member cancels their membership, and {{brandName}} retains member information until the point of cancellation.",
           "② A member may use the Service until they cancel their own membership."
         ]
       },
       {
-        "heading": "Article 10 (Obligations of HiFive English)",
+        "heading": "Article 10 (Obligations of {{brandName}})",
         "paragraphs": [
-          "① HiFive English shall not engage in conduct prohibited by law or these Terms, or conduct contrary to public order and good morals, and shall endeavor to provide the Service continuously and stably in accordance with these Terms.",
-          "② HiFive English shall establish a security system to protect users' personal information (including credit information) so that users can use the \"Service\" safely.",
-          "③ HiFive English shall not send unwanted commercial advertising emails to users."
+          "① {{brandName}} shall not engage in conduct prohibited by law or these Terms, or conduct contrary to public order and good morals, and shall endeavor to provide the Service continuously and stably in accordance with these Terms.",
+          "② {{brandName}} shall establish a security system to protect users' personal information (including credit information) so that users can use the \"Service\" safely.",
+          "③ {{brandName}} shall not send unwanted commercial advertising emails to users."
         ]
       },
       {
         "heading": "Article 11 (Users' Obligations Regarding ID and Password)",
         "paragraphs": [
-          "① Except where HiFive English is responsible under applicable law or its \"Privacy Policy,\" each user is responsible for managing their own ID and password.",
+          "① Except where {{brandName}} is responsible under applicable law or its \"Privacy Policy,\" each user is responsible for managing their own ID and password.",
           "② A user must not allow a third party to use their ID or password."
         ]
       },
@@ -227,33 +227,33 @@
         "heading": "Article 12 (Obligations of Users)",
         "paragraphs": [
           "(1) When applying for membership or changing member information, a user must enter all information under their real name and based on fact, and may not assert any rights if they register false information or another person's information.",
-          "(2) Members shall comply with the matters set out in these Terms, other rules established by HiFive English, notices and other matters announced by HiFive English, and applicable law, and shall not engage in conduct that interferes with HiFive English's business or damages HiFive English's reputation.",
-          "(3) If any matter relating to the use agreement, such as address, contact information, or email address, changes, the member must promptly notify HiFive English through the applicable procedure.",
-          "(4) Except where HiFive English is responsible under applicable law or the \"Privacy Policy,\" the member is responsible for all consequences arising from the member's negligent management or improper use of the password assigned to their ID.",
-          "(5) A member may not conduct commercial business activities using the Service without HiFive English's prior consent, and HiFive English is not responsible for the results of any such business activities. In addition, if HiFive English suffers damages as a result of such business activities, the member shall be liable to compensate HiFive English for those damages, and HiFive English may restrict that member's use of the Service and claim damages, etc., through lawful procedures.",
-          "(6) A member may not transfer or gift their right to use the Service or their other status under the use agreement to another person, or provide it as security, without HiFive English's express consent.",
-          "(7) Members shall not infringe the intellectual property rights of HiFive English or any third party.",
-          "(8) Members shall not engage in any of the following conduct, and where a member does so, HiFive English may restrict that member's use of the Service and impose sanctions including lawful measures.",
+          "(2) Members shall comply with the matters set out in these Terms, other rules established by {{brandName}}, notices and other matters announced by {{brandName}}, and applicable law, and shall not engage in conduct that interferes with {{brandName}}'s business or damages {{brandName}}'s reputation.",
+          "(3) If any matter relating to the use agreement, such as address, contact information, or email address, changes, the member must promptly notify {{brandName}} through the applicable procedure.",
+          "(4) Except where {{brandName}} is responsible under applicable law or the \"Privacy Policy,\" the member is responsible for all consequences arising from the member's negligent management or improper use of the password assigned to their ID.",
+          "(5) A member may not conduct commercial business activities using the Service without {{brandName}}'s prior consent, and {{brandName}} is not responsible for the results of any such business activities. In addition, if {{brandName}} suffers damages as a result of such business activities, the member shall be liable to compensate {{brandName}} for those damages, and {{brandName}} may restrict that member's use of the Service and claim damages, etc., through lawful procedures.",
+          "(6) A member may not transfer or gift their right to use the Service or their other status under the use agreement to another person, or provide it as security, without {{brandName}}'s express consent.",
+          "(7) Members shall not infringe the intellectual property rights of {{brandName}} or any third party.",
+          "(8) Members shall not engage in any of the following conduct, and where a member does so, {{brandName}} may restrict that member's use of the Service and impose sanctions including lawful measures.",
           "* Registering false information when applying for membership or changing member information",
           "* Misappropriating another user's ID, password, or resident registration number",
           "* Trading a user ID with another person",
-          "* Impersonating HiFive English's management, staff, or affiliated personnel",
-          "* Modifying HiFive English's client program, hacking HiFive English's servers, or arbitrarily modifying any part or all of the website or posted information, without having been granted special rights by HiFive English to do so",
+          "* Impersonating {{brandName}}'s management, staff, or affiliated personnel",
+          "* Modifying {{brandName}}'s client program, hacking {{brandName}}'s servers, or arbitrarily modifying any part or all of the website or posted information, without having been granted special rights by {{brandName}} to do so",
           "* Harming the Service or intentionally interfering with it",
-          "* Reproducing information obtained through the Service for purposes other than using the Service, or using it for publication, broadcasting, or providing it to a third party, without HiFive English's prior consent",
+          "* Reproducing information obtained through the Service for purposes other than using the Service, or using it for publication, broadcasting, or providing it to a third party, without {{brandName}}'s prior consent",
           "* Transmitting, posting, emailing, or otherwise distributing to others information, sentences, graphics, sounds, or videos that are vulgar or obscene and that violate public order and good morals",
           "* Transmitting, posting, emailing, or otherwise distributing to others content that is insulting or relates to another person's private affairs in a way that may infringe that person's honor or privacy",
           "* Harassing or threatening another user, or repeatedly causing distress or inconvenience to a specific user",
-          "* Collecting or storing another user's personal information without HiFive English's approval",
+          "* Collecting or storing another user's personal information without {{brandName}}'s approval",
           "* Conduct that is objectively determined to be connected with a crime",
-          "* Violating these Terms or any other rules or conditions of use established by HiFive English",
+          "* Violating these Terms or any other rules or conditions of use established by {{brandName}}",
           "* Any other conduct that violates applicable law"
         ]
       },
       {
         "heading": "Article 13 (Deletion of Public Postings)",
         "paragraphs": [
-          "Where the content of a user's public posting falls under any of the following, HiFive English may delete that posting without prior notice to the user, and may restrict, suspend, or revoke that user's membership status.",
+          "Where the content of a user's public posting falls under any of the following, {{brandName}} may delete that posting without prior notice to the user, and may restrict, suspend, or revoke that user's membership status.",
           "1. Content that defames another user or a third party or damages their reputation through slander or malicious rumor.",
           "2. Content that disseminates information, sentences, graphics, etc., that violate public order and good morals.",
           "3. Content determined to be related to criminal conduct.",
@@ -264,22 +264,22 @@
       {
         "heading": "Article 14 (Copyright in Postings)",
         "paragraphs": [
-          "(1) Copyright in a posting that a member posts within the service screen belongs to the member who posted it. HiFive English may not commercially use a posting without the poster's consent, except for non-profit purposes, and HiFive English holds the right to display the posting within the Service.",
+          "(1) Copyright in a posting that a member posts within the service screen belongs to the member who posted it. {{brandName}} may not commercially use a posting without the poster's consent, except for non-profit purposes, and {{brandName}} holds the right to display the posting within the Service.",
           "(2) Members may not commercially use materials posted on the Service, including by arbitrarily processing or selling information obtained through use of the Service."
         ]
       },
       {
         "heading": "Article 15 (Amendment of the Terms)",
         "paragraphs": [
-          "① HiFive English may amend these Terms to the extent it does not violate applicable laws such as the Act on the Regulation of Terms and Conditions, the Framework Act on Electronic Commerce, the Electronic Signature Act, and the Act on Promotion of Information and Communications Network Utilization and Information Protection.",
-          "② Where HiFive English amends these Terms, it will specify the effective date and reason for the amendment, and announce the amendment together with the current Terms on the initial screen from at least 7 days before the effective date until the day before the effective date.",
-          "③ \"Users\" have the right to refuse the amended Terms. A \"User\" may express their refusal within 15 days after the amended Terms are announced. Where a \"User\" refuses, HiFive English may terminate the contract with that \"User.\" If a \"User\" does not express refusal within 15 days after the amended Terms are announced, they will be deemed to have agreed to the amendment."
+          "① {{brandName}} may amend these Terms to the extent it does not violate applicable laws such as the Act on the Regulation of Terms and Conditions, the Framework Act on Electronic Commerce, the Electronic Signature Act, and the Act on Promotion of Information and Communications Network Utilization and Information Protection.",
+          "② Where {{brandName}} amends these Terms, it will specify the effective date and reason for the amendment, and announce the amendment together with the current Terms on the initial screen from at least 7 days before the effective date until the day before the effective date.",
+          "③ \"Users\" have the right to refuse the amended Terms. A \"User\" may express their refusal within 15 days after the amended Terms are announced. Where a \"User\" refuses, {{brandName}} may terminate the contract with that \"User.\" If a \"User\" does not express refusal within 15 days after the amended Terms are announced, they will be deemed to have agreed to the amendment."
         ]
       },
       {
         "heading": "Article 16 (Jurisdiction)",
         "paragraphs": [
-          "Disputes concerning use of the Service arising between HiFive English and a user are governed by the laws of the Republic of Korea, and any lawsuit arising from such a dispute shall be filed in a court of the Republic of Korea having jurisdiction under the Civil Procedure Act."
+          "Disputes concerning use of the Service arising between {{brandName}} and a user are governed by the laws of the Republic of Korea, and any lawsuit arising from such a dispute shall be filed in a court of the Republic of Korea having jurisdiction under the Civil Procedure Act."
         ]
       }
     ],

@@ -1,6 +1,4 @@
 export const CONTACT = {
-  kakaoId: "jongbum1010",
-  wechatId: "wjb5463",
   website: "www.hfenglish.co.kr",
   bank: {
     bankName: "신한은행",

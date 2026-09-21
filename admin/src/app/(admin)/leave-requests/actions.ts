@@ -192,13 +192,17 @@ export async function createAcademyClosure(
 
   const dayStart = parseAppDateTime(`${dateStr}T00:00`);
   const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+  const scopeAgentId = actor.role === "AGENT" ? actor.agentId : undefined;
 
+  // AGENT가 등록하면 자기 협력사 소속 학생 수업만 휴강 처리된다 — 본사/다른 협력사
+  // 수업은 절대 건드리지 않는다.
   const sessions = await prisma.classSession.findMany({
     where: {
       siteId: DEFAULT_SITE_ID,
       status: "SCHEDULED",
       deletedAt: null,
       scheduledAt: { gte: dayStart, lt: dayEnd },
+      ...(scopeAgentId ? { student: { agentId: scopeAgentId } } : {}),
     },
   });
 
@@ -217,7 +221,7 @@ export async function createAcademyClosure(
   const closure = await prisma.$transaction(
     async (tx) => {
       const created = await tx.academyClosure.create({
-        data: { siteId: DEFAULT_SITE_ID, date: dayStart, reason, createdById: actor.id },
+        data: { siteId: DEFAULT_SITE_ID, date: dayStart, reason, createdById: actor.id, agentId: scopeAgentId },
       });
 
       for (const session of sessions) {
@@ -290,6 +294,7 @@ export async function revertAcademyClosure(id: number) {
     include: { leaveRequests: true },
   });
   if (!closure) return;
+  if (actor.role === "AGENT" && closure.agentId !== actor.agentId) return;
 
   // createAcademyClosure와 같은 이유로(순차 쿼리가 많으면 Prisma 인터랙티브 트랜잭션
   // 기본 타임아웃 5초를 넘길 수 있음) 관련 수강 건의 현재 종료일을 미리 배치로 읽어

@@ -12,8 +12,18 @@ import { syncTeacherScheduleToGoogleSheet } from "@/lib/teacherScheduleSheet";
 import { findRecurringScheduleConflicts, resolveScheduleTime } from "./scheduleUtils";
 import { isWithinAvailableHours, timeStringToMinuteOfDay } from "@/lib/timeSlots";
 import { Prisma, type EnrollmentStatus, type EnrollmentRequestStatus, type PaymentStatus } from "@/generated/prisma/client";
+import type { Actor } from "@/lib/rbac";
 
 const REQUEST_STATUSES = ["NEW", "CONTACTED", "CONVERTED", "CANCELLED"] as const;
+
+// AGENT는 자기 협력사 소속 수강 건만 만질 수 있다.
+async function assertOwnsEnrollment(actor: Actor, enrollmentId: number): Promise<void> {
+  if (actor.role !== "AGENT") return;
+  const enrollment = await prisma.enrollment.findUnique({ where: { id: enrollmentId }, select: { agentId: true } });
+  if (!enrollment || enrollment.agentId !== actor.agentId) {
+    throw new Error("해당 수강 건에 접근할 권한이 없습니다.");
+  }
+}
 
 // 마케팅 사이트에서 학생이 제출한 수강신청 리드(EnrollmentRequest)의 상태 변경 — 예전
 // 별도 페이지(/enrollment-requests)에 있던 것을 수강내역관리 화면 상단 "신청" 목록으로
@@ -146,6 +156,15 @@ export async function createEnrollment(_prevState: { error?: string } | undefine
     return { error: "필수 항목을 모두 입력해주세요." };
   }
 
+  // AGENT는 자기 협력사 학생에게만 수강을 등록할 수 있다 — 폼에 studentId를 직접
+  // 조작해 다른 협력사 학생 앞으로 등록하는 것을 막는다.
+  if (actor.role === "AGENT") {
+    const student = await prisma.student.findUnique({ where: { id: studentId }, select: { agentId: true } });
+    if (!student || student.agentId !== actor.agentId) {
+      return { error: "해당 학생에게는 수강을 등록할 권한이 없습니다." };
+    }
+  }
+
   // "신청" 목록에서 강사를 배정해 등록으로 전환하는 흐름(sourceRequestId)이나 "강사 자리
   // 예약"에서 등록전환하는 흐름(reservationId)은 새 건을 곧바로 "진행중"으로 만든다 —
   // 둘 다 강사가 이미 정해진 상태로 들어오기 때문이다. 그 외에는 일반 등록과 똑같이
@@ -157,6 +176,7 @@ export async function createEnrollment(_prevState: { error?: string } | undefine
     data: {
       siteId: DEFAULT_SITE_ID,
       studentId,
+      agentId: actor.role === "AGENT" ? actor.agentId : undefined,
       teacherId,
       packageMonths,
       classMethod,
@@ -225,6 +245,9 @@ export async function updateEnrollment(id: number, _prevState: { error?: string 
   const existing = await prisma.enrollment.findUnique({ where: { id } });
   if (!existing) {
     return { error: "존재하지 않는 수강 건입니다." };
+  }
+  if (actor.role === "AGENT" && existing.agentId !== actor.agentId) {
+    return { error: "해당 수강 건에 접근할 권한이 없습니다." };
   }
 
   const teacherIdRaw = String(formData.get("teacherId") ?? "");
@@ -312,6 +335,7 @@ export async function updateEnrollmentStatus(id: number, status: EnrollmentStatu
 
   const existing = await prisma.enrollment.findUnique({ where: { id } });
   if (!existing) return;
+  if (actor.role === "AGENT" && existing.agentId !== actor.agentId) return;
 
   // "홀드"는 단순 라벨이 아니라 실제로 예정 수업을 멈춘다 — holdApply.ts 참고. 홀드로
   // 들어갈 때/나올 때는 그 부수효과까지 함께 처리해야 하므로 일반 상태 변경과 분기한다.
@@ -342,6 +366,7 @@ export async function updateEnrollmentPrice(
 ) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "enrollments.update");
+  await assertOwnsEnrollment(actor, id);
 
   const actualPriceRaw = String(formData.get("actualPriceKRW") ?? "").trim();
   const paymentStatus = String(formData.get("paymentStatus") ?? "") as PaymentStatus | "";

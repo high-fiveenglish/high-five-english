@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../../context/LanguageContext";
+import { useTenant } from "../../context/TenantContext";
 import { DEFAULT_LANG, SUPPORTED_LANGUAGES } from "../../i18n/config";
 
 // TODO: update to the real production domain once the site is deployed.
@@ -55,6 +56,11 @@ export function SeoHead({
 }) {
   const { t } = useTranslation(ns);
   const { lang } = useLanguage();
+  // t()가 반환하는 문자열은 {{brandName}} 등을 포함할 수 있는데, 브랜드명이 나중에
+  // (협력사 도메인 브랜딩 fetch 완료 후) 바뀌어도 이 이펙트의 의존성 배열엔 그 변화가
+  // 안 잡혀서(같은 lang/titleKey) 재실행이 안 될 수 있다 — tenant를 의존성에 넣어
+  // 브랜딩이 갱신될 때 document.title/메타도 함께 다시 계산되게 한다.
+  const tenant = useTenant();
 
   useEffect(() => {
     const title = t(titleKey);
@@ -75,7 +81,7 @@ export function SeoHead({
     setMeta("property", "og:description", description);
     setMeta("property", "og:url", canonicalUrl);
     setMeta("property", "og:locale", OG_LOCALES[lang] ?? "en_US");
-  }, [t, titleKey, descriptionKey, lang, path]);
+  }, [t, titleKey, descriptionKey, lang, path, tenant]);
 
   return null;
 }

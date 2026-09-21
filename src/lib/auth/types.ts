@@ -5,7 +5,10 @@
 // without changing its shape.
 import type { SchedulingErrorCode } from "../scheduling/types";
 
-export type Role = "student" | "teacher" | "general_admin" | "general_manager";
+// "agent" = 협력사 관리자(실제 AdminUser role=AGENT) — general_admin/general_manager와
+// 달리 이 사이트 자체 목업 권한 시스템(PermissionKey)을 전혀 쓰지 않는다. 로그인 성공
+// 즉시 실제 admin 앱의 협력사 전용 화면으로 브릿지되는 통로 역할만 한다.
+export type Role = "student" | "teacher" | "general_admin" | "general_manager" | "agent";
 
 export type PermissionKey =
   | "students"

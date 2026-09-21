@@ -6,6 +6,7 @@ import { DeleteButton } from "../DeleteButton";
 import { deleteClassSession } from "./actions";
 import { SessionStatusSelect } from "./SessionStatusSelect";
 import { formatAppDate, formatAppTime, parseAppDateTime } from "@/lib/appTime";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -36,6 +37,8 @@ export default async function SchedulePage({
 }: {
   searchParams: Promise<{ view?: string; date?: string; month?: string; week?: string; page?: string }>;
 }) {
+  const actor = await requireBackofficeActor();
+  const scopeAgentId = actor.role === "AGENT" ? actor.agentId : undefined;
   const { view: viewParam, date, month, week, page } = await searchParams;
   const view: ViewKey = viewParam === "week" ? "week" : "day";
   const today = formatAppDate(new Date());
@@ -72,9 +75,9 @@ export default async function SchedulePage({
       </div>
 
       {view === "day" ? (
-        <DayView date={date ?? today} month={month} today={today} page={page} />
+        <DayView date={date ?? today} month={month} today={today} page={page} scopeAgentId={scopeAgentId} />
       ) : (
-        <WeekView week={week ?? mondayOf(today)} />
+        <WeekView week={week ?? mondayOf(today)} scopeAgentId={scopeAgentId} />
       )}
     </div>
   );
@@ -87,11 +90,13 @@ async function DayView({
   month,
   today,
   page: pageParam,
+  scopeAgentId,
 }: {
   date: string;
   month?: string;
   today: string;
   page?: string;
+  scopeAgentId?: number;
 }) {
   const page = Math.max(1, Number(pageParam) || 1);
   const viewMonth = month ?? date.slice(0, 7);
@@ -99,7 +104,12 @@ async function DayView({
   const monthEnd = parseAppDateTime(`${addMonths(viewMonth, 1)}-01T00:00`);
 
   const sessions = await prisma.classSession.findMany({
-    where: { siteId: DEFAULT_SITE_ID, scheduledAt: { gte: monthStart, lt: monthEnd }, deletedAt: null },
+    where: {
+      siteId: DEFAULT_SITE_ID,
+      scheduledAt: { gte: monthStart, lt: monthEnd },
+      deletedAt: null,
+      ...(scopeAgentId ? { student: { agentId: scopeAgentId } } : {}),
+    },
     orderBy: { scheduledAt: "asc" },
     include: { student: true, teacher: { select: TEACHER_SUMMARY_SELECT } },
   });
@@ -265,14 +275,19 @@ async function DayView({
   );
 }
 
-async function WeekView({ week }: { week: string }) {
+async function WeekView({ week, scopeAgentId }: { week: string; scopeAgentId?: number }) {
   const weekStart = mondayOf(week);
   const weekDates = Array.from({ length: 7 }, (_, i) => addDaysIso(weekStart, i));
   const rangeStart = parseAppDateTime(`${weekStart}T00:00`);
   const rangeEnd = parseAppDateTime(`${addDaysIso(weekStart, 7)}T00:00`);
 
   const sessions = await prisma.classSession.findMany({
-    where: { siteId: DEFAULT_SITE_ID, scheduledAt: { gte: rangeStart, lt: rangeEnd }, deletedAt: null },
+    where: {
+      siteId: DEFAULT_SITE_ID,
+      scheduledAt: { gte: rangeStart, lt: rangeEnd },
+      deletedAt: null,
+      ...(scopeAgentId ? { student: { agentId: scopeAgentId } } : {}),
+    },
     orderBy: { scheduledAt: "asc" },
     include: { student: true, teacher: { select: TEACHER_SUMMARY_SELECT } },
   });

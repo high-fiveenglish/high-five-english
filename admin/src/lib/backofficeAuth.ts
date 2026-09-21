@@ -74,6 +74,10 @@ export async function requireBackofficeActor(): Promise<Actor> {
     return { role: "ADMIN", id: user.id, name: user.name };
   }
   const permissions = await resolveRolePermissions(user.role);
+  if (user.role === "AGENT") {
+    if (!user.agentId) redirect("/login"); // 협력사 미지정 AGENT 계정은 데이터 스코핑 기준이 없어 로그인 자체를 막는다.
+    return { role: "AGENT", id: user.id, name: user.name, permissions, agentId: user.agentId };
+  }
   return { role: user.role, id: user.id, name: user.name, permissions };
 }
 

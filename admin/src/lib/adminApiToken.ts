@@ -79,5 +79,9 @@ export async function actorFromAdminApiToken(request: Request): Promise<Actor | 
 
   if (user.role === "ADMIN") return { role: "ADMIN", id: user.id, name: user.name };
   const permissions = await resolveRolePermissions(user.role);
+  if (user.role === "AGENT") {
+    if (!user.agentId) return null;
+    return { role: "AGENT", id: user.id, name: user.name, permissions, agentId: user.agentId };
+  }
   return { role: user.role, id: user.id, name: user.name, permissions };
 }

@@ -52,7 +52,7 @@
     "counsel_cta": "1:1 상담 문의하기",
     "bank_transfer_title": "무통장입금 계좌 안내",
     "account_holder": "예금주",
-    "copyright": "© {{year}} HiFive English. All rights reserved.",
+    "copyright": "© {{year}} {{brandName}}. All rights reserved.",
     "terms": "이용약관",
     "privacy": "개인정보처리방침",
     "in_preparation": "준비 중입니다"
@@ -63,7 +63,7 @@
   "aria": {
     "open_menu": "메뉴 열기",
     "close_menu": "메뉴 닫기",
-    "home_logo": "하이파이브 잉글리쉬 홈",
+    "home_logo": "{{brandName}} 홈",
     "modal_close": "닫기"
   },
   "floating": {

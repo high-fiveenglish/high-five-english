@@ -5,7 +5,9 @@ import type { AuditAction, RoleName } from "../generated/prisma/client";
 // 통과시키므로, 권한 테이블을 잘못 편집해도 ADMIN이 잠길 수 없다(설계 요구사항).
 export type Actor =
   | { role: "ADMIN"; id: number; name: string }
-  | { role: "MANAGER" | "TEACHER" | "STUDENT"; id: number; name: string; permissions: string[] };
+  | { role: "MANAGER" | "TEACHER" | "STUDENT"; id: number; name: string; permissions: string[] }
+  // AGENT는 항상 agentId를 갖는다 — 모든 데이터 조회/생성 액션이 이 값으로 스코핑한다.
+  | { role: "AGENT"; id: number; name: string; permissions: string[]; agentId: number };
 
 export async function resolveRolePermissions(role: Exclude<RoleName, "ADMIN">): Promise<string[]> {
   const rows = await prisma.rolePermission.findMany({

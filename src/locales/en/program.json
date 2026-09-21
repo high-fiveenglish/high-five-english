@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "About Our Program | HiFive English",
-    "description": "Discover HiFive English's 1:1 interactive video English program — speak what you learn and get real feedback immediately."
+    "title": "About Our Program | {{brandName}}",
+    "description": "Discover {{brandName}}'s 1:1 interactive video English program — speak what you learn and get real feedback immediately."
   },
   "cta": {
     "startLevelTest": "Start with a Free Level Test",
@@ -11,7 +11,7 @@
   "hero": {
     "eyebrow": "About Video English",
     "headline": "Turn the English you know into English you can actually use",
-    "sub": "HiFive English's 1:1 video English class gives you 25 minutes to say the sentences you've learned out loud — and get corrected on the spot. It's not about memorizing more grammar; it's about building the instinct to actually speak English."
+    "sub": "{{brandName}}'s 1:1 video English class gives you 25 minutes to say the sentences you've learned out loud — and get corrected on the spot. It's not about memorizing more grammar; it's about building the instinct to actually speak English."
   },
   "output": {
     "eyebrow": "Core Strength 1",
@@ -55,7 +55,7 @@
         ]
       },
       "right": {
-        "label": "HiFive Tutors",
+        "label": "{{brandName}} Tutors",
         "points": [
           "Handles unexpected questions and situations naturally",
           "Adjusts approach based on your personality and how you're doing that day",
@@ -65,7 +65,7 @@
     },
     "highlight": "AI can be a conversation partner — but it can't be a teacher who truly understands you."
   },
-  "strengthsTitle": "The HiFive English Difference",
+  "strengthsTitle": "The {{brandName}} Difference",
   "strengths": [
     {
       "badge": "12 Years of Standards",
@@ -95,6 +95,6 @@
   },
   "closingCta": {
     "title": "See for yourself — it only takes 10 minutes",
-    "body": "Nothing explains it better than experiencing it yourself. Try a free level test and see what a HiFive English class is really like."
+    "body": "Nothing explains it better than experiencing it yourself. Try a free level test and see what a {{brandName}} class is really like."
   }
 }

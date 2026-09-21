@@ -20,6 +20,9 @@ enum RoleName {
   MANAGER
   TEACHER
   STUDENT
+  // 협력사 관리자 — 자기 협력사(agentId)로 스코프된 데이터만 보고 관리한다. AdminUser.agentId가
+  // 이 역할에서만 채워진다.
+  AGENT
 }
 
 enum AccountStatus {
@@ -69,7 +72,20 @@ model AdminUser {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
+  // role=AGENT일 때만 채워진다 — 이 계정이 어느 협력사 소속인지, 데이터 스코핑의 기준이 된다.
+  agentId Int?
+  agent   Agent? @relation(fields: [agentId], references: [id])
+
+  // "정보수정" 화면(협력사 관리자 자기 계정 수정)에서 쓰는 개인 프로필 항목 — Agent의
+  // biz* 필드(마케팅사이트에 공개 노출되는 회사 정보)와는 별개의, 계정 자체에 딸린 정보다.
+  engName  String?
+  email    String?
+  phone    String?
+  kakaoId  String?
+  wechatId String?
+
   @@index([siteId])
+  @@index([agentId])
   @@map("admin_users")
 }
 
@@ -185,6 +201,8 @@ model Agent {
   pricingDurations PricingDuration[]
   homeNotices      HomeNotice[]
   reviewPosts      ReviewPost[]
+  adminUsers       AdminUser[]
+  academyClosures  AcademyClosure[]
 
   @@index([siteId])
   @@map("agents")
@@ -683,9 +701,15 @@ model AcademyClosure {
   createdById Int?
   createdAt   DateTime @default(now())
 
+  // null = 본사가 등록한 전체(회사 전체) 휴강. 협력사(AGENT)가 등록하면 그 협력사
+  // 소속 학생 수업에만 적용되고, 값이 채워진다 — 다른 협력사/본사 수업은 건드리지 않는다.
+  agentId Int?
+  agent   Agent? @relation(fields: [agentId], references: [id])
+
   leaveRequests LeaveRequest[]
 
   @@index([siteId])
+  @@index([agentId])
   @@map("academy_closures")
 }
 

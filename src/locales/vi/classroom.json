@@ -1,5 +1,13 @@
 {
-  "weekdays_short": ["CN", "T2", "T3", "T4", "T5", "T6", "T7"],
+  "weekdays_short": [
+    "CN",
+    "T2",
+    "T3",
+    "T4",
+    "T5",
+    "T6",
+    "T7"
+  ],
   "enrollment_status": {
     "active": "Đang học",
     "completed": "Đã hoàn thành",

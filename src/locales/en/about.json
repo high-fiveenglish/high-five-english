@@ -1,19 +1,19 @@
 {
   "meta": {
-    "title": "About Us | HiFive English",
-    "description": "Learn about HiFive English's teaching philosophy and 12 years of trusted experience."
+    "title": "About Us | {{brandName}}",
+    "description": "Learn about {{brandName}}'s teaching philosophy and 12 years of trusted experience."
   },
   "page_header": {
     "eyebrow": "About Us",
-    "title": "The HiFive English Story",
-    "subtitle": "Here's an honest look at what our founder, {{ceoName}}, has wrestled with over 12 years of running a video English program — and what HiFive English is building today."
+    "title": "The {{brandName}} Story",
+    "subtitle": "Here's an honest look at what our founder, {{ceoName}}, has wrestled with over 12 years of running a video English program — and what {{brandName}} is building today."
   },
   "ceo_letter": {
     "avatar_initial": "{{ceoName}}",
     "author_label": "A letter from our founder, {{ceoName}}",
-    "author_sub": "HiFive English · 12 years in video English education",
+    "author_sub": "{{brandName}} · 12 years in video English education",
     "paragraphs_1": [
-      "Hello, I'm {{ceoName}}, founder of HiFive English.",
+      "Hello, I'm {{ceoName}}, founder of {{brandName}}.",
       "As of 2026, it's been 12 years since I started this video English education business.",
       "In that time, I've met countless students, parents, and teachers who worked alongside me. Through it all, one question has stayed with me longer than any other."
     ],
@@ -29,19 +29,19 @@
       "Is there a way for parents to understand their child's lessons more clearly than they do now?"
     ],
     "paragraphs_3": [
-      "The past 12 years have been a process of searching for answers to these questions, and HiFive English is the result of continually reshaping itself along the way.",
+      "The past 12 years have been a process of searching for answers to these questions, and {{brandName}} is the result of continually reshaping itself along the way.",
       "I feel much the same way about pricing. A higher price doesn't always mean a better class, and chasing the lowest price shouldn't be the goal either. Cutting costs that have nothing to do with the quality of the lesson itself, and putting what's saved back into the actual teaching — that's what I consider a fair price.",
-      "HiFive English won't stay exactly as it is today. It will keep changing."
+      "{{brandName}} won't stay exactly as it is today. It will keep changing."
     ],
-    "signoff_label": "Founder, HiFive English",
+    "signoff_label": "Founder, {{brandName}}",
     "signoff_name": "{{ceoName}}"
   },
   "trust_section": {
     "title": "We've grown through real stories, not advertising",
     "paragraphs": [
-      "Rather than spending heavily on advertising, HiFive English has grown mainly through the words of parents and students who have already taken our classes.",
+      "Rather than spending heavily on advertising, {{brandName}} has grown mainly through the words of parents and students who have already taken our classes.",
       "It wasn't a deliberate decision to avoid advertising. It's simply that, when it comes to education, nothing is more accurate than the words of someone who has actually taken the class. Ad copy can always be written to sound good, but what a child says right after a lesson, or what a parent writes in a review months later, can't be faked.",
-      "That's why HiFive English spends its time making each lesson better for the students we already have, rather than chasing new ones."
+      "That's why {{brandName}} spends its time making each lesson better for the students we already have, rather than chasing new ones."
     ]
   },
   "philosophy_section": {
@@ -49,11 +49,11 @@
     "paragraphs": [
       "Students learning English in an EFL environment — where there's little occasion to use English in daily life — face a particular challenge. They spend plenty of time studying English, but nowhere near enough time actually using it.",
       "Even students who know plenty of vocabulary and grammar often freeze up in front of a native speaker — not because their ability is lacking, but because they simply haven't had enough real experience putting that vocabulary and grammar to use.",
-      "This is where HiFive English's lessons begin. We don't stop at listening and understanding. Within each lesson, the student thinks through the content and puts it into their own words, the teacher corrects it on the spot, and the student says it again using the corrected expression — and this cycle repeats."
+      "This is where {{brandName}}'s lessons begin. We don't stop at listening and understanding. Within each lesson, the student thinks through the content and puts it into their own words, the teacher corrects it on the spot, and the student says it again using the corrected expression — and this cycle repeats."
     ],
     "closing_paragraphs": [
       "When this cycle repeats several times within a single lesson, an expression finally shifts from something the student merely 'knows' to something they can actually 'use.'",
-      "That's why HiFive English teachers don't focus on simply finishing a textbook on schedule. They spend more time asking questions suited to each student's level and goals, keeping the conversation going, correcting sentences, and having students practice the same expression again and again in different situations."
+      "That's why {{brandName}} teachers don't focus on simply finishing a textbook on schedule. They spend more time asking questions suited to each student's level and goals, keeping the conversation going, correcting sentences, and having students practice the same expression again and again in different situations."
     ]
   },
   "output_steps": {
@@ -70,7 +70,7 @@
     "items": [
       {
         "q": "Is my child actually speaking much English in class?",
-        "a": "It's hard to know the answer for certain unless you sit in on the lesson yourself. That's why HiFive English treats a student's 'share of speaking time' as a key standard, starting from teacher training. We design lessons so that students speak for longer than teachers explain, and we factor this directly into teacher evaluations."
+        "a": "It's hard to know the answer for certain unless you sit in on the lesson yourself. That's why {{brandName}} treats a student's 'share of speaking time' as a key standard, starting from teacher training. We design lessons so that students speak for longer than teachers explain, and we factor this directly into teacher evaluations."
       },
       {
         "q": "Is the teacher tailoring the lesson to my child specifically?",

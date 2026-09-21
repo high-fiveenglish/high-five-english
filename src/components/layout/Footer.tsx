@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageCircle, Clock, Landmark, Globe } from "lucide-react";
 import { Container } from "../ui/Container";
@@ -5,10 +6,21 @@ import { CONTACT } from "../../data/contact";
 import { useTenant } from "../../context/TenantContext";
 import { BrandMark } from "./BrandMark";
 import { LocalizedLink } from "../i18n/LocalizedLink";
+import { listActiveConsultChannels } from "../../services/consultChannelService";
+import type { ConsultChannel } from "../../lib/community/types";
 
 export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
   const { t } = useTranslation("common");
   const tenant = useTenant();
+  // 카카오톡/위챗 표시는 더 이상 본사 값을 하드코딩해서 보여주지 않는다 — 협력사가
+  // 관리자 화면(/agencies/:id)에서 직접 설정한 채널만 뜨고, 아직 설정 안 했으면(본사
+  // 채널로 대체하지 않고) 그냥 빈칸으로 둔다.
+  const [channels, setChannels] = useState<ConsultChannel[]>([]);
+  useEffect(() => {
+    listActiveConsultChannels().then(setChannels);
+  }, [tenant.agentId]);
+  const kakao = channels.find((c) => c.id === "kakao");
+  const wechat = channels.find((c) => c.id === "wechat");
   // 협력사 사이트는 회사정보/계좌를 그 협력사 값으로 대체한다 — 값이 비어있는 항목은
   // (아직 관리자가 안 채운 경우) 본사 기본값으로 떨어진다.
   const company = {
@@ -83,34 +95,34 @@ export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
           <div>
             <h4 className="mb-3 text-sm font-bold text-white">{t("footer.customer_center")}</h4>
             <ul className="space-y-2 text-[13px] text-white/55">
-              <li>
-                <button
-                  onClick={onOpenContact}
-                  className="flex items-center gap-2 text-left transition hover:text-white"
-                >
-                  <MessageCircle size={14} className="shrink-0 text-accent-400" />
-                  <span>
-                    {t("footer.kakao")}{" "}
-                    <span className="font-semibold text-white/80">
-                      {CONTACT.kakaoId}
+              {kakao && (
+                <li>
+                  <button
+                    onClick={onOpenContact}
+                    className="flex items-center gap-2 text-left transition hover:text-white"
+                  >
+                    <MessageCircle size={14} className="shrink-0 text-accent-400" />
+                    <span>
+                      {t("footer.kakao")}{" "}
+                      <span className="font-semibold text-white/80">{kakao.value}</span>
                     </span>
-                  </span>
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={onOpenContact}
-                  className="flex items-center gap-2 text-left transition hover:text-white"
-                >
-                  <MessageCircle size={14} className="shrink-0 text-accent-400" />
-                  <span>
-                    {t("footer.wechat")}{" "}
-                    <span className="font-semibold text-white/80">
-                      {CONTACT.wechatId}
+                  </button>
+                </li>
+              )}
+              {wechat && (
+                <li>
+                  <button
+                    onClick={onOpenContact}
+                    className="flex items-center gap-2 text-left transition hover:text-white"
+                  >
+                    <MessageCircle size={14} className="shrink-0 text-accent-400" />
+                    <span>
+                      {t("footer.wechat")}{" "}
+                      <span className="font-semibold text-white/80">{wechat.value}</span>
                     </span>
-                  </span>
-                </button>
-              </li>
+                  </button>
+                </li>
+              )}
               <li className="flex items-center gap-2">
                 <Clock size={14} className="shrink-0 text-accent-400" />
                 <span>{t("footer.weekday_hours")}</span>

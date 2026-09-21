@@ -1,12 +1,12 @@
 {
   "meta": {
-    "title": "Chương trình học | HiFive English",
+    "title": "Chương trình học | {{brandName}}",
     "description": "Lộ trình học theo cấp độ cùng giáo trình đã được kiểm chứng, giúp nâng cao trình độ tiếng Anh một cách bài bản."
   },
   "hero": {
     "eyebrow": "Chương trình học",
     "heading": "Lộ trình liền mạch từ tiếng Anh thực dụng đến trình độ nâng cao",
-    "paragraph": "HiFive English đã sắp xếp lại hơn 200 loại giáo trình tích lũy trong 12 năm theo độ tuổi, trình độ và mục đích học tập. Học viên bắt đầu từ giai đoạn phù hợp với năng lực và mục tiêu hiện tại, rồi tự nhiên tiến lên giai đoạn tiếp theo."
+    "paragraph": "{{brandName}} đã sắp xếp lại hơn 200 loại giáo trình tích lũy trong 12 năm theo độ tuổi, trình độ và mục đích học tập. Học viên bắt đầu từ giai đoạn phù hợp với năng lực và mục tiêu hiện tại, rồi tự nhiên tiến lên giai đoạn tiếp theo."
   },
   "roadmap": {
     "eyebrow": "Lộ trình cấp độ",
@@ -18,31 +18,51 @@
       "name": "Ngữ âm · Tiếng Anh đầu đời",
       "ageRange": "Mầm non ~ Lớp 1",
       "goal": "Làm quen bảng chữ cái và quy tắc phát âm, nghe và lặp lại các câu ngắn.",
-      "focus": ["Bảng chữ cái/Ngữ âm", "Nghe nói câu ngắn", "Từ vựng cơ bản"]
+      "focus": [
+        "Bảng chữ cái/Ngữ âm",
+        "Nghe nói câu ngắn",
+        "Từ vựng cơ bản"
+      ]
     },
     "basic-conversation": {
       "name": "Hội thoại cơ bản · Bắt đầu đọc sách phân cấp",
       "ageRange": "Lớp 1 ~ Lớp 3",
       "goal": "Trao đổi hội thoại ngắn bằng các mẫu câu hàng ngày và bắt đầu đọc sách tranh.",
-      "focus": ["Hội thoại hàng ngày", "Đọc sách tranh", "Mẫu câu hỏi đáp"]
+      "focus": [
+        "Hội thoại hàng ngày",
+        "Đọc sách tranh",
+        "Mẫu câu hỏi đáp"
+      ]
     },
     "reading-smalltalk": {
       "name": "Tăng cường đọc hiểu · Trò chuyện ngắn",
       "ageRange": "Lớp 3 ~ Lớp 6",
       "goal": "Đọc các đoạn văn và trình bày quan điểm cá nhân về một chủ đề bằng vài câu.",
-      "focus": ["Đọc hiểu đoạn văn", "Trò chuyện theo chủ đề", "Viết cơ bản"]
+      "focus": [
+        "Đọc hiểu đoạn văn",
+        "Trò chuyện theo chủ đề",
+        "Viết cơ bản"
+      ]
     },
     "conversation-debate": {
       "name": "Hội thoại chuyên sâu · Tranh biện",
       "ageRange": "Cuối cấp Tiểu học ~ THCS",
       "goal": "Duy trì hội thoại với ngữ pháp chính xác và trình bày quan điểm cá nhân một cách logic, có dẫn chứng.",
-      "focus": ["Hội thoại theo ngữ pháp", "Trình bày quan điểm", "Nhập môn tranh biện"]
+      "focus": [
+        "Hội thoại theo ngữ pháp",
+        "Trình bày quan điểm",
+        "Nhập môn tranh biện"
+      ]
     },
     "advanced-discussion": {
       "name": "Hội thoại nâng cao · Thảo luận thời sự · Tiếng Anh thương mại",
       "ageRange": "THPT ~ Người lớn",
       "goal": "Thảo luận các chủ đề thời sự và chuyên môn, luyện tập tiếng Anh dùng trong thuyết trình và công việc thực tế.",
-      "focus": ["Thảo luận thời sự", "Thuyết trình", "Tiếng Anh công sở"]
+      "focus": [
+        "Thảo luận thời sự",
+        "Thuyết trình",
+        "Tiếng Anh công sở"
+      ]
     }
   },
   "catalogSection": {
@@ -94,7 +114,14 @@
     "allLevels": "Tất cả trình độ",
     "allAges": "Tất cả độ tuổi",
     "countLabel": "Hiển thị {{filtered}} / {{total}} cuốn",
-    "tableHeaders": ["Tên giáo trình", "Thư mục", "Danh mục", "Trình độ", "Độ tuổi", "Điểm nổi bật"],
+    "tableHeaders": [
+      "Tên giáo trình",
+      "Thư mục",
+      "Danh mục",
+      "Trình độ",
+      "Độ tuổi",
+      "Điểm nổi bật"
+    ],
     "emptyState": "Không có giáo trình phù hợp với điều kiện.",
     "footnote": "Trình độ và độ tuổi là giá trị tham khảo thực tế dựa trên vị trí thông thường của từng bộ giáo trình trong chương trình học; việc xếp lớp thực tế ưu tiên theo kết quả kiểm tra của học viên. Giáo trình đánh dấu (?) chưa thể xác định rõ nhà xuất bản hoặc nội dung chỉ dựa vào tên thư mục, nên cần kiểm tra bìa sách và mục lục thực tế."
   }

@@ -9,6 +9,7 @@ import { ApproveRejectButtons } from "./ApproveRejectButtons";
 import { AcademyClosureCalendar } from "./AcademyClosureCalendar";
 import { AcademyClosureRevertButton } from "./AcademyClosureRevertButton";
 import { formatAppDate, formatAppDateTime } from "@/lib/appTime";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import type { Prisma } from "@/generated/prisma/client";
 
 const fmtDateTime = formatAppDateTime;
@@ -45,27 +46,34 @@ export default async function LeaveRequestsPage({
 }: {
   searchParams: Promise<{ tab?: string; q?: string }>;
 }) {
+  const actor = await requireBackofficeActor();
+  const isAgent = actor.role === "AGENT";
+  const scopeAgentId = isAgent ? actor.agentId : undefined;
   const { tab: tabParam, q } = await searchParams;
-  const tab: TabKey = tabParam === "admin" || tabParam === "academy" ? tabParam : "student";
+  // AGENT는 전체수업휴강 탭만 쓴다 — 학생휴강/관리자휴강 탭은 본사·다른 협력사 학생
+  // 정보까지 노출되므로 쿼리스트링을 조작해도 접근을 허용하지 않는다.
+  const tab: TabKey = isAgent ? "academy" : tabParam === "admin" || tabParam === "academy" ? tabParam : "student";
   const query = q?.trim();
 
   return (
     <div>
       <h1 className="mb-6 text-xl font-bold text-slate-900">휴강 관리</h1>
 
-      <div className="mb-4 flex flex-wrap gap-2 text-sm">
-        {TABS.map((t) => (
-          <Link
-            key={t.key}
-            href={t.key === "student" ? "/leave-requests" : `/leave-requests?tab=${t.key}`}
-            className={`rounded-lg px-3 py-1.5 font-medium ${
-              tab === t.key ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-600"
-            }`}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </div>
+      {!isAgent && (
+        <div className="mb-4 flex flex-wrap gap-2 text-sm">
+          {TABS.map((t) => (
+            <Link
+              key={t.key}
+              href={t.key === "student" ? "/leave-requests" : `/leave-requests?tab=${t.key}`}
+              className={`rounded-lg px-3 py-1.5 font-medium ${
+                tab === t.key ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-600"
+              }`}
+            >
+              {t.label}
+            </Link>
+          ))}
+        </div>
+      )}
 
       {tab !== "academy" && (
         <form className="mb-4 flex gap-2" method="get">
@@ -96,7 +104,7 @@ export default async function LeaveRequestsPage({
 
       {tab === "student" && <StudentLeaveTab query={query} />}
       {tab === "admin" && <AdminLeaveTab query={query} />}
-      {tab === "academy" && <AcademyClosureTab />}
+      {tab === "academy" && <AcademyClosureTab scopeAgentId={scopeAgentId} />}
     </div>
   );
 }
@@ -257,19 +265,23 @@ function LeaveRequestTable({
 // 한 번에 휴강 처리한다(등록 폼은 AcademyClosureCalendar 안에 있다). 그 사유는
 // LeaveRequest.reason으로 그대로 저장되므로, 학생 페이지(students/[id]/sessions,
 // student/sessions)에도 개별 휴강과 똑같이 자동으로 노출된다.
-async function AcademyClosureTab() {
+async function AcademyClosureTab({ scopeAgentId }: { scopeAgentId?: number }) {
   const [closures, closureTotalCount, allLeaveRequests] = await Promise.all([
     prisma.academyClosure.findMany({
-      where: { siteId: DEFAULT_SITE_ID },
+      // AGENT는 자기 협력사 것만, ADMIN/MANAGER는(스코프 없음) 본사+전체 협력사 것을
+      // 다 본다 — "본사 컨트롤 아래" 요구사항대로 협력사 활동이 본사엔 그대로 보여야 한다.
+      where: { siteId: DEFAULT_SITE_ID, ...(scopeAgentId ? { agentId: scopeAgentId } : {}) },
       orderBy: { date: "desc" },
       include: { _count: { select: { leaveRequests: true } } },
       take: 100,
     }),
-    prisma.academyClosure.count({ where: { siteId: DEFAULT_SITE_ID } }),
+    prisma.academyClosure.count({
+      where: { siteId: DEFAULT_SITE_ID, ...(scopeAgentId ? { agentId: scopeAgentId } : {}) },
+    }),
     // 달력에서 날짜를 클릭했을 때 그 날짜에 이미 걸려있는 연기 기록(학생·관리자·
     // 어학원 휴강 전부)을 보여주기 위해 최근 것 위주로 넉넉히 가져온다.
     prisma.leaveRequest.findMany({
-      where: { siteId: DEFAULT_SITE_ID },
+      where: { siteId: DEFAULT_SITE_ID, ...(scopeAgentId ? { student: { agentId: scopeAgentId } } : {}) },
       orderBy: { createdAt: "desc" },
       include: { student: true, classSession: { include: { teacher: { select: TEACHER_SUMMARY_SELECT } } } },
       take: 500,

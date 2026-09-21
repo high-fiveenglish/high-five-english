@@ -1,5 +1,13 @@
 {
-  "weekdays_short": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  "weekdays_short": [
+    "Sun",
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat"
+  ],
   "enrollment_status": {
     "active": "Active",
     "completed": "Completed",

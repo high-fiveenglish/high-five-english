@@ -7,6 +7,7 @@ import { ImpersonateButton } from "../students/ImpersonateButton";
 import { deleteLevelTest } from "./actions";
 import { SUBJECT_OPTIONS } from "@/lib/levelTestOptions";
 import { formatAppDate, formatAppDateTime } from "@/lib/appTime";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
 
 const SUBJECT_LABEL: Record<string, string> = Object.fromEntries(SUBJECT_OPTIONS.map((o) => [o.value, o.label]));
 
@@ -23,13 +24,19 @@ const PROGRESS_BADGE_STYLE: Record<string, string> = {
 const PROGRESS_ORDER = ["접수", "수업확정", "수업완료", "결석", "취소"] as const;
 
 export default async function LevelTestsPage() {
+  const actor = await requireBackofficeActor();
+  const scopeAgentId = actor.role === "AGENT" ? actor.agentId : undefined;
   const [levelTests, progressGroups] = await Promise.all([
     prisma.levelTest.findMany({
-      where: { siteId: DEFAULT_SITE_ID },
+      where: { siteId: DEFAULT_SITE_ID, ...(scopeAgentId ? { agentId: scopeAgentId } : {}) },
       orderBy: { id: "desc" },
       include: { student: true, teacher: { select: TEACHER_SUMMARY_SELECT } },
     }),
-    prisma.levelTest.groupBy({ by: ["progressStatus"], where: { siteId: DEFAULT_SITE_ID }, _count: true }),
+    prisma.levelTest.groupBy({
+      by: ["progressStatus"],
+      where: { siteId: DEFAULT_SITE_ID, ...(scopeAgentId ? { agentId: scopeAgentId } : {}) },
+      _count: true,
+    }),
   ]);
   const countByStatus = new Map(progressGroups.map((g) => [g.progressStatus ?? "접수", g._count]));
   const total = levelTests.length;

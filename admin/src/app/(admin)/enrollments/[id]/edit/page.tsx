@@ -7,8 +7,10 @@ import { computeBasePriceKRW } from "@/lib/enrollmentPricing";
 import { EnrollmentCreateForm } from "../../new/EnrollmentCreateForm";
 import { parseScheduleDaysLabel } from "../../scheduleUtils";
 import { PaymentForm } from "./PaymentForm";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
 
 export default async function EditEnrollmentPage({ params }: { params: Promise<{ id: string }> }) {
+  const actor = await requireBackofficeActor();
   const { id } = await params;
   const enrollmentId = Number(id);
 
@@ -18,6 +20,7 @@ export default async function EditEnrollmentPage({ params }: { params: Promise<{
   ]);
 
   if (!enrollment) notFound();
+  if (actor.role === "AGENT" && enrollment.agentId !== actor.agentId) notFound();
 
   const weekdayCount = parseScheduleDaysLabel(enrollment.scheduleDays).length;
   const basePriceKRW = await computeBasePriceKRW(enrollment.packageMonths, weekdayCount, enrollment.classDurationMin);

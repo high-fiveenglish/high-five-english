@@ -12,6 +12,7 @@ import { FILTER_TABS, buildEnrollmentWhere } from "./filters";
 import { formatScheduleDayTime } from "./scheduleUtils";
 import { formatAppDate, formatAppDateTime } from "@/lib/appTime";
 import { closeExpiredEnrollments } from "@/lib/enrollmentLifecycle";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
 
 const PAYMENT_STATUS_LABEL: Record<string, string> = { UNPAID: "미결제", PAID: "결제완료", FAILED: "결제실패" };
 const PAYMENT_STATUS_CLASS: Record<string, string> = {
@@ -67,6 +68,8 @@ export default async function EnrollmentsPage({
 }: {
   searchParams: Promise<{ filter?: string; q?: string; page?: string }>;
 }) {
+  const actor = await requireBackofficeActor();
+  const scopeAgentId = actor.role === "AGENT" ? actor.agentId : undefined;
   const { filter, q, page: pageParam } = await searchParams;
   // 필터를 지정하지 않고 들어오면(메뉴 클릭 시 기본 진입) "진행중"을 기본으로 보여준다 —
   // 관리자가 매번 "전체"에서 다시 걸러야 했던 문제. 전체 목록은 "전체" 탭에서 명시적으로 본다.
@@ -78,6 +81,7 @@ export default async function EnrollmentsPage({
 
   const listWhere = {
     siteId: DEFAULT_SITE_ID,
+    ...(scopeAgentId ? { agentId: scopeAgentId } : {}),
     ...buildEnrollmentWhere(effectiveFilter),
     ...(query
       ? {
@@ -107,7 +111,11 @@ export default async function EnrollmentsPage({
     // 마케팅 사이트에서 학생이 제출했지만 아직 관리자가 확인(연락완료/등록전환/취소)하지
     // 않은 수강신청 리드 — 필터와 무관하게 이 화면 맨 위에 "신청"으로 항상 노출한다.
     prisma.enrollmentRequest.findMany({
-      where: { siteId: DEFAULT_SITE_ID, status: { in: ["NEW", "CONTACTED"] } },
+      where: {
+        siteId: DEFAULT_SITE_ID,
+        status: { in: ["NEW", "CONTACTED"] },
+        ...(scopeAgentId ? { student: { agentId: scopeAgentId } } : {}),
+      },
       orderBy: { id: "desc" },
       include: { student: true },
     }),
@@ -145,7 +153,13 @@ export default async function EnrollmentsPage({
     await Promise.all(
       FILTER_TABS.map(async (tab) => [
         tab.key,
-        await prisma.enrollment.count({ where: { siteId: DEFAULT_SITE_ID, ...buildEnrollmentWhere(tab.key) } }),
+        await prisma.enrollment.count({
+          where: {
+            siteId: DEFAULT_SITE_ID,
+            ...(scopeAgentId ? { agentId: scopeAgentId } : {}),
+            ...buildEnrollmentWhere(tab.key),
+          },
+        }),
       ]),
     ),
   ) as Record<string, number>;

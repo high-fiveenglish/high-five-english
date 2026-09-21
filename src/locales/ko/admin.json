@@ -28,7 +28,11 @@
     "save_permissions": "권한 저장",
     "saving": "저장 중...",
     "all_accounts_title": "전체 계정 목록",
-    "table_headers": { "id": "아이디", "name": "이름", "role": "역할" },
+    "table_headers": {
+      "id": "아이디",
+      "name": "이름",
+      "role": "역할"
+    },
     "roles": {
       "general_manager": "General Manager",
       "general_admin": "General Administrator",
@@ -74,7 +78,11 @@
       "academy_closed": "학원 휴강",
       "admin_cancelled": "관리자 취소"
     },
-    "initiated_by_labels": { "student": "학생", "teacher": "강사", "admin": "관리자" },
+    "initiated_by_labels": {
+      "student": "학생",
+      "teacher": "강사",
+      "admin": "관리자"
+    },
     "reason_label": "사유",
     "status_applied": "적용됨",
     "status_reverted": "취소됨"
@@ -110,7 +118,13 @@
   "notices": {
     "admin_title": "강사 공지사항 관리",
     "admin_description": "여기서 작성한 공지는 강사 페이지의 Bulletin Board에만 표시됩니다. 학생 및 방문객은 볼 수 없습니다.",
-    "table_headers": { "title": "제목", "author": "작성자", "created_at": "작성일시", "status": "상태", "actions": "관리" },
+    "table_headers": {
+      "title": "제목",
+      "author": "작성자",
+      "created_at": "작성일시",
+      "status": "상태",
+      "actions": "관리"
+    },
     "no_rows": "등록된 공지사항이 없습니다.",
     "new_button": "새 공지사항 작성",
     "create_title": "공지사항 작성",
@@ -151,7 +165,10 @@
     "age_value": "{{age}}세",
     "kst_label": "한국시간",
     "min_suffix": "분",
-    "status_labels": { "new": "신규", "contacted": "연락완료" }
+    "status_labels": {
+      "new": "신규",
+      "contacted": "연락완료"
+    }
   },
   "pricing": {
     "admin_title": "수강료 관리",

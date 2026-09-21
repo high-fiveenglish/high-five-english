@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "Quy trình đăng ký | HiFive English",
-    "description": "Từ bài kiểm tra trình độ miễn phí đến buổi học đầu tiên — quy trình đăng ký học tại HiFive English."
+    "title": "Quy trình đăng ký | {{brandName}}",
+    "description": "Từ bài kiểm tra trình độ miễn phí đến buổi học đầu tiên — quy trình đăng ký học tại {{brandName}}."
   },
   "hero": {
     "eyebrow": "Quy Trình Đăng Ký",
@@ -9,7 +9,12 @@
     "headingLine2": "Hãy trải nghiệm miễn phí trước tiên.",
     "paragraph": "Kiểm tra trình độ, học thử và tư vấn đều hoàn toàn miễn phí. Đăng ký không có nghĩa là phải thanh toán ngay. Bạn có thể tìm hiểu kỹ rồi thoải mái quyết định."
   },
-  "reassurance": ["Đăng ký miễn phí", "Kiểm tra trình độ miễn phí", "Học thử miễn phí", "Quyết định sau tư vấn"],
+  "reassurance": [
+    "Đăng ký miễn phí",
+    "Kiểm tra trình độ miễn phí",
+    "Học thử miễn phí",
+    "Quyết định sau tư vấn"
+  ],
   "levelTestCta": "Đăng Ký Kiểm Tra Trình Độ Miễn Phí",
   "steps": {
     "1": {
@@ -19,7 +24,13 @@
     "2": {
       "title": "Đăng Ký Kiểm Tra Trình Độ",
       "desc": "Chỉ cần nhập ngày giờ mong muốn, mục tiêu học tập và khóa học bạn quan tâm là hoàn tất đăng ký. Trong vòng 1-2 ngày, quản lý học tập sẽ liên hệ trực tiếp để xác nhận lịch học, đồng thời tư vấn định hướng học tập phù hợp với bạn.",
-      "bullets": ["Giờ học", "Số buổi học", "Giáo trình", "Hình thức học", "Khóa học đề xuất"],
+      "bullets": [
+        "Giờ học",
+        "Số buổi học",
+        "Giáo trình",
+        "Hình thức học",
+        "Khóa học đề xuất"
+      ],
       "note": "Đây không chỉ đơn thuần là đặt lịch kiểm tra — ngay từ đầu, chúng tôi sẽ cùng bạn tìm ra định hướng học tập phù hợp nhất."
     },
     "3": {
@@ -33,7 +44,13 @@
     "5": {
       "title": "Tư Vấn Đăng Ký",
       "desc": "Sau khi xem kết quả, bạn sẽ trao đổi với quản lý học tập để cùng quyết định khóa học phù hợp với mình. Ở bước này, chúng tôi hoàn toàn không ép buộc đăng ký — bạn có thể tìm hiểu kỹ rồi thoải mái quyết định.",
-      "bullets": ["Khóa học đề xuất", "Giờ học", "Số buổi học", "Giáo trình", "Hình thức học"]
+      "bullets": [
+        "Khóa học đề xuất",
+        "Giờ học",
+        "Số buổi học",
+        "Giáo trình",
+        "Hình thức học"
+      ]
     },
     "6": {
       "title": "Thanh Toán Học Phí",
@@ -42,7 +59,12 @@
     "7": {
       "title": "Kiểm Tra Lịch Học",
       "desc": "Bạn có thể kiểm tra ngày giờ học, giáo viên phụ trách và khóa học trên trang cá nhân (My Page). Hãy kiểm tra và chuẩn bị môi trường học tập trước khi buổi học bắt đầu.",
-      "bullets": ["Ngày học", "Giờ học", "Giáo viên phụ trách", "Khóa học"]
+      "bullets": [
+        "Ngày học",
+        "Giờ học",
+        "Giáo viên phụ trách",
+        "Khóa học"
+      ]
     },
     "8": {
       "title": "Bắt Đầu Học Chính Thức",

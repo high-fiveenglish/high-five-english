@@ -52,7 +52,7 @@
     "counsel_cta": "申请1:1咨询",
     "bank_transfer_title": "银行转账账户信息",
     "account_holder": "账户持有人",
-    "copyright": "© {{year}} HiFive English. All rights reserved.",
+    "copyright": "© {{year}} {{brandName}}. All rights reserved.",
     "terms": "服务条款",
     "privacy": "隐私政策",
     "in_preparation": "即将推出"
@@ -63,7 +63,7 @@
   "aria": {
     "open_menu": "打开菜单",
     "close_menu": "关闭菜单",
-    "home_logo": "HiFive English 首页",
+    "home_logo": "{{brandName}} 首页",
     "modal_close": "关闭"
   },
   "floating": {

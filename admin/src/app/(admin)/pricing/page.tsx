@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID, HIGHFIVE_AGENT_CODE } from "@/lib/constants";
 import { PriceCell } from "./PriceCell";
 import { ensureAgentPricing } from "./actions";
+import { requireBackofficeActor } from "@/lib/backofficeAuth";
 
 const FREQUENCY_LABEL: Record<string, string> = {
   freq5: "주 5회",
@@ -21,14 +22,18 @@ export default async function PricingPage({
 }: {
   searchParams: Promise<{ agentId?: string }>;
 }) {
+  const actor = await requireBackofficeActor();
   const { agentId: agentIdRaw } = await searchParams;
 
   const agents = await prisma.agent.findMany({
     where: { siteId: DEFAULT_SITE_ID },
     orderBy: { name: "asc" },
   });
-  const isHighfiveTab = !agentIdRaw;
-  const selectedAgentId = agentIdRaw ? Number(agentIdRaw) : null;
+  // AGENT는 탭 전환이 의미 없다 — 쿼리스트링을 조작해도 항상 자기 협력사 가격표만
+  // 본다/고친다.
+  const isAgentActor = actor.role === "AGENT";
+  const isHighfiveTab = !isAgentActor && !agentIdRaw;
+  const selectedAgentId = isAgentActor ? actor.agentId : agentIdRaw ? Number(agentIdRaw) : null;
 
   // 협력사 탭이면(직영 제외) 가격표가 아직 없을 때 본사 기준으로 한 번 초기화해둔다.
   if (selectedAgentId) {
@@ -49,29 +54,31 @@ export default async function PricingPage({
         탭은 본사 가격표를 기준으로 시작되며, 이후 협력사별로 자유롭게 다르게 설정할 수 있습니다.
       </p>
 
-      <div className="mb-6 flex gap-2 text-sm">
-        <Link
-          href="/pricing"
-          className={`rounded-lg px-3 py-1.5 font-medium ${
-            isHighfiveTab ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-600"
-          }`}
-        >
-          직영
-        </Link>
-        {agents
-          .filter((a) => a.code !== HIGHFIVE_AGENT_CODE)
-          .map((a) => (
-            <Link
-              key={a.id}
-              href={`/pricing?agentId=${a.id}`}
-              className={`rounded-lg px-3 py-1.5 font-medium ${
-                selectedAgentId === a.id ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-600"
-              }`}
-            >
-              {a.name}
-            </Link>
-          ))}
-      </div>
+      {!isAgentActor && (
+        <div className="mb-6 flex gap-2 text-sm">
+          <Link
+            href="/pricing"
+            className={`rounded-lg px-3 py-1.5 font-medium ${
+              isHighfiveTab ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-600"
+            }`}
+          >
+            직영
+          </Link>
+          {agents
+            .filter((a) => a.code !== HIGHFIVE_AGENT_CODE)
+            .map((a) => (
+              <Link
+                key={a.id}
+                href={`/pricing?agentId=${a.id}`}
+                className={`rounded-lg px-3 py-1.5 font-medium ${
+                  selectedAgentId === a.id ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-600"
+                }`}
+              >
+                {a.name}
+              </Link>
+            ))}
+        </div>
+      )}
 
       <div className="flex flex-col gap-8">
         {durations.map((d) => (

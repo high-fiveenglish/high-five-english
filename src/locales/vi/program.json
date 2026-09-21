@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "Giới thiệu chương trình | HiFive English",
-    "description": "Khám phá chương trình tiếng Anh trực tuyến 1:1 tương tác của HiFive English — nói ngay những gì đã học và nhận phản hồi tức thì."
+    "title": "Giới thiệu chương trình | {{brandName}}",
+    "description": "Khám phá chương trình tiếng Anh trực tuyến 1:1 tương tác của {{brandName}} — nói ngay những gì đã học và nhận phản hồi tức thì."
   },
   "cta": {
     "startLevelTest": "Bắt đầu với bài kiểm tra trình độ miễn phí",
@@ -11,7 +11,7 @@
   "hero": {
     "eyebrow": "Giới thiệu tiếng Anh qua video",
     "headline": "Biến vốn tiếng Anh đã biết thành tiếng Anh thực sự nói được",
-    "sub": "Lớp tiếng Anh qua video 1:1 của HiFive English là 25 phút để bạn trực tiếp nói ra những câu đã học và được sửa ngay tại chỗ. Đây không phải là lớp học thuộc thêm vài quy tắc ngữ pháp, mà là lớp học giúp cơ thể bạn ghi nhớ cảm giác thực sự nói tiếng Anh."
+    "sub": "Lớp tiếng Anh qua video 1:1 của {{brandName}} là 25 phút để bạn trực tiếp nói ra những câu đã học và được sửa ngay tại chỗ. Đây không phải là lớp học thuộc thêm vài quy tắc ngữ pháp, mà là lớp học giúp cơ thể bạn ghi nhớ cảm giác thực sự nói tiếng Anh."
   },
   "output": {
     "eyebrow": "Thế mạnh cốt lõi 1",
@@ -55,7 +55,7 @@
         ]
       },
       "right": {
-        "label": "Giáo viên HiFive",
+        "label": "Giáo viên {{brandName}}",
         "points": [
           "Trò chuyện tự nhiên ngay cả với câu hỏi và tình huống bất ngờ",
           "Điều chỉnh cách dạy theo tính cách và tình trạng của học sinh hôm đó",
@@ -65,7 +65,7 @@
     },
     "highlight": "AI có thể là bạn trò chuyện, nhưng không thể trở thành người thầy thực sự hiểu bạn."
   },
-  "strengthsTitle": "Sự khác biệt của riêng HiFive English",
+  "strengthsTitle": "Sự khác biệt của riêng {{brandName}}",
   "strengths": [
     {
       "badge": "Tiêu chuẩn được mài giũa qua 12 năm",
@@ -95,6 +95,6 @@
   },
   "closingCta": {
     "title": "Ngay bây giờ, chỉ cần 10 phút để tự mình kiểm chứng",
-    "body": "Không gì thuyết phục bằng việc tự mình trải nghiệm. Hãy thử bài kiểm tra trình độ miễn phí để trải nghiệm trước lớp học của HiFive English."
+    "body": "Không gì thuyết phục bằng việc tự mình trải nghiệm. Hãy thử bài kiểm tra trình độ miễn phí để trải nghiệm trước lớp học của {{brandName}}."
   }
 }

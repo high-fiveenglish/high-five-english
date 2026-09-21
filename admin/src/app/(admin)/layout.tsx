@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { NavLink } from "./NavLink";
 import { logout } from "./actions";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { prisma } from "@/lib/prisma";
 
 // permission이 없으면 로그인한 ADMIN/MANAGER 모두에게 항상 보인다. permission이 있으면
 // ADMIN은 항상 통과하고, MANAGER는 실제로 그 view 권한을 가졌을 때만 링크가 보인다 —
@@ -58,6 +59,21 @@ const NAV_GROUPS = [
   },
 ] as const;
 
+// AGENT(협력사 관리자)는 위 NAV_GROUPS/ADMIN_ONLY_GROUP을 전혀 쓰지 않고 이 고정된
+// 단일 목록만 본다 — 본사가 정해준 화면 밖으로 절대 못 나가게(현재 쓰는 협력사
+// 관리자페이지 레퍼런스를 참고해 필요한 항목만 추림).
+const AGENT_NAV_ITEMS = [
+  { href: "/schedule", label: "전체일정조회" },
+  { href: "/level-tests", label: "레벨테스트신청내역" },
+  { href: "/students", label: "회원목록" },
+  { href: "/enrollments", label: "수강신청내역" },
+  { href: "/settlements", label: "정산내역" },
+  { href: "/pricing", label: "수강료관리" },
+  { href: "/leave-requests?tab=academy", label: "전체휴강" },
+  { href: "/student-holds", label: "학생홀드관리" },
+  { href: "/my-profile", label: "정보수정" },
+] as const;
+
 // ADMIN에게만 보이는 그룹 — role을 직접 확인하며, 권한 테이블과 무관하게 항상
 // ADMIN에게만 노출된다(계정관리/권한관리/Audit Log 페이지 자체도 서버에서 동일하게 확인).
 const ADMIN_ONLY_GROUP = {
@@ -72,7 +88,8 @@ const ADMIN_ONLY_GROUP = {
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const actor = await requireBackofficeActor();
   const isAdmin = actor.role === "ADMIN";
-  const marketingSiteUrl = process.env.MARKETING_SITE_URL ?? "http://localhost:5173";
+  const isAgent = actor.role === "AGENT";
+  const defaultMarketingSiteUrl = process.env.MARKETING_SITE_URL ?? "http://localhost:5173";
   const hasPermission = (key: string | null) => key === null || isAdmin || ("permissions" in actor && actor.permissions.includes(key));
 
   const visibleGroups = NAV_GROUPS.map((group) => ({
@@ -80,40 +97,65 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     items: group.items.filter((item) => hasPermission(item.permission)),
   })).filter((group) => group.items.length > 0);
 
+  // AGENT는 자기 협력사 마케팅사이트 도메인으로 "홈페이지 메인"이 열려야 한다(본사
+  // 도메인이 아니라). 도메인을 아직 안 정했으면 본사 기본 URL로 대체.
+  let marketingSiteUrl = defaultMarketingSiteUrl;
+  let agencyLabel = "하이파이브 잉글리쉬";
+  if (isAgent) {
+    const agent = await prisma.agent.findUnique({ where: { id: actor.agentId } });
+    if (agent?.domain) marketingSiteUrl = `https://${agent.domain}`;
+    if (agent?.name) agencyLabel = `${agent.name}(협력사)`;
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-100">
       <aside className="flex w-60 shrink-0 flex-col gap-6 bg-slate-900 p-4">
         <div className="px-2 pt-2">
-          <p className="text-sm font-bold text-white">하이파이브 잉글리쉬</p>
+          <p className="text-sm font-bold text-white">{agencyLabel}</p>
           <p className="text-xs text-slate-400">
             {actor.name} · {actor.role}
           </p>
         </div>
 
         <nav className="flex flex-1 flex-col gap-5 overflow-y-auto">
-          {visibleGroups.map((group) => (
-            <div key={group.title}>
+          {isAgent ? (
+            <div>
               <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                {group.title}
+                관리자메뉴
               </p>
               <div className="flex flex-col gap-0.5">
-                {group.items.map((item) => (
+                {AGENT_NAV_ITEMS.map((item) => (
                   <NavLink key={item.href} href={item.href} label={item.label} />
                 ))}
               </div>
             </div>
-          ))}
-          {isAdmin && (
-            <div key={ADMIN_ONLY_GROUP.title}>
-              <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                {ADMIN_ONLY_GROUP.title}
-              </p>
-              <div className="flex flex-col gap-0.5">
-                {ADMIN_ONLY_GROUP.items.map((item) => (
-                  <NavLink key={item.href} href={item.href} label={item.label} />
-                ))}
-              </div>
-            </div>
+          ) : (
+            <>
+              {visibleGroups.map((group) => (
+                <div key={group.title}>
+                  <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    {group.title}
+                  </p>
+                  <div className="flex flex-col gap-0.5">
+                    {group.items.map((item) => (
+                      <NavLink key={item.href} href={item.href} label={item.label} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {isAdmin && (
+                <div key={ADMIN_ONLY_GROUP.title}>
+                  <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    {ADMIN_ONLY_GROUP.title}
+                  </p>
+                  <div className="flex flex-col gap-0.5">
+                    {ADMIN_ONLY_GROUP.items.map((item) => (
+                      <NavLink key={item.href} href={item.href} label={item.label} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </nav>
 

@@ -1,10 +1,10 @@
 {
   "privacy": {
     "meta_title": "Chính sách bảo mật",
-    "meta_description": "Chính sách bảo mật thông tin cá nhân của HiFive English.",
+    "meta_description": "Chính sách bảo mật thông tin cá nhân của {{brandName}}.",
     "title": "Chính sách bảo mật",
     "translation_note": "Đây là bản dịch tham khảo của Chính sách bảo mật gốc bằng tiếng Hàn. Nếu có sự khác biệt, bản gốc tiếng Hàn sẽ được ưu tiên áp dụng.",
-    "intro": "HiFive English (sau đây gọi là \"Công ty\") coi trọng việc bảo vệ thông tin cá nhân của người dùng. Công ty tuân thủ các quy định về bảo vệ thông tin cá nhân theo Luật Xúc tiến sử dụng mạng thông tin và truyền thông và Bảo vệ thông tin, cùng Hướng dẫn bảo vệ thông tin cá nhân do Bộ Thông tin và Truyền thông ban hành, và xây dựng Chính sách bảo mật này theo quy định pháp luật liên quan nhằm bảo vệ tối đa quyền lợi của người dùng.",
+    "intro": "{{brandName}} (sau đây gọi là \"Công ty\") coi trọng việc bảo vệ thông tin cá nhân của người dùng. Công ty tuân thủ các quy định về bảo vệ thông tin cá nhân theo Luật Xúc tiến sử dụng mạng thông tin và truyền thông và Bảo vệ thông tin, cùng Hướng dẫn bảo vệ thông tin cá nhân do Bộ Thông tin và Truyền thông ban hành, và xây dựng Chính sách bảo mật này theo quy định pháp luật liên quan nhằm bảo vệ tối đa quyền lợi của người dùng.",
     "toc": [
       "1. Quy định chung",
       "2. Các mục thông tin cá nhân được thu thập và phương thức thu thập",
@@ -115,10 +115,10 @@
         "paragraphs": [
           "Công ty chỉ định người phụ trách quản lý thông tin cá nhân và nhân viên phụ trách việc tiếp nhận ý kiến và xử lý khiếu nại liên quan đến thông tin cá nhân, thông tin liên hệ như sau.",
           "▶ Người phụ trách quản lý thông tin cá nhân",
-          "- Họ tên: Woo Jong-beom (우종범)",
+          "- Họ tên: {{ceoName}}",
           "- Đơn vị/Chức vụ: Đại diện",
-          "- Email: jongbum1010@hanmail.net",
-          "- Số điện thoại: 010-2777-5463",
+          "- Email: {{brandEmail}}",
+          "- Số điện thoại: {{brandPhone}}",
           "Quý khách có thể báo cáo mọi khiếu nại liên quan đến bảo vệ thông tin cá nhân phát sinh trong quá trình sử dụng dịch vụ của Công ty cho người phụ trách quản lý thông tin cá nhân hoặc bộ phận phụ trách. Công ty sẽ phản hồi nhanh chóng và đầy đủ đối với các báo cáo của người dùng.",
           "Nếu cần báo cáo hoặc tư vấn về các vi phạm thông tin cá nhân khác, vui lòng liên hệ các cơ quan sau.",
           "1. Ủy ban Hòa giải tranh chấp cá nhân (www.1336.or.kr / 1336)",
@@ -133,93 +133,93 @@
   },
   "terms": {
     "meta_title": "Điều khoản dịch vụ",
-    "meta_description": "Điều khoản dịch vụ của HiFive English.",
+    "meta_description": "Điều khoản dịch vụ của {{brandName}}.",
     "title": "Điều khoản dịch vụ",
     "translation_note": "Đây là bản dịch tham khảo của Điều khoản dịch vụ gốc bằng tiếng Hàn. Nếu có sự khác biệt, bản gốc tiếng Hàn sẽ được ưu tiên áp dụng.",
     "sections": [
       {
         "heading": "Điều 1 (Mục đích)",
         "paragraphs": [
-          "Điều khoản này quy định quyền, nghĩa vụ và trách nhiệm giữa người dùng và HiFive English trong việc sử dụng các dịch vụ liên quan đến internet (sau đây gọi là \"Dịch vụ\") mà HiFive English cung cấp thông qua trang chủ (http://www.hfenglish.co.kr)."
+          "Điều khoản này quy định quyền, nghĩa vụ và trách nhiệm giữa người dùng và {{brandName}} trong việc sử dụng các dịch vụ liên quan đến internet (sau đây gọi là \"Dịch vụ\") mà {{brandName}} cung cấp thông qua trang chủ (http://www.hfenglish.co.kr)."
         ]
       },
       {
         "heading": "Điều 2 (Hiệu lực và sửa đổi điều khoản)",
         "paragraphs": [
           "① Nội dung điều khoản này có hiệu lực khi được đăng tải trên màn hình dịch vụ và người dùng đồng ý.",
-          "② HiFive English có thể sửa đổi điều khoản này khi phát sinh lý do hợp lý, và khi điều khoản được sửa đổi, sẽ thông báo trước ít nhất 7 ngày theo cách thức như khoản 1.",
+          "② {{brandName}} có thể sửa đổi điều khoản này khi phát sinh lý do hợp lý, và khi điều khoản được sửa đổi, sẽ thông báo trước ít nhất 7 ngày theo cách thức như khoản 1.",
           "③ Khi có dịch vụ mới được mở, trừ khi có giải thích rõ ràng khác, dịch vụ đó sẽ được cung cấp theo điều khoản này."
         ]
       },
       {
         "heading": "Điều 3 (Định nghĩa người dùng)",
         "paragraphs": [
-          "\"Người dùng\" là người truy cập vào \"trang web\" và nhận dịch vụ do HiFive English cung cấp."
+          "\"Người dùng\" là người truy cập vào \"trang web\" và nhận dịch vụ do {{brandName}} cung cấp."
         ]
       },
       {
         "heading": "Điều 4 (Đăng ký thành viên)",
         "paragraphs": [
-          "① Người muốn trở thành \"thành viên\" đăng ký thành viên bằng cách điền thông tin thành viên theo mẫu đăng ký do HiFive English quy định và nhấn nút \"Đăng ký\".",
-          "② HiFive English đăng ký người đăng ký theo khoản 1 làm thành viên, trừ khi người đó thuộc một trong các trường hợp sau.",
-          "1. Trường hợp người đăng ký trước đó đã từng mất tư cách thành viên theo Điều 6 khoản 3 của điều khoản này. Tuy nhiên, trường hợp đã qua 1 năm kể từ khi mất tư cách thành viên theo Điều 6 khoản 3 và đã được HiFive English chấp thuận cho đăng ký lại thì được coi là ngoại lệ.",
+          "① Người muốn trở thành \"thành viên\" đăng ký thành viên bằng cách điền thông tin thành viên theo mẫu đăng ký do {{brandName}} quy định và nhấn nút \"Đăng ký\".",
+          "② {{brandName}} đăng ký người đăng ký theo khoản 1 làm thành viên, trừ khi người đó thuộc một trong các trường hợp sau.",
+          "1. Trường hợp người đăng ký trước đó đã từng mất tư cách thành viên theo Điều 6 khoản 3 của điều khoản này. Tuy nhiên, trường hợp đã qua 1 năm kể từ khi mất tư cách thành viên theo Điều 6 khoản 3 và đã được {{brandName}} chấp thuận cho đăng ký lại thì được coi là ngoại lệ.",
           "2. Trường hợp nội dung đăng ký có sai lệch, thiếu sót hoặc ghi sai.",
-          "3. Trường hợp khác mà HiFive English đánh giá rằng việc đăng ký người đó làm thành viên sẽ gây trở ngại đáng kể về mặt kỹ thuật.",
-          "③ Thời điểm hợp đồng đăng ký thành viên có hiệu lực là thời điểm sự chấp thuận của HiFive English đến với người đăng ký.",
+          "3. Trường hợp khác mà {{brandName}} đánh giá rằng việc đăng ký người đó làm thành viên sẽ gây trở ngại đáng kể về mặt kỹ thuật.",
+          "③ Thời điểm hợp đồng đăng ký thành viên có hiệu lực là thời điểm sự chấp thuận của {{brandName}} đến với người đăng ký.",
           "④ Khi có thay đổi đối với nội dung thông tin thành viên đã ghi tại khoản 1, thành viên phải ngay lập tức đính chính và ghi lại nội dung thay đổi."
         ]
       },
       {
         "heading": "Điều 5 (Gián đoạn dịch vụ)",
         "paragraphs": [
-          "① HiFive English có thể tạm thời ngừng cung cấp dịch vụ khi phát sinh lý do bảo trì, thay thế, hư hỏng thiết bị thông tin liên lạc như máy tính, hoặc gián đoạn liên lạc, và có thể hoàn toàn ngừng dịch vụ hiện đang cung cấp do việc thay thế bằng dịch vụ mới hoặc các lý do khác mà HiFive English cho là phù hợp.",
-          "② Trong trường hợp ngừng dịch vụ theo khoản 1, HiFive English sẽ thông báo cho người dùng theo phương thức quy định tại Điều 7 khoản 2. Tuy nhiên, trường hợp không thể thông báo trước do lý do nằm ngoài khả năng kiểm soát của HiFive English (như sự cố ổ đĩa, hệ thống ngừng hoạt động không do cố ý hoặc sơ suất của quản trị viên hệ thống) thì không áp dụng."
+          "① {{brandName}} có thể tạm thời ngừng cung cấp dịch vụ khi phát sinh lý do bảo trì, thay thế, hư hỏng thiết bị thông tin liên lạc như máy tính, hoặc gián đoạn liên lạc, và có thể hoàn toàn ngừng dịch vụ hiện đang cung cấp do việc thay thế bằng dịch vụ mới hoặc các lý do khác mà {{brandName}} cho là phù hợp.",
+          "② Trong trường hợp ngừng dịch vụ theo khoản 1, {{brandName}} sẽ thông báo cho người dùng theo phương thức quy định tại Điều 7 khoản 2. Tuy nhiên, trường hợp không thể thông báo trước do lý do nằm ngoài khả năng kiểm soát của {{brandName}} (như sự cố ổ đĩa, hệ thống ngừng hoạt động không do cố ý hoặc sơ suất của quản trị viên hệ thống) thì không áp dụng."
         ]
       },
       {
         "heading": "Điều 6 (Rút lui và mất tư cách thành viên, v.v.)",
         "paragraphs": [
-          "① Người dùng có thể yêu cầu HiFive English xóa đăng ký thành viên của mình (rút lui khỏi tư cách người dùng) bất cứ lúc nào, và HiFive English sẽ ngay lập tức tiến hành thủ tục xóa đăng ký thành viên của người dùng đó khi nhận được yêu cầu trên.",
-          "② Trường hợp người dùng thuộc một trong các lý do sau đây, HiFive English có thể hạn chế, đình chỉ hoặc tước tư cách thành viên của người dùng bằng phương thức phù hợp.",
+          "① Người dùng có thể yêu cầu {{brandName}} xóa đăng ký thành viên của mình (rút lui khỏi tư cách người dùng) bất cứ lúc nào, và {{brandName}} sẽ ngay lập tức tiến hành thủ tục xóa đăng ký thành viên của người dùng đó khi nhận được yêu cầu trên.",
+          "② Trường hợp người dùng thuộc một trong các lý do sau đây, {{brandName}} có thể hạn chế, đình chỉ hoặc tước tư cách thành viên của người dùng bằng phương thức phù hợp.",
           "1. Trường hợp đăng ký nội dung sai sự thật khi đăng ký.",
           "2. Trường hợp cản trở người khác sử dụng \"Dịch vụ\" hoặc đánh cắp thông tin của họ, đe dọa trật tự giao dịch điện tử.",
           "3. Trường hợp sử dụng \"Dịch vụ\" để thực hiện hành vi bị pháp luật và điều khoản này cấm hoặc trái với thuần phong mỹ tục.",
-          "① Trường hợp HiFive English quyết định tước tư cách thành viên của người dùng, sẽ xóa đăng ký thành viên. Trong trường hợp này, HiFive English sẽ thông báo cho thành viên đó trước khi xóa đăng ký, và cho họ cơ hội giải trình.",
-          "② Trường hợp \"người dùng\" đã đăng ký thành viên theo điều khoản này, trong quá trình sử dụng \"Dịch vụ\", không có bản ghi đăng nhập liên tục trong 1 năm, HiFive English có thể tước tư cách thành viên của người dùng đó."
+          "① Trường hợp {{brandName}} quyết định tước tư cách thành viên của người dùng, sẽ xóa đăng ký thành viên. Trong trường hợp này, {{brandName}} sẽ thông báo cho thành viên đó trước khi xóa đăng ký, và cho họ cơ hội giải trình.",
+          "② Trường hợp \"người dùng\" đã đăng ký thành viên theo điều khoản này, trong quá trình sử dụng \"Dịch vụ\", không có bản ghi đăng nhập liên tục trong 1 năm, {{brandName}} có thể tước tư cách thành viên của người dùng đó."
         ]
       },
       {
         "heading": "Điều 7 (Thông báo cho người dùng)",
         "paragraphs": [
-          "① HiFive English có thể thông báo cho người dùng cụ thể qua địa chỉ email mà HiFive English đã cấp.",
-          "② Trường hợp HiFive English thông báo cho số đông người dùng không xác định, có thể thay thế thông báo riêng bằng cách đăng tải trên bảng thông báo của HiFive English từ 7 ngày trở lên."
+          "① {{brandName}} có thể thông báo cho người dùng cụ thể qua địa chỉ email mà {{brandName}} đã cấp.",
+          "② Trường hợp {{brandName}} thông báo cho số đông người dùng không xác định, có thể thay thế thông báo riêng bằng cách đăng tải trên bảng thông báo của {{brandName}} từ 7 ngày trở lên."
         ]
       },
       {
         "heading": "Điều 8 (Bảo vệ thông tin cá nhân của người dùng)",
         "paragraphs": [
-          "HiFive English nỗ lực bảo vệ thông tin cá nhân của người dùng, bao gồm thông tin đăng ký người dùng, theo quy định của pháp luật liên quan. Về việc bảo vệ thông tin cá nhân của người dùng, thực hiện theo pháp luật liên quan và \"Chính sách bảo mật\" do HiFive English quy định."
+          "{{brandName}} nỗ lực bảo vệ thông tin cá nhân của người dùng, bao gồm thông tin đăng ký người dùng, theo quy định của pháp luật liên quan. Về việc bảo vệ thông tin cá nhân của người dùng, thực hiện theo pháp luật liên quan và \"Chính sách bảo mật\" do {{brandName}} quy định."
         ]
       },
       {
         "heading": "Điều 9 (Thời hạn lưu giữ và sử dụng thông tin cá nhân)",
         "paragraphs": [
-          "① Thông tin cá nhân được lưu giữ cho đến khi thành viên hủy đăng ký, và HiFive English lưu giữ thông tin thành viên cho đến thời điểm hủy đăng ký.",
+          "① Thông tin cá nhân được lưu giữ cho đến khi thành viên hủy đăng ký, và {{brandName}} lưu giữ thông tin thành viên cho đến thời điểm hủy đăng ký.",
           "② Thành viên có thể sử dụng dịch vụ cho đến khi tự mình hủy đăng ký."
         ]
       },
       {
-        "heading": "Điều 10 (Nghĩa vụ của HiFive English)",
+        "heading": "Điều 10 (Nghĩa vụ của {{brandName}})",
         "paragraphs": [
-          "① HiFive English không thực hiện hành vi bị pháp luật và điều khoản này cấm hoặc trái với thuần phong mỹ tục, và nỗ lực cung cấp dịch vụ liên tục, ổn định theo quy định của điều khoản này.",
-          "② HiFive English xây dựng hệ thống bảo mật để bảo vệ thông tin cá nhân (bao gồm thông tin tín dụng) của người dùng, để người dùng có thể sử dụng \"Dịch vụ\" một cách an toàn.",
-          "③ HiFive English không gửi email quảng cáo mang tính thương mại mà người dùng không mong muốn."
+          "① {{brandName}} không thực hiện hành vi bị pháp luật và điều khoản này cấm hoặc trái với thuần phong mỹ tục, và nỗ lực cung cấp dịch vụ liên tục, ổn định theo quy định của điều khoản này.",
+          "② {{brandName}} xây dựng hệ thống bảo mật để bảo vệ thông tin cá nhân (bao gồm thông tin tín dụng) của người dùng, để người dùng có thể sử dụng \"Dịch vụ\" một cách an toàn.",
+          "③ {{brandName}} không gửi email quảng cáo mang tính thương mại mà người dùng không mong muốn."
         ]
       },
       {
         "heading": "Điều 11 (Nghĩa vụ của người dùng đối với ID và mật khẩu)",
         "paragraphs": [
-          "① Trừ trường hợp HiFive English chịu trách nhiệm theo pháp luật liên quan hoặc \"Chính sách bảo mật\", mỗi người dùng chịu trách nhiệm quản lý ID và mật khẩu của mình.",
+          "① Trừ trường hợp {{brandName}} chịu trách nhiệm theo pháp luật liên quan hoặc \"Chính sách bảo mật\", mỗi người dùng chịu trách nhiệm quản lý ID và mật khẩu của mình.",
           "② Người dùng không được để bên thứ ba sử dụng ID và mật khẩu của mình."
         ]
       },
@@ -227,33 +227,33 @@
         "heading": "Điều 12 (Nghĩa vụ của người dùng)",
         "paragraphs": [
           "(1) Khi đăng ký thành viên hoặc thay đổi thông tin thành viên, người dùng phải điền đầy đủ thông tin bằng tên thật và dựa trên sự thật, và không được chủ trương bất kỳ quyền lợi nào nếu đăng ký thông tin sai lệch hoặc thông tin của người khác.",
-          "(2) Thành viên phải tuân thủ các quy định của điều khoản này và các quy định khác, thông báo do HiFive English công bố cũng như pháp luật liên quan, và không được thực hiện hành vi cản trở công việc của HiFive English hoặc gây tổn hại đến uy tín của HiFive English.",
-          "(3) Khi các nội dung hợp đồng sử dụng như địa chỉ, thông tin liên hệ, địa chỉ email thay đổi, thành viên phải thông báo ngay cho HiFive English qua thủ tục tương ứng.",
-          "(4) Trừ trường hợp HiFive English chịu trách nhiệm theo pháp luật liên quan và 'Chính sách bảo mật', mọi hậu quả phát sinh do việc quản lý mật khẩu ID của thành viên không cẩn thận, sử dụng sai mục đích đều do thành viên chịu trách nhiệm.",
-          "(5) Thành viên không được sử dụng dịch vụ để tiến hành hoạt động kinh doanh khi chưa có sự đồng ý trước của HiFive English, và HiFive English không chịu trách nhiệm về kết quả của hoạt động kinh doanh đó. Ngoài ra, nếu HiFive English bị thiệt hại do hoạt động kinh doanh như vậy của thành viên, thành viên có nghĩa vụ bồi thường thiệt hại cho HiFive English, và HiFive English có thể hạn chế việc sử dụng dịch vụ của thành viên đó và yêu cầu bồi thường thiệt hại thông qua thủ tục hợp pháp.",
-          "(6) Thành viên không được chuyển nhượng, tặng cho quyền sử dụng dịch vụ hoặc vị trí khác theo hợp đồng sử dụng cho người khác, cũng như không được dùng làm tài sản thế chấp, khi chưa có sự đồng ý rõ ràng của HiFive English.",
-          "(7) Thành viên không được xâm phạm quyền sở hữu trí tuệ của HiFive English và bên thứ ba.",
-          "(8) Thành viên không được thực hiện các hành vi sau đây, và nếu thực hiện các hành vi đó, HiFive English có thể áp dụng chế tài đối với thành viên, bao gồm hạn chế sử dụng dịch vụ và biện pháp hợp pháp.",
+          "(2) Thành viên phải tuân thủ các quy định của điều khoản này và các quy định khác, thông báo do {{brandName}} công bố cũng như pháp luật liên quan, và không được thực hiện hành vi cản trở công việc của {{brandName}} hoặc gây tổn hại đến uy tín của {{brandName}}.",
+          "(3) Khi các nội dung hợp đồng sử dụng như địa chỉ, thông tin liên hệ, địa chỉ email thay đổi, thành viên phải thông báo ngay cho {{brandName}} qua thủ tục tương ứng.",
+          "(4) Trừ trường hợp {{brandName}} chịu trách nhiệm theo pháp luật liên quan và 'Chính sách bảo mật', mọi hậu quả phát sinh do việc quản lý mật khẩu ID của thành viên không cẩn thận, sử dụng sai mục đích đều do thành viên chịu trách nhiệm.",
+          "(5) Thành viên không được sử dụng dịch vụ để tiến hành hoạt động kinh doanh khi chưa có sự đồng ý trước của {{brandName}}, và {{brandName}} không chịu trách nhiệm về kết quả của hoạt động kinh doanh đó. Ngoài ra, nếu {{brandName}} bị thiệt hại do hoạt động kinh doanh như vậy của thành viên, thành viên có nghĩa vụ bồi thường thiệt hại cho {{brandName}}, và {{brandName}} có thể hạn chế việc sử dụng dịch vụ của thành viên đó và yêu cầu bồi thường thiệt hại thông qua thủ tục hợp pháp.",
+          "(6) Thành viên không được chuyển nhượng, tặng cho quyền sử dụng dịch vụ hoặc vị trí khác theo hợp đồng sử dụng cho người khác, cũng như không được dùng làm tài sản thế chấp, khi chưa có sự đồng ý rõ ràng của {{brandName}}.",
+          "(7) Thành viên không được xâm phạm quyền sở hữu trí tuệ của {{brandName}} và bên thứ ba.",
+          "(8) Thành viên không được thực hiện các hành vi sau đây, và nếu thực hiện các hành vi đó, {{brandName}} có thể áp dụng chế tài đối với thành viên, bao gồm hạn chế sử dụng dịch vụ và biện pháp hợp pháp.",
           "* Hành vi đăng ký nội dung sai sự thật khi đăng ký thành viên hoặc thay đổi thông tin thành viên",
           "* Hành vi đánh cắp ID, mật khẩu, số đăng ký cư trú của người dùng khác",
           "* Hành vi giao dịch ID người dùng với người khác",
-          "* Hành vi mạo danh ban điều hành, nhân viên hoặc người liên quan của HiFive English",
-          "* Hành vi thay đổi chương trình khách hàng của HiFive English, xâm nhập máy chủ của HiFive English, hoặc tự ý thay đổi một phần hoặc toàn bộ trang web hoặc thông tin đã đăng tải mà không được HiFive English cấp quyền đặc biệt",
+          "* Hành vi mạo danh ban điều hành, nhân viên hoặc người liên quan của {{brandName}}",
+          "* Hành vi thay đổi chương trình khách hàng của {{brandName}}, xâm nhập máy chủ của {{brandName}}, hoặc tự ý thay đổi một phần hoặc toàn bộ trang web hoặc thông tin đã đăng tải mà không được {{brandName}} cấp quyền đặc biệt",
           "* Hành vi gây hại hoặc cố ý cản trở dịch vụ",
-          "* Hành vi sao chép thông tin có được thông qua dịch vụ này cho mục đích khác ngoài việc sử dụng dịch vụ, sử dụng để xuất bản, phát sóng, hoặc cung cấp cho bên thứ ba mà không có sự đồng ý trước của HiFive English",
+          "* Hành vi sao chép thông tin có được thông qua dịch vụ này cho mục đích khác ngoài việc sử dụng dịch vụ, sử dụng để xuất bản, phát sóng, hoặc cung cấp cho bên thứ ba mà không có sự đồng ý trước của {{brandName}}",
           "* Hành vi truyền tải, đăng tải, gửi email hoặc phổ biến cho người khác bằng phương thức khác các thông tin, câu văn, hình ảnh, âm thanh, video có nội dung thô tục, khiêu dâm vi phạm trật tự công cộng và thuần phong mỹ tục",
           "* Hành vi truyền tải, đăng tải, gửi email hoặc phổ biến cho người khác bằng phương thức khác nội dung mang tính xúc phạm hoặc liên quan đến đời tư cá nhân có thể xâm phạm danh dự hoặc quyền riêng tư của người khác",
           "* Hành vi quấy rối hoặc đe dọa người dùng khác, hoặc liên tục gây đau khổ hoặc bất tiện cho một người dùng cụ thể",
-          "* Hành vi thu thập hoặc lưu trữ thông tin cá nhân của người dùng khác mà không có sự chấp thuận của HiFive English",
+          "* Hành vi thu thập hoặc lưu trữ thông tin cá nhân của người dùng khác mà không có sự chấp thuận của {{brandName}}",
           "* Hành vi được đánh giá khách quan là liên quan đến tội phạm",
-          "* Hành vi vi phạm điều khoản này và các quy định hoặc điều kiện sử dụng khác do HiFive English quy định",
+          "* Hành vi vi phạm điều khoản này và các quy định hoặc điều kiện sử dụng khác do {{brandName}} quy định",
           "* Các hành vi khác vi phạm pháp luật liên quan"
         ]
       },
       {
         "heading": "Điều 13 (Xóa bài đăng công khai)",
         "paragraphs": [
-          "Nếu nội dung bài đăng công khai của người dùng thuộc một trong các trường hợp sau, HiFive English có thể xóa bài đăng công khai đó mà không cần thông báo trước cho người dùng, và có thể hạn chế, đình chỉ hoặc tước tư cách thành viên của người dùng đó.",
+          "Nếu nội dung bài đăng công khai của người dùng thuộc một trong các trường hợp sau, {{brandName}} có thể xóa bài đăng công khai đó mà không cần thông báo trước cho người dùng, và có thể hạn chế, đình chỉ hoặc tước tư cách thành viên của người dùng đó.",
           "1. Nội dung phỉ báng người dùng khác hoặc bên thứ ba, hoặc làm tổn hại danh dự bằng cách vu khống.",
           "2. Nội dung phổ biến thông tin, câu văn, hình ảnh vi phạm thuần phong mỹ tục.",
           "3. Nội dung được đánh giá là có liên quan đến hành vi phạm tội.",
@@ -264,22 +264,22 @@
       {
         "heading": "Điều 14 (Bản quyền đối với bài đăng)",
         "paragraphs": [
-          "(1) Bản quyền đối với bài đăng mà thành viên đăng tải trên màn hình dịch vụ thuộc về thành viên đã đăng bài đó. Ngoài ra, HiFive English không được sử dụng bài đăng vì mục đích thương mại khi chưa có sự đồng ý của người đăng, trừ trường hợp vì mục đích phi lợi nhuận, và HiFive English có quyền đăng tải bài viết đó trong phạm vi dịch vụ.",
+          "(1) Bản quyền đối với bài đăng mà thành viên đăng tải trên màn hình dịch vụ thuộc về thành viên đã đăng bài đó. Ngoài ra, {{brandName}} không được sử dụng bài đăng vì mục đích thương mại khi chưa có sự đồng ý của người đăng, trừ trường hợp vì mục đích phi lợi nhuận, và {{brandName}} có quyền đăng tải bài viết đó trong phạm vi dịch vụ.",
           "(2) Thành viên không được sử dụng vì mục đích thương mại các tài liệu được đăng tải trong dịch vụ, bao gồm hành vi tự ý xử lý, bán lại thông tin có được thông qua việc sử dụng dịch vụ."
         ]
       },
       {
         "heading": "Điều 15 (Sửa đổi điều khoản)",
         "paragraphs": [
-          "① HiFive English có thể sửa đổi điều khoản này trong phạm vi không vi phạm các luật liên quan như Luật về quy chế điều khoản hợp đồng, Luật cơ bản về giao dịch điện tử, Luật chữ ký điện tử, Luật xúc tiến sử dụng mạng thông tin và truyền thông, v.v.",
-          "② Khi sửa đổi điều khoản này, HiFive English sẽ nêu rõ ngày áp dụng và lý do sửa đổi, thông báo cùng với điều khoản hiện hành trên màn hình ban đầu từ ít nhất 7 ngày trước ngày áp dụng cho đến trước ngày áp dụng.",
-          "③ \"Người dùng\" có quyền từ chối điều khoản đã thay đổi. \"Người dùng\" có thể bày tỏ ý định từ chối trong vòng 15 ngày kể từ khi điều khoản thay đổi được thông báo. Nếu \"người dùng\" từ chối, HiFive English có thể chấm dứt hợp đồng với \"người dùng\" đó. Nếu \"người dùng\" không bày tỏ ý định từ chối trong vòng 15 ngày kể từ khi điều khoản thay đổi được thông báo, sẽ được coi là đã đồng ý."
+          "① {{brandName}} có thể sửa đổi điều khoản này trong phạm vi không vi phạm các luật liên quan như Luật về quy chế điều khoản hợp đồng, Luật cơ bản về giao dịch điện tử, Luật chữ ký điện tử, Luật xúc tiến sử dụng mạng thông tin và truyền thông, v.v.",
+          "② Khi sửa đổi điều khoản này, {{brandName}} sẽ nêu rõ ngày áp dụng và lý do sửa đổi, thông báo cùng với điều khoản hiện hành trên màn hình ban đầu từ ít nhất 7 ngày trước ngày áp dụng cho đến trước ngày áp dụng.",
+          "③ \"Người dùng\" có quyền từ chối điều khoản đã thay đổi. \"Người dùng\" có thể bày tỏ ý định từ chối trong vòng 15 ngày kể từ khi điều khoản thay đổi được thông báo. Nếu \"người dùng\" từ chối, {{brandName}} có thể chấm dứt hợp đồng với \"người dùng\" đó. Nếu \"người dùng\" không bày tỏ ý định từ chối trong vòng 15 ngày kể từ khi điều khoản thay đổi được thông báo, sẽ được coi là đã đồng ý."
         ]
       },
       {
         "heading": "Điều 16 (Thẩm quyền xét xử)",
         "paragraphs": [
-          "Đối với tranh chấp liên quan đến việc sử dụng dịch vụ phát sinh giữa HiFive English và người dùng, áp dụng pháp luật Đại Hàn Dân Quốc, và vụ kiện phát sinh từ tranh chấp này sẽ được đệ trình lên tòa án của Đại Hàn Dân Quốc có thẩm quyền theo Luật Tố tụng dân sự."
+          "Đối với tranh chấp liên quan đến việc sử dụng dịch vụ phát sinh giữa {{brandName}} và người dùng, áp dụng pháp luật Đại Hàn Dân Quốc, và vụ kiện phát sinh từ tranh chấp này sẽ được đệ trình lên tòa án của Đại Hàn Dân Quốc có thẩm quyền theo Luật Tố tụng dân sự."
         ]
       }
     ],

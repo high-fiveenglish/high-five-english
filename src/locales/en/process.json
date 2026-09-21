@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "Enrollment Process | HiFive English",
-    "description": "From a free level test to your first class — here's how to get started with HiFive English."
+    "title": "Enrollment Process | {{brandName}}",
+    "description": "From a free level test to your first class — here's how to get started with {{brandName}}."
   },
   "hero": {
     "eyebrow": "Enrollment Process",
@@ -9,7 +9,12 @@
     "headingLine2": "Try it first — completely free.",
     "paragraph": "The level test, trial class, and consultation are all completely free. Signing up doesn't mean you have to pay right away — take your time, check everything out, and decide whenever you're ready."
   },
-  "reassurance": ["Free sign-up", "Free level test", "Free trial class", "Decide after consultation"],
+  "reassurance": [
+    "Free sign-up",
+    "Free level test",
+    "Free trial class",
+    "Decide after consultation"
+  ],
   "levelTestCta": "Sign Up for a Free Level Test",
   "steps": {
     "1": {
@@ -19,7 +24,13 @@
     "2": {
       "title": "Apply for a Level Test",
       "desc": "Just enter your preferred date and time, learning goals, and desired course to complete your application. Within 1-2 days, a learning manager will contact you directly to confirm your schedule and discuss the right class direction for you.",
-      "bullets": ["Class time", "Number of sessions", "Materials", "Class style", "Recommended course"],
+      "bullets": [
+        "Class time",
+        "Number of sessions",
+        "Materials",
+        "Class style",
+        "Recommended course"
+      ],
       "note": "This isn't just about booking a test slot — from the very start, we work together to find the class direction that's right for you."
     },
     "3": {
@@ -33,7 +44,13 @@
     "5": {
       "title": "Enrollment Consultation",
       "desc": "After reviewing your results, you'll consult with a learning manager to decide on the course that's right for you. There's no pressure to enroll at this stage — take your time and decide whenever you feel ready.",
-      "bullets": ["Recommended course", "Class time", "Number of sessions", "Materials", "Class style"]
+      "bullets": [
+        "Recommended course",
+        "Class time",
+        "Number of sessions",
+        "Materials",
+        "Class style"
+      ]
     },
     "6": {
       "title": "Tuition Payment",
@@ -42,7 +59,12 @@
     "7": {
       "title": "Check Your Schedule",
       "desc": "You can check your class days and times, assigned tutor, and course details on your My Page. Take a moment beforehand to check your class setup and get ready.",
-      "bullets": ["Class days", "Class time", "Assigned tutor", "Course"]
+      "bullets": [
+        "Class days",
+        "Class time",
+        "Assigned tutor",
+        "Course"
+      ]
     },
     "8": {
       "title": "Regular Classes Begin",

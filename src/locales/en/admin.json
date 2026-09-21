@@ -28,7 +28,11 @@
     "save_permissions": "Save Permissions",
     "saving": "Saving...",
     "all_accounts_title": "All Accounts",
-    "table_headers": { "id": "ID", "name": "Name", "role": "Role" },
+    "table_headers": {
+      "id": "ID",
+      "name": "Name",
+      "role": "Role"
+    },
     "roles": {
       "general_manager": "General Manager",
       "general_admin": "General Administrator",
@@ -74,7 +78,11 @@
       "academy_closed": "Academy Closed",
       "admin_cancelled": "Admin Cancelled"
     },
-    "initiated_by_labels": { "student": "Student", "teacher": "Teacher", "admin": "Admin" },
+    "initiated_by_labels": {
+      "student": "Student",
+      "teacher": "Teacher",
+      "admin": "Admin"
+    },
     "reason_label": "Reason",
     "status_applied": "Applied",
     "status_reverted": "Reverted"
@@ -110,7 +118,13 @@
   "notices": {
     "admin_title": "Teacher Notices",
     "admin_description": "Notices written here only appear on the teacher page's Bulletin Board. Students and visitors cannot see them.",
-    "table_headers": { "title": "Title", "author": "Author", "created_at": "Created", "status": "Status", "actions": "Actions" },
+    "table_headers": {
+      "title": "Title",
+      "author": "Author",
+      "created_at": "Created",
+      "status": "Status",
+      "actions": "Actions"
+    },
     "no_rows": "No notices yet.",
     "new_button": "New Notice",
     "create_title": "Write Notice",
@@ -151,7 +165,10 @@
     "age_value": "age {{age}}",
     "kst_label": "KST",
     "min_suffix": " min",
-    "status_labels": { "new": "New", "contacted": "Contacted" }
+    "status_labels": {
+      "new": "New",
+      "contacted": "Contacted"
+    }
   },
   "pricing": {
     "admin_title": "Pricing",
