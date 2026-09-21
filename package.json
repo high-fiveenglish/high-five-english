@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:tenant": "node scripts/buildForTenant.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run"
