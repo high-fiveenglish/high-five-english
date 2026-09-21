@@ -169,6 +169,9 @@ model Agent {
   bizCeo     String?
   bizRegNo   String?
   bizAddress String?
+  bizPhone       String?
+  bizEmail       String?
+  bizMailOrderNo String?
   // 무통장입금 계좌 정보.
   bankName          String?
   bankAccountNumber String?

@@ -2,11 +2,14 @@ import { useTranslation } from "react-i18next";
 import { ArrowRight, Quote } from "lucide-react";
 import { Container } from "../ui/Container";
 import { LocalizedLink } from "../i18n/LocalizedLink";
-
-const CEO_NAME = "우종범";
+import { useTenant } from "../../context/TenantContext";
 
 export function AboutTeaserSection() {
   const { t } = useTranslation("home");
+  const tenant = useTenant();
+  // /about 페이지와 동일하게, 서사(문구·연혁)는 그대로 두고 대표 이름만 협력사
+  // 대표로 바꿔 보여준다.
+  const ceoName = tenant.biz.ceo ?? "우종범";
   return (
     <section className="bg-white py-20 sm:py-24">
       <Container className="grid items-center gap-10 lg:grid-cols-[0.85fr_1.15fr]">
@@ -20,10 +23,10 @@ export function AboutTeaserSection() {
           </p>
           <div className="mt-6 flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">
-              {CEO_NAME}
+              {ceoName}
             </div>
             <div>
-              <p className="text-sm font-bold text-brand-950">{t("aboutTeaser.ceo_display", { name: CEO_NAME })}</p>
+              <p className="text-sm font-bold text-brand-950">{t("aboutTeaser.ceo_display", { name: ceoName })}</p>
               <p className="text-xs text-slate-400">{t("aboutTeaser.company_tagline")}</p>
             </div>
           </div>

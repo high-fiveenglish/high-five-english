@@ -16,6 +16,11 @@ export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
     ceo: tenant.biz.ceo ?? CONTACT.company.ceo,
     bizRegNo: tenant.biz.regNo ?? CONTACT.company.bizRegNo,
     address: tenant.biz.address ?? CONTACT.company.address,
+    // 상담전화/이메일/통신판매업신고번호는 본사 기본값이 아직 없어 협력사에만 값이
+    // 있을 때만 표시한다(비어있으면 행 자체를 렌더링하지 않음).
+    phone: tenant.biz.phone,
+    email: tenant.biz.email,
+    mailOrderNo: tenant.biz.mailOrderNo,
   };
   const bank = {
     bankName: tenant.bank.name ?? CONTACT.bank.bankName,
@@ -50,6 +55,24 @@ export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
                 <dt className="shrink-0 text-white/35">{t("footer.address_label")}</dt>
                 <dd>{company.address}</dd>
               </div>
+              {company.phone && (
+                <div className="flex gap-1.5">
+                  <dt className="shrink-0 text-white/35">{t("footer.phone_label")}</dt>
+                  <dd>{company.phone}</dd>
+                </div>
+              )}
+              {company.email && (
+                <div className="flex gap-1.5">
+                  <dt className="shrink-0 text-white/35">{t("footer.email_label")}</dt>
+                  <dd>{company.email}</dd>
+                </div>
+              )}
+              {company.mailOrderNo && (
+                <div className="flex gap-1.5">
+                  <dt className="shrink-0 text-white/35">{t("footer.mail_order_no_label")}</dt>
+                  <dd>{company.mailOrderNo}</dd>
+                </div>
+              )}
               <div className="flex items-center gap-1.5 pt-1">
                 <Globe size={13} className="shrink-0 text-accent-400" />
                 <dd className="font-medium text-white/70">{tenant.domain ?? CONTACT.website}</dd>

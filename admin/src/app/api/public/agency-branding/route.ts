@@ -41,6 +41,9 @@ export async function GET(request: Request) {
         ceo: agent.bizCeo,
         regNo: agent.bizRegNo,
         address: agent.bizAddress,
+        phone: agent.bizPhone,
+        email: agent.bizEmail,
+        mailOrderNo: agent.bizMailOrderNo,
       },
       bank: {
         name: agent.bankName,

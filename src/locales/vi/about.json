@@ -6,14 +6,14 @@
   "page_header": {
     "eyebrow": "Giới thiệu",
     "title": "Câu chuyện của HiFive English",
-    "subtitle": "Đây là những trăn trở của người sáng lập 우종범 trong suốt 12 năm điều hành chương trình tiếng Anh trực tuyến, và những gì HiFive English đang xây dựng ngay lúc này."
+    "subtitle": "Đây là những trăn trở của người sáng lập {{ceoName}} trong suốt 12 năm điều hành chương trình tiếng Anh trực tuyến, và những gì HiFive English đang xây dựng ngay lúc này."
   },
   "ceo_letter": {
-    "avatar_initial": "우종범",
-    "author_label": "Tâm thư từ nhà sáng lập 우종범",
+    "avatar_initial": "{{ceoName}}",
+    "author_label": "Tâm thư từ nhà sáng lập {{ceoName}}",
     "author_sub": "HiFive English · 12 năm trong lĩnh vực giáo dục tiếng Anh trực tuyến",
     "paragraphs_1": [
-      "Xin chào, tôi là 우종범, nhà sáng lập HiFive English.",
+      "Xin chào, tôi là {{ceoName}}, nhà sáng lập HiFive English.",
       "Tính đến năm 2026, đã 12 năm kể từ khi tôi bắt đầu sự nghiệp giáo dục tiếng Anh trực tuyến này.",
       "Trong suốt thời gian đó, tôi đã gặp gỡ vô số học sinh, phụ huynh, và các giáo viên từng đồng hành cùng mình. Trong ngần ấy thời gian, có một câu hỏi mà tôi luôn trăn trở nhiều nhất."
     ],
@@ -34,7 +34,7 @@
       "HiFive English sẽ không dừng lại ở hình hài hiện tại, mà sẽ tiếp tục thay đổi trong thời gian tới."
     ],
     "signoff_label": "Nhà sáng lập HiFive English",
-    "signoff_name": "우종범"
+    "signoff_name": "{{ceoName}}"
   },
   "trust_section": {
     "title": "Chúng tôi được biết đến qua những đánh giá thực tế, thay vì quảng cáo",

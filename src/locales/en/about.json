@@ -6,14 +6,14 @@
   "page_header": {
     "eyebrow": "About Us",
     "title": "The HiFive English Story",
-    "subtitle": "Here's an honest look at what our founder, 우종범, has wrestled with over 12 years of running a video English program — and what HiFive English is building today."
+    "subtitle": "Here's an honest look at what our founder, {{ceoName}}, has wrestled with over 12 years of running a video English program — and what HiFive English is building today."
   },
   "ceo_letter": {
-    "avatar_initial": "우종범",
-    "author_label": "A letter from our founder, 우종범",
+    "avatar_initial": "{{ceoName}}",
+    "author_label": "A letter from our founder, {{ceoName}}",
     "author_sub": "HiFive English · 12 years in video English education",
     "paragraphs_1": [
-      "Hello, I'm 우종범, founder of HiFive English.",
+      "Hello, I'm {{ceoName}}, founder of HiFive English.",
       "As of 2026, it's been 12 years since I started this video English education business.",
       "In that time, I've met countless students, parents, and teachers who worked alongside me. Through it all, one question has stayed with me longer than any other."
     ],
@@ -34,7 +34,7 @@
       "HiFive English won't stay exactly as it is today. It will keep changing."
     ],
     "signoff_label": "Founder, HiFive English",
-    "signoff_name": "우종범"
+    "signoff_name": "{{ceoName}}"
   },
   "trust_section": {
     "title": "We've grown through real stories, not advertising",

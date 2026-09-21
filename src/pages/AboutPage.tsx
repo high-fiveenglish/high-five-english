@@ -15,6 +15,7 @@ import { SectionHeading } from "../components/ui/SectionHeading";
 import { FaqAccordion, type FaqEntry } from "../components/ui/FaqAccordion";
 import { SeoHead } from "../components/seo/SeoHead";
 import { OUTPUT_STEPS } from "../data/aboutContent";
+import { useTenant } from "../context/TenantContext";
 
 const STEP_ICONS = {
   Ear,
@@ -27,9 +28,14 @@ const STEP_ICONS = {
 
 export function AboutPage() {
   const { t } = useTranslation("about");
+  const tenant = useTenant();
+  // 회사소개 서사(12년 경력, 개인 소회 등)는 협력사 사이트에서도 그대로 유지하고,
+  // 대표 이름만 협력사 대표로 바꿔 보여준다 — 관리자 요청에 따른 의도적 선택.
+  const ceoName = tenant.biz.ceo ?? "우종범";
 
   const ceoParagraphs1 = t("ceo_letter.paragraphs_1", {
     returnObjects: true,
+    ceoName,
   }) as string[];
   const ceoParagraphs2 = t("ceo_letter.paragraphs_2", {
     returnObjects: true,
@@ -70,7 +76,7 @@ export function AboutPage() {
             {t("page_header.title")}
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-slate-500">
-            {t("page_header.subtitle")}
+            {t("page_header.subtitle", { ceoName })}
           </p>
         </Container>
       </section>
@@ -80,11 +86,11 @@ export function AboutPage() {
         <Container className="max-w-3xl">
           <div className="mb-8 flex items-center gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-base font-bold text-white">
-              {t("ceo_letter.avatar_initial")}
+              {t("ceo_letter.avatar_initial", { ceoName })}
             </div>
             <div>
               <p className="text-sm font-bold text-brand-950">
-                {t("ceo_letter.author_label")}
+                {t("ceo_letter.author_label", { ceoName })}
               </p>
               <p className="text-xs text-slate-400">
                 {t("ceo_letter.author_sub")}
@@ -123,7 +129,7 @@ export function AboutPage() {
             {t("ceo_letter.signoff_label")}
             <br />
             <span className="text-base font-bold text-brand-950">
-              {t("ceo_letter.signoff_name")}
+              {t("ceo_letter.signoff_name", { ceoName })}
             </span>
           </div>
         </Container>

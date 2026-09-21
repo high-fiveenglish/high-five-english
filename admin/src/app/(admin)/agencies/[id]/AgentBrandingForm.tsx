@@ -38,6 +38,15 @@ export function AgentBrandingForm({ agent }: { agent: Agent }) {
           <Field label="주소">
             <input name="bizAddress" defaultValue={agent.bizAddress ?? ""} className="input" />
           </Field>
+          <Field label="상담전화">
+            <input name="bizPhone" defaultValue={agent.bizPhone ?? ""} className="input" />
+          </Field>
+          <Field label="이메일">
+            <input name="bizEmail" defaultValue={agent.bizEmail ?? ""} className="input" />
+          </Field>
+          <Field label="통신판매업신고번호">
+            <input name="bizMailOrderNo" defaultValue={agent.bizMailOrderNo ?? ""} className="input" />
+          </Field>
         </div>
       </Section>
 

@@ -13,7 +13,15 @@ export type AgencyBranding = {
   domain: string | null;
   logoUrl: string | null;
   brandTagline: string | null;
-  biz: { name: string | null; ceo: string | null; regNo: string | null; address: string | null };
+  biz: {
+    name: string | null;
+    ceo: string | null;
+    regNo: string | null;
+    address: string | null;
+    phone: string | null;
+    email: string | null;
+    mailOrderNo: string | null;
+  };
   bank: { name: string | null; accountNumber: string | null; accountHolder: string | null };
 };
 
@@ -30,6 +38,9 @@ export const DEFAULT_BRANDING: AgencyBranding = {
     ceo: "우종범",
     regNo: "328-11-02334",
     address: "인천광역시 부평구 충선로 87번길 10",
+    phone: null,
+    email: null,
+    mailOrderNo: null,
   },
   bank: { name: "신한은행", accountNumber: "110-288-553436", accountHolder: "하이파이브 잉글리쉬(우종범)" },
 };
