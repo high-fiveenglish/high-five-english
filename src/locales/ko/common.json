@@ -24,6 +24,7 @@
   "topbar": {
     "home": "홈",
     "login": "로그인",
+    "signup": "회원가입",
     "find_account": "ID/PW 찾기",
     "welcome": "<b>{{name}}</b>님, 환영합니다",
     "my_classroom": "내 강의실",

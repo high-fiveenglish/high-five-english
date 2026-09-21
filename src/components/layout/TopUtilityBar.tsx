@@ -85,6 +85,9 @@ export function TopUtilityBar({
             <button onClick={onOpenLogin} className="transition hover:text-white">
               {t("topbar.login")}
             </button>
+            <LocalizedLink to="/signup" className="transition hover:text-white">
+              {t("topbar.signup")}
+            </LocalizedLink>
             <button onClick={onOpenFind} className="transition hover:text-white">
               {t("topbar.find_account")}
             </button>

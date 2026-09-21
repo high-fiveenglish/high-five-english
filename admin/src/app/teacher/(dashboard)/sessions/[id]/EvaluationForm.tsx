@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { TEXTBOOK_OPTIONS } from "@/lib/textbookCatalog";
 import { saveEvaluation } from "./actions";
 
 const MAX_LENGTH = 2000;
@@ -8,10 +9,14 @@ const MAX_LENGTH = 2000;
 export function EvaluationForm({
   sessionId,
   defaultContent,
+  defaultTextbook,
+  defaultProgress,
   onSaved,
 }: {
   sessionId: number;
   defaultContent: string;
+  defaultTextbook: string;
+  defaultProgress: string;
   onSaved?: () => void;
 }) {
   const action = saveEvaluation.bind(null, sessionId);
@@ -29,6 +34,32 @@ export function EvaluationForm({
 
   return (
     <form action={formAction} className="flex max-w-2xl flex-col gap-3">
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-600">Textbook</span>
+          <select
+            name="textbookName"
+            defaultValue={defaultTextbook}
+            className="rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none focus:border-slate-500"
+          >
+            <option value="">Select</option>
+            {TEXTBOOK_OPTIONS.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-600">Progress</span>
+          <input
+            name="progressNote"
+            defaultValue={defaultProgress}
+            placeholder="e.g. Chapter 5, page 20"
+            className="rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none focus:border-slate-500"
+          />
+        </label>
+      </div>
       <textarea
         name="content"
         value={content}

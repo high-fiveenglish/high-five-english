@@ -6,12 +6,16 @@ import { EvaluationForm } from "../sessions/[id]/EvaluationForm";
 export function EvaluationModal({
   sessionId,
   defaultContent,
+  defaultTextbook,
+  defaultProgress,
   studentLabel,
   metaLine,
   onClose,
 }: {
   sessionId: number;
   defaultContent: string;
+  defaultTextbook: string;
+  defaultProgress: string;
   studentLabel: string;
   metaLine: string;
   onClose: () => void;
@@ -43,6 +47,8 @@ export function EvaluationModal({
         <EvaluationForm
           sessionId={sessionId}
           defaultContent={defaultContent}
+          defaultTextbook={defaultTextbook}
+          defaultProgress={defaultProgress}
           onSaved={() => {
             router.refresh();
             onClose();

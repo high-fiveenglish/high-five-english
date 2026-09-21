@@ -1,7 +1,20 @@
+import { useTenant } from "../../context/TenantContext";
+
 const SHIELD_PATH =
   "M14 2 L86 2 Q92 2 92 8 L92 60 C92 80 74 94 50 104 C26 94 8 80 8 60 L8 8 Q8 2 14 2 Z";
 
 export function BrandMark({ size = 40 }: { size?: number }) {
+  const { logoUrl, name } = useTenant();
+
+  // 협력사가 자체 로고를 올려뒀으면(logoUrl) 그 이미지를 그대로 쓰고, 없으면(본사,
+  // 또는 아직 로고를 안 올린 협력사) 기존 방패 모양 마크를 그대로 보여준다.
+  if (logoUrl) {
+    return (
+      // eslint-disable-next-line jsx-a11y/alt-text -- alt는 아래에서 동적으로 전달됨
+      <img src={logoUrl} alt={name} width={size} height={size} className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />
+    );
+  }
+
   return (
     <svg
       width={size}

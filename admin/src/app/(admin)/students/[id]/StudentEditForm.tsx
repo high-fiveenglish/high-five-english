@@ -25,6 +25,7 @@ export type StudentEditValues = {
   teamsId: string | null;
   kakaoId: string | null;
   wechatId: string | null;
+  consultRoute: string | null;
   referrerId: string | null;
 };
 
@@ -120,6 +121,13 @@ export function StudentEditForm({
           </Field>
           <Field label="위챗 ID (선택)">
             <input name="wechatId" defaultValue={s.wechatId ?? ""} className="input" />
+          </Field>
+          <Field label="상담루트 (선택)">
+            <select name="consultRoute" defaultValue={s.consultRoute ?? ""} className="input">
+              <option value="">선택 안 함</option>
+              <option value="KAKAOTALK">카카오톡</option>
+              <option value="WECHAT">위챗</option>
+            </select>
           </Field>
         </div>
       </Section>

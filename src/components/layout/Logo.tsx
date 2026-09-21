@@ -1,9 +1,13 @@
 import { useTranslation } from "react-i18next";
 import { BrandMark } from "./BrandMark";
 import { LocalizedLink } from "../i18n/LocalizedLink";
+import { useTenant } from "../../context/TenantContext";
 
 export function Logo({ compact = false }: { compact?: boolean }) {
   const { t } = useTranslation("common");
+  const tenant = useTenant();
+  const brandName = tenant.isHeadquarters ? t("footer.brand_name") : tenant.name;
+  const brandTagline = tenant.isHeadquarters ? t("footer.brand_tagline") : tenant.brandTagline;
 
   return (
     <LocalizedLink
@@ -20,11 +24,11 @@ export function Logo({ compact = false }: { compact?: boolean }) {
             compact ? "text-lg" : "text-xl sm:text-2xl"
           }`}
         >
-          {t("footer.brand_name")}
+          {brandName}
         </span>
-        {!compact && (
+        {!compact && brandTagline && (
           <span className="text-[11px] font-medium tracking-wide text-slate-400">
-            {t("footer.brand_tagline")}
+            {brandTagline}
           </span>
         )}
       </span>

@@ -35,13 +35,31 @@ import {
   fetchRealClassroom,
   fetchRealEnrollmentHistory,
   requestRealReschedule,
+  requestRealHoldRelease,
   type RealClassroomSnapshot,
   type RealEnrollmentHistoryRow,
+  type RealEnrollmentStatus,
   type RealLesson,
 } from "./classroomBridgeService";
+import type { EnrollmentStatus } from "../lib/scheduling/types";
 
 let idCounter = 1000;
 const idGen = () => `svc-${++idCounter}`;
+
+// admin의 실제 EnrollmentStatus → 이 사이트 mock Enrollment.status로 변환한다.
+// PAID/APPLIED는 실 계정이 이 화면을 볼 시점엔 이미 정상 수강 중인 셈이라 "active"로
+// 합친다 — mock 상태값에는 그 구분이 아예 없다(접수 단계는 수강신청 리드일 뿐 아직
+// "내 강의실"에 뜨는 수강 건이 아니므로).
+function mapRealEnrollmentStatus(status: RealEnrollmentStatus): EnrollmentStatus {
+  switch (status) {
+    case "COMPLETED":
+      return "completed";
+    case "HOLDING":
+      return "paused";
+    default:
+      return "active";
+  }
+}
 
 export interface MeetingPlatformRow {
   id: MeetingPlatformId;
@@ -221,7 +239,7 @@ async function getMyClassroomFromRealBackend(
     lessonDurationMin: snap.enrollment.classDurationMin,
     weeklyDays,
     classTime,
-    status: "active",
+    status: mapRealEnrollmentStatus(snap.enrollment.status),
     meetingPlatform: snap.enrollment.meetingPlatform,
     currentLevel: "b1",
   };
@@ -371,7 +389,7 @@ function buildHistoryRowFromReal(
     lessonDurationMin: row.enrollment.classDurationMin,
     weeklyDays,
     classTime,
-    status: "active",
+    status: mapRealEnrollmentStatus(row.enrollment.status),
     meetingPlatform: row.enrollment.meetingPlatform,
     currentLevel: "b1",
   };
@@ -577,6 +595,32 @@ export async function requestReschedule(
   store.rescheduleRequests = [...store.rescheduleRequests, result.value.rescheduleRequest];
 
   return okResult(result.value.rescheduleRequest);
+}
+
+/** "홀드 해제 요청" — 승인 대기 없이 요청 즉시 적용된다(학생 셀프 연기 신청과 같은
+ * 정책). 실 계정만 의미가 있다 — mock 계정은 Enrollment.status가 애초에 "paused"가
+ * 될 일이 없으므로(관리자 mock 패널에 홀드 개념이 없다) 호출될 일이 없지만, 방어적으로
+ * status만 "active"로 되돌려준다. */
+export async function requestHoldRelease(
+  actor: Actor,
+  enrollmentId: string,
+  apiToken?: string | null,
+): Promise<ServiceResult<void>> {
+  if (apiToken) {
+    const real = await requestRealHoldRelease(apiToken, Number(enrollmentId));
+    if (!real.ok) {
+      return errResult(real.error.code === "SESSION_EXPIRED" ? "UNAUTHENTICATED" : "NOT_FOUND", real.error.message);
+    }
+    return okResult(undefined);
+  }
+
+  const enrollment = store.enrollments.find((e) => e.id === enrollmentId);
+  if (!enrollment) return errResult("NOT_FOUND", "수강 정보를 찾을 수 없습니다.");
+  const guard = requireOwnStudent(actor, enrollment.studentId);
+  if (!guard.ok) return guard;
+
+  store.enrollments = store.enrollments.map((e) => (e.id === enrollmentId ? { ...e, status: "active" } : e));
+  return okResult(undefined);
 }
 
 export function enrollmentsLessonsForTeacher(teacherId: string): Lesson[] {

@@ -24,6 +24,7 @@
   "topbar": {
     "home": "首页",
     "login": "登录",
+    "signup": "注册",
     "find_account": "查找账号/密码",
     "welcome": "欢迎，<b>{{name}}</b>",
     "my_classroom": "我的教室",

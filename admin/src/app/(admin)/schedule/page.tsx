@@ -34,9 +34,9 @@ type ViewKey = "day" | "week";
 export default async function SchedulePage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; date?: string; month?: string; week?: string }>;
+  searchParams: Promise<{ view?: string; date?: string; month?: string; week?: string; page?: string }>;
 }) {
-  const { view: viewParam, date, month, week } = await searchParams;
+  const { view: viewParam, date, month, week, page } = await searchParams;
   const view: ViewKey = viewParam === "week" ? "week" : "day";
   const today = formatAppDate(new Date());
 
@@ -71,12 +71,29 @@ export default async function SchedulePage({
         </Link>
       </div>
 
-      {view === "day" ? <DayView date={date ?? today} month={month} today={today} /> : <WeekView week={week ?? mondayOf(today)} />}
+      {view === "day" ? (
+        <DayView date={date ?? today} month={month} today={today} page={page} />
+      ) : (
+        <WeekView week={week ?? mondayOf(today)} />
+      )}
     </div>
   );
 }
 
-async function DayView({ date, month, today }: { date: string; month?: string; today: string }) {
+const PAGE_SIZE = 20;
+
+async function DayView({
+  date,
+  month,
+  today,
+  page: pageParam,
+}: {
+  date: string;
+  month?: string;
+  today: string;
+  page?: string;
+}) {
+  const page = Math.max(1, Number(pageParam) || 1);
   const viewMonth = month ?? date.slice(0, 7);
   const monthStart = parseAppDateTime(`${viewMonth}-01T00:00`);
   const monthEnd = parseAppDateTime(`${addMonths(viewMonth, 1)}-01T00:00`);
@@ -92,7 +109,15 @@ async function DayView({ date, month, today }: { date: string; month?: string; t
     const key = formatAppDate(s.scheduledAt);
     byDate.set(key, [...(byDate.get(key) ?? []), s]);
   }
-  const selectedSessions = byDate.get(date) ?? [];
+  const selectedSessions = [...(byDate.get(date) ?? [])].sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
+  const totalPages = Math.max(1, Math.ceil(selectedSessions.length / PAGE_SIZE));
+  const pageSessions = selectedSessions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  function pageHref(p: number): string {
+    const params = new URLSearchParams({ view: "day", month: viewMonth, date });
+    if (p > 1) params.set("page", String(p));
+    return `/schedule?${params.toString()}`;
+  }
 
   const [y, m] = viewMonth.split("-").map(Number);
   const firstOfMonth = new Date(Date.UTC(y, m - 1, 1));
@@ -163,50 +188,78 @@ async function DayView({ date, month, today }: { date: string; month?: string; t
         <div className="border-b border-slate-100 px-4 py-3">
           <p className="text-sm font-bold text-slate-900">{date} 수업 ({selectedSessions.length}건)</p>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
-              <th className="px-4 py-3">시간</th>
-              <th className="px-4 py-3">학생</th>
-              <th className="px-4 py-3">강사</th>
-              <th className="px-4 py-3">시간(분)</th>
-              <th className="px-4 py-3">상태</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {[...selectedSessions]
-              .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime())
-              .map((s) => (
-                <tr key={s.id} className="border-b border-slate-100 last:border-0">
-                  <td className="px-4 py-3 text-slate-900">{formatAppTime(s.scheduledAt)}</td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {s.student.name}
-                    {s.isSupplement && (
-                      <span className="ml-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">
-                        보충수업
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{s.teacher.realName}</td>
-                  <td className="px-4 py-3 text-slate-600">{s.durationMin}</td>
-                  <td className="px-4 py-3">
-                    <SessionStatusSelect id={s.id} status={s.status} />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <DeleteButton action={deleteClassSession.bind(null, s.id)} />
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
+                <th className="px-4 py-3">No.</th>
+                <th className="px-4 py-3">시간</th>
+                <th className="px-4 py-3">학생</th>
+                <th className="px-4 py-3">강사</th>
+                <th className="px-4 py-3">시간(분)</th>
+                <th className="px-4 py-3">상태</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {pageSessions.map((s, i) => (
+                  <tr key={s.id} className="border-b border-slate-100 last:border-0">
+                    <td className="px-4 py-3 text-slate-500">{(page - 1) * PAGE_SIZE + i + 1}</td>
+                    <td className="px-4 py-3 text-slate-900">{formatAppTime(s.scheduledAt)}</td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {s.student.name}
+                      {s.isSupplement && (
+                        <span className="ml-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                          보충수업
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{s.teacher.realName}</td>
+                    <td className="px-4 py-3 text-slate-600">{s.durationMin}</td>
+                    <td className="px-4 py-3">
+                      <SessionStatusSelect id={s.id} status={s.status} />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <DeleteButton action={deleteClassSession.bind(null, s.id)} />
+                    </td>
+                  </tr>
+                ))}
+              {selectedSessions.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
+                    이 날짜에 등록된 수업이 없습니다.
                   </td>
                 </tr>
-              ))}
-            {selectedSessions.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
-                  이 날짜에 등록된 수업이 없습니다.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 border-t border-slate-100 px-4 py-3 text-sm">
+            <Link
+              href={pageHref(Math.max(1, page - 1))}
+              aria-disabled={page <= 1}
+              className={`rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600 ${
+                page <= 1 ? "pointer-events-none opacity-40" : "hover:bg-slate-50"
+              }`}
+            >
+              이전
+            </Link>
+            <span className="px-2 text-slate-500">
+              {page} / {totalPages.toLocaleString()} 페이지 (총 {selectedSessions.length.toLocaleString()}건)
+            </span>
+            <Link
+              href={pageHref(Math.min(totalPages, page + 1))}
+              aria-disabled={page >= totalPages}
+              className={`rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600 ${
+                page >= totalPages ? "pointer-events-none opacity-40" : "hover:bg-slate-50"
+              }`}
+            >
+              다음
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

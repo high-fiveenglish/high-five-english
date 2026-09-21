@@ -7,18 +7,22 @@ import { DEFAULT_SITE_ID } from "./constants";
 const FREQUENCY_BY_WEEKDAY_COUNT: Record<number, string> = { 2: "freq2", 3: "freq3", 5: "freq5" };
 
 /** 수강 조건(기간·주당 횟수·수업시간)에 해당하는 가격표상의 기본 수강료(KRW)를 찾는다.
- * 매칭되는 가격표 행이 없으면 null. */
+ * agentId가 있으면 그 협력사 전용 가격표를 먼저 찾고, 없으면(또는 agentId가 없으면)
+ * 본사 기본 가격표로 대체한다. 매칭되는 가격표 행이 없으면 null. */
 export async function computeBasePriceKRW(
   packageMonths: number,
   weekdayCount: number,
   classDurationMin: number,
+  agentId?: number | null,
 ): Promise<number | null> {
   const frequencyId = FREQUENCY_BY_WEEKDAY_COUNT[weekdayCount];
   if (!frequencyId) return null;
 
-  const duration = await prisma.pricingDuration.findUnique({
-    where: { siteId_code: { siteId: DEFAULT_SITE_ID, code: `${packageMonths}m` } },
-  });
+  const code = `${packageMonths}m`;
+  const duration = agentId
+    ? ((await prisma.pricingDuration.findFirst({ where: { siteId: DEFAULT_SITE_ID, agentId, code } })) ??
+      (await prisma.pricingDuration.findFirst({ where: { siteId: DEFAULT_SITE_ID, agentId: null, code } })))
+    : await prisma.pricingDuration.findFirst({ where: { siteId: DEFAULT_SITE_ID, agentId: null, code } });
   if (!duration) return null;
 
   const row = await prisma.pricingRow.findUnique({

@@ -18,7 +18,8 @@ type ViteLessonStatus =
   | "rescheduled"
   | "teacher_absent"
   | "academy_closed"
-  | "admin_cancelled";
+  | "admin_cancelled"
+  | "on_hold";
 
 function mapLessonStatus(session: {
   status: string;
@@ -33,6 +34,8 @@ function mapLessonStatus(session: {
       return "admin_cancelled";
     case "MAKEUP_NEEDED":
       return "absent";
+    case "HOLD":
+      return "on_hold";
     case "LEAVE": {
       const lr = session.leaveRequest;
       if (lr?.academyClosureId) return "academy_closed";
@@ -50,6 +53,9 @@ const CLASS_METHOD_TO_PLATFORM: Record<string, "zoom" | "teams" | "voov"> = {
   tencent: "voov",
 };
 
+// 마케팅 사이트(Vite)의 "현재 수강 상태" 표시 + "홀드 해제 요청" 버튼 노출 여부가
+// 이 값을 그대로 쓴다(src/lib/community/types.ts의 RealEnrollmentStatus와 값을
+// 맞춘다) — admin 자체 EnrollmentStatus와 동일한 문자열이라 별도 변환 없이 내려준다.
 export type StudentClassroomSnapshot = {
   enrollment: {
     id: number;
@@ -62,6 +68,7 @@ export type StudentClassroomSnapshot = {
     teacherId: number | null;
     teacherName: string | null;
     teacherMeetingLinks: Partial<Record<"zoom" | "teams" | "voov", string>>;
+    status: "APPLIED" | "PAID" | "ACTIVE" | "HOLDING" | "COMPLETED";
   };
   allEnrollments: { id: number; startDate: string; endDate: string }[];
   lessons: {
@@ -130,6 +137,7 @@ export async function getStudentClassroomSnapshot(
       teacherId: teacher?.id ?? null,
       teacherName: teacher?.realName ?? null,
       teacherMeetingLinks,
+      status: enrollment.status,
     },
     allEnrollments: enrollments.map((e) => ({
       id: e.id,
@@ -198,6 +206,7 @@ export async function getStudentEnrollmentHistory(studentId: number): Promise<St
         teacherId: teacher?.id ?? null,
         teacherName: teacher?.realName ?? null,
         teacherMeetingLinks: {},
+        status: enrollment.status,
       },
       lessons: enrollmentSessions.map((s) => ({
         id: s.id,

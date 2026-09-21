@@ -8,7 +8,8 @@ import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { WEEKDAYS } from "@/lib/weekdays";
-import { computeEndDate, findRecurringScheduleConflicts, parseScheduleDaysLabel, resolveScheduleTime } from "./scheduleUtils";
+import { syncTeacherScheduleToGoogleSheet } from "@/lib/teacherScheduleSheet";
+import { findRecurringScheduleConflicts, resolveScheduleTime } from "./scheduleUtils";
 import { isWithinAvailableHours, timeStringToMinuteOfDay } from "@/lib/timeSlots";
 import { Prisma, type EnrollmentStatus, type EnrollmentRequestStatus, type PaymentStatus } from "@/generated/prisma/client";
 
@@ -133,16 +134,30 @@ export async function createEnrollment(_prevState: { error?: string } | undefine
   }
   const returnToRaw = String(formData.get("returnTo") ?? "/enrollments");
   const returnTo = returnToRaw.startsWith("/") ? returnToRaw : "/enrollments";
+  const sourceRequestIdRaw = String(formData.get("sourceRequestId") ?? "");
+  const sourceRequestId = sourceRequestIdRaw ? Number(sourceRequestIdRaw) : null;
+  const renewedFromIdRaw = String(formData.get("renewedFromId") ?? "");
+  const renewedFromId = renewedFromIdRaw ? Number(renewedFromIdRaw) : null;
+  const reservationIdRaw = String(formData.get("reservationId") ?? "");
+  const reservationId = reservationIdRaw ? Number(reservationIdRaw) : null;
+  const teacherId = teacherIdRaw ? Number(teacherIdRaw) : null;
 
   if (!studentId || !classMethod || !scheduleDays || !totalSessions || !startDate || !endDate) {
     return { error: "필수 항목을 모두 입력해주세요." };
   }
 
+  // "신청" 목록에서 강사를 배정해 등록으로 전환하는 흐름(sourceRequestId)이나 "강사 자리
+  // 예약"에서 등록전환하는 흐름(reservationId)은 새 건을 곧바로 "진행중"으로 만든다 —
+  // 둘 다 강사가 이미 정해진 상태로 들어오기 때문이다. 그 외에는 일반 등록과 똑같이
+  // "신청" 상태로 만든다.
+  const isRequestConversion = sourceRequestId !== null && teacherId !== null;
+  const isReservationConversion = reservationId !== null && teacherId !== null;
+
   const enrollment = await prisma.enrollment.create({
     data: {
       siteId: DEFAULT_SITE_ID,
       studentId,
-      teacherId: teacherIdRaw ? Number(teacherIdRaw) : null,
+      teacherId,
       packageMonths,
       classMethod,
       scheduleDays,
@@ -158,14 +173,48 @@ export async function createEnrollment(_prevState: { error?: string } | undefine
       classTime: classTime || null,
       classTimes: Object.keys(classTimes).length > 0 ? classTimes : undefined,
       adminNote: adminNote || null,
-      status: "APPLIED",
+      status: isRequestConversion || isReservationConversion ? "ACTIVE" : "APPLIED",
       paymentStatus: "UNPAID",
+      renewedFromId: renewedFromId ?? undefined,
     },
   });
-  await logAudit({ actor, action: "CREATE", targetType: "Enrollment", targetId: enrollment.id });
+  await logAudit({
+    actor,
+    action: "CREATE",
+    targetType: "Enrollment",
+    targetId: enrollment.id,
+    description: renewedFromId ? `재수강 신청 (원본 수강 건 #${renewedFromId})` : undefined,
+  });
+
+  if (isRequestConversion) {
+    await prisma.enrollmentRequest.update({ where: { id: sourceRequestId }, data: { status: "CONVERTED" } });
+    await logAudit({
+      actor,
+      action: "UPDATE",
+      targetType: "EnrollmentRequest",
+      targetId: sourceRequestId,
+      description: `등록전환 — 수강 건 #${enrollment.id}로 전환`,
+    });
+  }
+
+  if (isReservationConversion) {
+    await prisma.slotReservation.update({
+      where: { id: reservationId },
+      data: { status: "CONVERTED", convertedEnrollmentId: enrollment.id },
+    });
+    await logAudit({
+      actor,
+      action: "UPDATE",
+      targetType: "SlotReservation",
+      targetId: reservationId,
+      description: `예약 등록전환 — 수강 건 #${enrollment.id}로 전환`,
+    });
+    revalidatePath("/reservations");
+  }
 
   revalidatePath("/enrollments");
   revalidatePath("/students");
+  syncTeacherScheduleToGoogleSheet().catch(() => {});
   redirect(returnTo);
 }
 
@@ -253,15 +302,37 @@ export async function updateEnrollment(id: number, _prevState: { error?: string 
   revalidatePath("/students");
   revalidatePath("/schedule");
   revalidatePath("/teacher/schedule");
+  syncTeacherScheduleToGoogleSheet().catch(() => {});
   redirect("/enrollments");
 }
 
 export async function updateEnrollmentStatus(id: number, status: EnrollmentStatus) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "enrollments.update");
-  await prisma.enrollment.update({ where: { id }, data: { status } });
+
+  const existing = await prisma.enrollment.findUnique({ where: { id } });
+  if (!existing) return;
+
+  // "홀드"는 단순 라벨이 아니라 실제로 예정 수업을 멈춘다 — holdApply.ts 참고. 홀드로
+  // 들어갈 때/나올 때는 그 부수효과까지 함께 처리해야 하므로 일반 상태 변경과 분기한다.
+  if (status === "HOLDING" && existing.status !== "HOLDING") {
+    const { applyHold } = await import("@/lib/holdApply");
+    await applyHold(id);
+  } else if (existing.status === "HOLDING" && status !== "HOLDING") {
+    const { releaseHold } = await import("@/lib/holdApply");
+    await releaseHold(id);
+    if (status !== "ACTIVE") {
+      await prisma.enrollment.update({ where: { id }, data: { status } });
+    }
+  } else {
+    await prisma.enrollment.update({ where: { id }, data: { status } });
+  }
+
   await logAudit({ actor, action: "UPDATE", targetType: "Enrollment", targetId: id, description: `상태 변경: ${status}` });
   revalidatePath("/enrollments");
+  revalidatePath("/schedule");
+  revalidatePath("/student");
+  syncTeacherScheduleToGoogleSheet().catch(() => {});
 }
 
 export async function updateEnrollmentPrice(
@@ -296,63 +367,9 @@ export async function updateEnrollmentPrice(
   redirect("/enrollments");
 }
 
-// "재수강" — 기존 수강 건과 강사/요일/시간/기간/교재 등 모든 내용을 동일하게 유지한
-// 채, 기존 종료일 다음날부터 이어지는 새 Enrollment를 하나 더 만든다. 기존 건
-// 자체는 손대지 않는다(상태 변경으로 표현하지 않는 이유 — 재수강 전후 두 수강 건의
-// 결제/수업 이력이 각각 독립적으로 남아야 하기 때문).
-export async function renewEnrollment(id: number) {
-  const actor = await requireBackofficeActor();
-  requirePermission(actor, "enrollments.create");
-
-  const existing = await prisma.enrollment.findUnique({ where: { id } });
-  if (!existing) return;
-
-  const newStartDate = new Date(existing.endDate);
-  newStartDate.setUTCDate(newStartDate.getUTCDate() + 1);
-  const startDateIso = newStartDate.toISOString().slice(0, 10);
-
-  const weekdayValues = parseScheduleDaysLabel(existing.scheduleDays);
-  const computedEndDateIso = computeEndDate(startDateIso, weekdayValues, existing.totalSessions);
-  const newEndDate = computedEndDateIso
-    ? new Date(`${computedEndDateIso}T00:00:00Z`)
-    : new Date(Date.UTC(newStartDate.getUTCFullYear(), newStartDate.getUTCMonth() + existing.packageMonths, newStartDate.getUTCDate()));
-
-  const renewed = await prisma.enrollment.create({
-    data: {
-      siteId: existing.siteId,
-      studentId: existing.studentId,
-      teacherId: existing.teacherId,
-      packageMonths: existing.packageMonths,
-      classMethod: existing.classMethod,
-      scheduleDays: existing.scheduleDays,
-      classDurationMin: existing.classDurationMin,
-      totalSessions: existing.totalSessions,
-      startDate: newStartDate,
-      endDate: newEndDate,
-      classType: existing.classType,
-      textbookName: existing.textbookName,
-      classTime: existing.classTime,
-      classTimes: existing.classTimes ?? undefined,
-      studentLevel: existing.studentLevel,
-      studentEnglishName: existing.studentEnglishName,
-      curriculum: existing.curriculum,
-      adminNote: existing.adminNote,
-      status: "APPLIED",
-      paymentStatus: "UNPAID",
-    },
-  });
-  await logAudit({
-    actor,
-    action: "CREATE",
-    targetType: "Enrollment",
-    targetId: renewed.id,
-    description: `재수강 신청 (원본 수강 건 #${id})`,
-  });
-
-  revalidatePath("/enrollments");
-  revalidatePath("/students");
-  redirect(`/enrollments/${renewed.id}/edit`);
-}
+// "재수강"은 더 이상 클릭 즉시 레코드를 만들지 않는다 — /enrollments/new?renewFrom=<id>가
+// 기존 스케줄을 기본값으로 채운 등록 폼을 보여주고, 관리자가 검토·수정 후 저장을 눌러야
+// createEnrollment로 실제 생성된다(그 화면의 renewedFromId가 감사 로그에 원본 건을 남김).
 
 export async function deleteEnrollment(id: number) {
   const actor = await requireBackofficeActor();
@@ -360,4 +377,5 @@ export async function deleteEnrollment(id: number) {
   await prisma.enrollment.delete({ where: { id } });
   await logAudit({ actor, action: "DELETE", targetType: "Enrollment", targetId: id });
   revalidatePath("/enrollments");
+  syncTeacherScheduleToGoogleSheet().catch(() => {});
 }

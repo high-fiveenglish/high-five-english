@@ -76,14 +76,9 @@ export function InstructorsSection() {
                     </div>
                   )}
                 </div>
-                <p className="mt-3 text-[15px] font-bold text-brand-950">
-                  {ins.name}
-                  {ins.nickname && <span className="text-xs font-medium text-slate-400"> ({ins.nickname})</span>}
-                </p>
+                <p className="mt-3 text-[15px] font-bold text-brand-950">{ins.name}</p>
                 <p className="mt-0.5 truncate text-xs text-slate-400">
-                  {[ins.grade === "SENIOR" ? t("instructors.grade_senior") : null, ins.tesol ? t("instructors.tesol_badge") : null]
-                    .filter(Boolean)
-                    .join(" · ")}
+                  {ins.grade === "SENIOR" ? t("instructors.grade_senior") : ins.tesol ? t("instructors.tesol_badge") : " "}
                 </p>
               </button>
             );

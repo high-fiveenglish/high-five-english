@@ -74,6 +74,7 @@ export type StudentProfileSnapshot = {
   teamsId: string | null;
   kakaoId: string | null;
   wechatId: string | null;
+  kakaoLinked: boolean;
 };
 
 export async function getStudentProfileSnapshot(studentId: number): Promise<StudentProfileSnapshot | null> {
@@ -95,5 +96,6 @@ export async function getStudentProfileSnapshot(studentId: number): Promise<Stud
     teamsId: student.teamsId,
     kakaoId: student.kakaoId,
     wechatId: student.wechatId,
+    kakaoLinked: !!student.kakaoUserId,
   };
 }

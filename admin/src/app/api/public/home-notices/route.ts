@@ -4,6 +4,7 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { corsHeaders, corsOptionsResponse } from "@/lib/cors";
 import { actorFromAdminApiToken } from "@/lib/adminApiToken";
 import { requirePermission, logAudit, ForbiddenError } from "@/lib/rbac";
+import { resolveAgentIdFromDomain } from "@/lib/agencyBranding";
 
 // 메인 마케팅 사이트(Vite, src/services/homeNoticeService.ts)의 홈페이지 공지 목록 —
 // 비로그인 방문자도 읽는 공개 피드라 GET은 인증이 필요 없다. POST(작성)만 Vite 자체
@@ -21,9 +22,14 @@ export async function OPTIONS(request: Request) {
 export async function GET(request: Request) {
   const headers = corsHeaders(request.headers.get("origin"));
   const admin = await actorFromAdminApiToken(request);
+  const { searchParams } = new URL(request.url);
+  // 본사/협력사 공지는 "각각 진행"이라 병합 없이 정확히 접속 도메인의 협력사(또는
+  // 본사=null)에 해당하는 것만 보여준다 — pricing/consult-channels와 달리 폴백하지
+  // 않는다.
+  const agentId = await resolveAgentIdFromDomain(searchParams.get("domain"));
 
   const notices = await prisma.homeNotice.findMany({
-    where: { siteId: DEFAULT_SITE_ID, ...(admin ? {} : { published: true }) },
+    where: { siteId: DEFAULT_SITE_ID, agentId, ...(admin ? {} : { published: true }) },
     orderBy: { createdAt: "desc" },
   });
 

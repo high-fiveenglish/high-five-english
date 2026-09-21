@@ -54,6 +54,10 @@ export function EnrollmentCreateForm({
   mode = "create",
   enrollmentId,
   initialValues,
+  returnTo,
+  sourceRequestId,
+  renewedFromId,
+  reservationId,
 }: {
   students: StudentOption[];
   teachers: TeacherOption[];
@@ -70,6 +74,18 @@ export function EnrollmentCreateForm({
   mode?: "create" | "edit";
   enrollmentId?: number;
   initialValues?: EnrollmentInitialValues;
+  /** 저장 후 이동할 경로 — 지정하지 않으면 actions.ts의 기본값(/enrollments)을 따른다. */
+  returnTo?: string;
+  /** "신청" 목록의 리드를 등록으로 전환하는 흐름에서만 채워진다 — createEnrollment가
+   * 이 값을 보고 강사가 배정되면 새 건을 바로 "진행중"으로 만들고, 원본 신청 건을
+   * "등록전환"으로 표시한다(actions.ts 참고). */
+  sourceRequestId?: number;
+  /** "재수강" 흐름에서만 채워진다 — 원본 수강 건 id를 감사 로그에 남기기 위해서만 쓰고,
+   * createEnrollment의 저장 로직 자체는 건드리지 않는다. */
+  renewedFromId?: number;
+  /** "강사 자리 예약"의 "등록전환" 흐름에서만 채워진다 — createEnrollment가 이 값을
+   * 보고 새 건을 바로 "진행중"으로 만들고, 원본 예약을 "등록완료"로 표시한다. */
+  reservationId?: number;
 }) {
   const isEdit = mode === "edit";
   const action = isEdit ? updateEnrollment.bind(null, enrollmentId!) : createEnrollment;
@@ -162,7 +178,10 @@ export function EnrollmentCreateForm({
 
   return (
     <form action={formAction} className="flex max-w-md flex-col gap-4">
-      {lockStudent && !isEdit && <input type="hidden" name="returnTo" value="/students?notice=enrollment-created" />}
+      {returnTo && !isEdit && <input type="hidden" name="returnTo" value={returnTo} />}
+      {sourceRequestId && !isEdit && <input type="hidden" name="sourceRequestId" value={sourceRequestId} />}
+      {renewedFromId && !isEdit && <input type="hidden" name="renewedFromId" value={renewedFromId} />}
+      {reservationId && !isEdit && <input type="hidden" name="reservationId" value={reservationId} />}
       <Field label="학생">
         {lockStudent ? (
           <>

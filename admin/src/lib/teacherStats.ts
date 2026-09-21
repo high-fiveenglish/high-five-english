@@ -16,7 +16,7 @@ export interface TeacherStatRow {
   agentName: string;
   sessionUnits: number;
   ratePerUnit: number;
-  payKRW: number;
+  payPHP: number;
 }
 
 export interface TeacherStatSummaryRow {
@@ -25,7 +25,7 @@ export interface TeacherStatSummaryRow {
   presentUnits: number;
   absentUnits: number;
   paidLeaveCount: number;
-  totalPayKRW: number;
+  totalPayPHP: number;
 }
 
 export interface TeacherStatResult {
@@ -47,27 +47,22 @@ function toDateLabel(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** teacherId -> 조회 기간 내 가장 최근에 적용되는 TeacherRate.ratePerUnit(원/25분).
- * 레이트 이력이 없는 강사는 0으로 처리한다(급여 계산 불가 상태를 명시적으로 드러냄). */
-async function loadRatesByTeacher(teacherIds: number[]): Promise<Map<number, { ratePerUnit: number; effectiveFrom: Date }[]>> {
+/** teacherId -> 현재 레이트(TeacherRate.ratePerUnit, ₱/25분). 강사 관리 화면
+ * (teachers/page.tsx)이 "가장 최근 effectiveFrom 1건"을 그 강사의 레이트로 보여주는
+ *것과 정확히 같은 기준으로 고른다 — 세션 날짜 기준으로 과거 레이트를 역산하지 않는다
+ * (두 화면의 레이트가 서로 다르게 보이던 문제의 원인이라, 강사 관리 화면 쪽 기준에
+ * 맞춰 통일했다). 레이트 이력이 없는 강사는 0으로 처리한다. */
+async function loadRatesByTeacher(teacherIds: number[]): Promise<Map<number, number>> {
   if (teacherIds.length === 0) return new Map();
   const rates = await prisma.teacherRate.findMany({
     where: { teacherId: { in: teacherIds } },
     orderBy: { effectiveFrom: "desc" },
   });
-  const map = new Map<number, { ratePerUnit: number; effectiveFrom: Date }[]>();
+  const map = new Map<number, number>();
   for (const r of rates) {
-    const list = map.get(r.teacherId) ?? [];
-    list.push({ ratePerUnit: Number(r.ratePerUnit), effectiveFrom: r.effectiveFrom });
-    map.set(r.teacherId, list);
+    if (!map.has(r.teacherId)) map.set(r.teacherId, Number(r.ratePerUnit));
   }
   return map;
-}
-
-function rateForDate(rates: { ratePerUnit: number; effectiveFrom: Date }[] | undefined, date: Date): number {
-  if (!rates || rates.length === 0) return 0;
-  const applicable = rates.find((r) => r.effectiveFrom <= date);
-  return applicable ? applicable.ratePerUnit : (rates[rates.length - 1]?.ratePerUnit ?? 0);
 }
 
 export async function buildTeacherStats(from: Date, to: Date): Promise<TeacherStatResult> {
@@ -110,9 +105,9 @@ export async function buildTeacherStats(from: Date, to: Date): Promise<TeacherSt
 
   for (const s of sessions) {
     const attendance: AttendanceLabel = s.status === "COMPLETED" ? "출석" : s.status === "MAKEUP_NEEDED" ? "결석" : "유급휴가";
-    const ratePerUnit = rateForDate(ratesByTeacher.get(s.teacherId), s.scheduledAt);
+    const ratePerUnit = ratesByTeacher.get(s.teacherId) ?? 0;
     const sessionUnits = s.durationMin / UNIT_MINUTES;
-    const payKRW =
+    const payPHP =
       attendance === "출석"
         ? Math.round(ratePerUnit * sessionUnits)
         : attendance === "결석"
@@ -128,16 +123,16 @@ export async function buildTeacherStats(from: Date, to: Date): Promise<TeacherSt
       agentName: s.student.agent?.name ?? "-",
       sessionUnits,
       ratePerUnit,
-      payKRW,
+      payPHP,
     });
   }
 
   for (const lt of levelTests) {
     if (!lt.teacherId || !lt.scheduledClassDatetime) continue;
     const attendance: AttendanceLabel = lt.progressStatus === "수업완료" ? "출석" : "결석";
-    const ratePerUnit = rateForDate(ratesByTeacher.get(lt.teacherId), lt.scheduledClassDatetime);
+    const ratePerUnit = ratesByTeacher.get(lt.teacherId) ?? 0;
     const sessionUnits = LEVEL_TEST_DURATION_MIN / UNIT_MINUTES;
-    const payKRW = Math.round(ratePerUnit * sessionUnits * (attendance === "출석" ? 1 : ABSENT_RATE_MULTIPLIER));
+    const payPHP = Math.round(ratePerUnit * sessionUnits * (attendance === "출석" ? 1 : ABSENT_RATE_MULTIPLIER));
 
     rows.push({
       teacherName: lt.teacher?.realName ?? "-",
@@ -148,7 +143,7 @@ export async function buildTeacherStats(from: Date, to: Date): Promise<TeacherSt
       agentName: lt.student?.agent?.name ?? "-",
       sessionUnits,
       ratePerUnit,
-      payKRW,
+      payPHP,
     });
   }
 
@@ -162,12 +157,12 @@ export async function buildTeacherStats(from: Date, to: Date): Promise<TeacherSt
       presentUnits: 0,
       absentUnits: 0,
       paidLeaveCount: 0,
-      totalPayKRW: 0,
+      totalPayPHP: 0,
     };
     if (r.attendance === "출석") existing.presentUnits += r.sessionUnits;
     else if (r.attendance === "결석") existing.absentUnits += r.sessionUnits;
     else existing.paidLeaveCount += 1;
-    existing.totalPayKRW += r.payKRW;
+    existing.totalPayPHP += r.payPHP;
     summaryMap.set(r.teacherName, existing);
   }
   const summary = Array.from(summaryMap.values()).sort((a, b) => a.teacherName.localeCompare(b.teacherName));

@@ -11,6 +11,9 @@ export const SESSION_STATUS_LABEL_EN: Record<SessionStatus, string> = {
   CANCELLED: "Cancelled",
   MAKEUP_NEEDED: "Makeup Needed",
   LEAVE: "Hold",
+  // LEAVE(학생 개별 수업 휴강)는 이미 영어로 "Hold"라 불리고 있어, Enrollment 전체를
+  // 멈추는 이 새 상태는 헷갈리지 않도록 "Paused"로 구분한다.
+  HOLD: "Paused",
 };
 
 // 레벨테스트 진행상태(LevelTest.progressStatus, levelTestOptions.ts 기준: 접수 →

@@ -8,7 +8,7 @@ export type CalendarSession = {
   id: number;
   scheduledAt: Date;
   durationMin: number;
-  status: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "MAKEUP_NEEDED" | "LEAVE";
+  status: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "MAKEUP_NEEDED" | "LEAVE" | "HOLD";
   progressNote: string | null;
   teacherName: string;
   evaluationId: number | null;
@@ -21,6 +21,7 @@ const STATUS_LABEL: Record<CalendarSession["status"], string> = {
   CANCELLED: "취소",
   MAKEUP_NEEDED: "보충필요",
   LEAVE: "휴강",
+  HOLD: "홀드",
 };
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];

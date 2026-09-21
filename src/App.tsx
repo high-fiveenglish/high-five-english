@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AuthProvider } from "./context/AuthContext";
+import { TenantProvider } from "./context/TenantContext";
 import { listPublicInstructors } from "./services/instructorService";
 import { LanguageProvider } from "./context/LanguageContext";
 import { Header } from "./components/layout/Header";
@@ -19,6 +20,8 @@ import { ProcessPage } from "./pages/ProcessPage";
 import { EnrollmentRegisterPage } from "./pages/EnrollmentRegisterPage";
 import { ClassroomPage } from "./pages/ClassroomPage";
 import { SsoLoginPage } from "./pages/SsoLoginPage";
+import { KakaoCallbackPage } from "./pages/KakaoCallbackPage";
+import { SignupPage } from "./pages/SignupPage";
 import { ReviewBoardPage } from "./pages/ReviewBoardPage";
 import { NoticeBoardPage } from "./pages/NoticeBoardPage";
 import { AdminReschedulePage } from "./pages/AdminReschedulePage";
@@ -58,6 +61,7 @@ function App() {
 
   return (
     <AuthProvider>
+      <TenantProvider>
       <LanguageProvider>
         <ScrollToHash />
         <div className="flex min-h-screen flex-col">
@@ -92,6 +96,8 @@ function App() {
               {/* Protected pages: never indexed, so no locale prefix — language comes
                   from the logged-in account's own preference (LanguageContext). */}
               <Route path="/sso" element={<SsoLoginPage />} />
+              <Route path="/kakao/callback" element={<KakaoCallbackPage />} />
+              <Route path="/signup" element={<SignupPage />} />
               <Route
                 path="/classroom"
                 element={<ClassroomPage onOpenLogin={openLogin} onOpenLevelTest={openLevelTest} />}
@@ -178,6 +184,7 @@ function App() {
         <LevelTestModal open={levelTestOpen} onClose={() => setLevelTestOpen(false)} onOpenLogin={openLogin} />
         <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
       </LanguageProvider>
+      </TenantProvider>
     </AuthProvider>
   );
 }

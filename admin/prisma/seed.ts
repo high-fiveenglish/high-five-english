@@ -55,6 +55,7 @@ const PERMISSION_SEED: { key: string; description: string }[] = [
   { key: "own_monthly_evaluations.update", description: "본인 담당 수강생 월평가서 작성/수정" },
   { key: "own_level_tests.update", description: "본인 담당 레벨테스트 결과(평가서) 작성/수정" },
   { key: "own_profile.update", description: "본인 프로필 정보 수정" },
+  { key: "own_enrollment.hold_release", description: "본인 수강 건 홀드 해제 요청" },
   { key: "bulletins.view", description: "공지사항 조회" },
   { key: "bulletins.create", description: "공지사항 작성" },
   { key: "bulletins.update", description: "공지사항 수정" },
@@ -70,6 +71,11 @@ const PERMISSION_SEED: { key: string; description: string }[] = [
   { key: "reviews.view", description: "수강후기 게시판 조회" },
   { key: "reviews.delete", description: "수강후기 게시판 글 삭제(모더레이션)" },
   { key: "teacher_stats.view", description: "강사수업통계/급여 조회 및 엑셀 다운로드" },
+  { key: "reservations.view", description: "강사 자리 가예약 조회" },
+  { key: "reservations.create", description: "강사 자리 가예약 등록" },
+  { key: "reservations.update", description: "강사 자리 가예약 등록전환/취소" },
+  { key: "agencies.view", description: "협력사 관리(브랜딩/회사정보) 조회" },
+  { key: "agencies.update", description: "협력사 관리(브랜딩/회사정보) 수정" },
 ];
 
 const ROLE_PERMISSION_SEED: Record<Exclude<RoleName, "ADMIN">, string[]> = {
@@ -89,6 +95,7 @@ const ROLE_PERMISSION_SEED: Record<Exclude<RoleName, "ADMIN">, string[]> = {
     "consult_channels.view", "consult_channels.update",
     "reviews.view", "reviews.delete",
     "teacher_stats.view",
+    "reservations.view", "reservations.create", "reservations.update",
   ],
   TEACHER: [
     "own_schedule.view", "own_evaluations.view", "own_evaluations.update",
@@ -96,7 +103,13 @@ const ROLE_PERMISSION_SEED: Record<Exclude<RoleName, "ADMIN">, string[]> = {
     "own_monthly_evaluations.view", "own_monthly_evaluations.update",
     "own_level_tests.update",
   ],
-  STUDENT: ["own_schedule.view", "own_evaluations.view", "leave_requests.create", "own_profile.update"],
+  STUDENT: [
+    "own_schedule.view",
+    "own_evaluations.view",
+    "leave_requests.create",
+    "own_profile.update",
+    "own_enrollment.hold_release",
+  ],
 };
 
 const PRICING_SEED = [
@@ -135,9 +148,9 @@ const PRICING_SEED = [
 // 마케팅 사이트의 기존 정적 CONTACT.kakaoId/wechatId 값을 그대로 옮긴다(src/data/contact.ts
 // 참고) — customerService는 실제 상담 연락처가 아직 없어 기본 비활성.
 const CONSULT_CHANNEL_SEED = [
-  { id: "kakao", displayName: "카카오톡 상담", value: "jongbum1010", url: null, enabled: true },
-  { id: "wechat", displayName: "위챗 상담", value: "wjb5463", url: null, enabled: true },
-  { id: "customerService", displayName: "고객센터", value: "www.hfenglish.co.kr", url: null, enabled: false },
+  { code: "kakao", displayName: "카카오톡 상담", value: "jongbum1010", url: null, enabled: true },
+  { code: "wechat", displayName: "위챗 상담", value: "wjb5463", url: null, enabled: true },
+  { code: "customerService", displayName: "고객센터", value: "www.hfenglish.co.kr", url: null, enabled: false },
 ];
 
 // 협력사 — 학생별로 지정하며, 추후 별도의 협력사 관리 화면에서 CRUD하도록 확장한다.
@@ -205,17 +218,18 @@ async function main() {
     }
   }
 
+  // agentId가 null인 행(본사 기본값)은 Prisma의 복합 unique where 단축 문법으로 조회할
+  // 수 없다(null은 그 문법에서 매칭 대상이 아니다) — findFirst로 직접 찾은 뒤 없을 때만
+  // 만드는 방식으로 대신한다.
   for (const duration of PRICING_SEED) {
-    const createdDuration = await prisma.pricingDuration.upsert({
-      where: { siteId_code: { siteId: site.id, code: duration.code } },
-      update: {},
-      create: {
-        siteId: site.id,
-        code: duration.code,
-        hasBadge: duration.hasBadge,
-        order: duration.order,
-      },
+    const existingDuration = await prisma.pricingDuration.findFirst({
+      where: { siteId: site.id, agentId: null, code: duration.code },
     });
+    const createdDuration =
+      existingDuration ??
+      (await prisma.pricingDuration.create({
+        data: { siteId: site.id, code: duration.code, hasBadge: duration.hasBadge, order: duration.order },
+      }));
     for (const row of duration.rows) {
       await prisma.pricingRow.upsert({
         where: { durationId_frequencyId: { durationId: createdDuration.id, frequencyId: row.frequencyId } },
@@ -226,11 +240,12 @@ async function main() {
   }
 
   for (const channel of CONSULT_CHANNEL_SEED) {
-    await prisma.consultChannel.upsert({
-      where: { id: channel.id },
-      update: {},
-      create: { ...channel, siteId: site.id },
+    const existing = await prisma.consultChannel.findFirst({
+      where: { siteId: site.id, agentId: null, code: channel.code },
     });
+    if (!existing) {
+      await prisma.consultChannel.create({ data: { ...channel, siteId: site.id } });
+    }
   }
 }
 

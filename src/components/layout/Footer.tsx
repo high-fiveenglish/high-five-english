@@ -2,11 +2,26 @@ import { useTranslation } from "react-i18next";
 import { MessageCircle, Clock, Landmark, Globe } from "lucide-react";
 import { Container } from "../ui/Container";
 import { CONTACT } from "../../data/contact";
+import { useTenant } from "../../context/TenantContext";
 import { BrandMark } from "./BrandMark";
 import { LocalizedLink } from "../i18n/LocalizedLink";
 
 export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
   const { t } = useTranslation("common");
+  const tenant = useTenant();
+  // 협력사 사이트는 회사정보/계좌를 그 협력사 값으로 대체한다 — 값이 비어있는 항목은
+  // (아직 관리자가 안 채운 경우) 본사 기본값으로 떨어진다.
+  const company = {
+    name: tenant.biz.name ?? CONTACT.company.name,
+    ceo: tenant.biz.ceo ?? CONTACT.company.ceo,
+    bizRegNo: tenant.biz.regNo ?? CONTACT.company.bizRegNo,
+    address: tenant.biz.address ?? CONTACT.company.address,
+  };
+  const bank = {
+    bankName: tenant.bank.name ?? CONTACT.bank.bankName,
+    accountNumber: tenant.bank.accountNumber ?? CONTACT.bank.accountNumber,
+    accountHolder: tenant.bank.accountHolder ?? CONTACT.bank.accountHolder,
+  };
 
   return (
     <footer className="border-t border-white/10 bg-brand-950 text-white/70">
@@ -21,23 +36,23 @@ export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
             <dl className="space-y-1.5 text-[13px] leading-relaxed text-white/55">
               <div className="flex gap-1.5">
                 <dt className="shrink-0 text-white/35">{t("footer.biz_name_label")}</dt>
-                <dd>{CONTACT.company.name}</dd>
+                <dd>{company.name}</dd>
               </div>
               <div className="flex gap-1.5">
                 <dt className="shrink-0 text-white/35">{t("footer.ceo_label")}</dt>
-                <dd>{CONTACT.company.ceo}</dd>
+                <dd>{company.ceo}</dd>
               </div>
               <div className="flex gap-1.5">
                 <dt className="shrink-0 text-white/35">{t("footer.biz_reg_no_label")}</dt>
-                <dd>{CONTACT.company.bizRegNo}</dd>
+                <dd>{company.bizRegNo}</dd>
               </div>
               <div className="flex gap-1.5">
                 <dt className="shrink-0 text-white/35">{t("footer.address_label")}</dt>
-                <dd>{CONTACT.company.address}</dd>
+                <dd>{company.address}</dd>
               </div>
               <div className="flex items-center gap-1.5 pt-1">
                 <Globe size={13} className="shrink-0 text-accent-400" />
-                <dd className="font-medium text-white/70">{CONTACT.website}</dd>
+                <dd className="font-medium text-white/70">{tenant.domain ?? CONTACT.website}</dd>
               </div>
             </dl>
           </div>
@@ -92,10 +107,10 @@ export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
               <Landmark size={16} className="mt-0.5 shrink-0 text-accent-400" />
               <div>
                 <p className="font-bold text-white">
-                  {CONTACT.bank.bankName} {CONTACT.bank.accountNumber}
+                  {bank.bankName} {bank.accountNumber}
                 </p>
                 <p className="mt-0.5 text-white/50">
-                  {t("footer.account_holder")} {CONTACT.bank.accountHolder}
+                  {t("footer.account_holder")} {bank.accountHolder}
                 </p>
               </div>
             </div>

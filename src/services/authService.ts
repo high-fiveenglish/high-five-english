@@ -6,7 +6,7 @@ import { ACCOUNTS } from "../data/accounts";
 import type { Actor, ServiceResult } from "../lib/auth/types";
 import { errResult, okResult } from "../lib/auth/types";
 import { store } from "./store";
-import { ADMIN_API_URL } from "../lib/adminApi";
+import { ADMIN_API_URL, getTenantDomain } from "../lib/adminApi";
 import { linkedIdForRealStudent, type RealStudentData, type StudentProfileSnapshot } from "../lib/realStudentBridge";
 
 export interface LoginResult {
@@ -72,6 +72,21 @@ async function bridgeAdminSession(
 // student_session 쿠키가 함께 발급되고("정보변경"이 그 쿠키로 admin 실제 페이지에
 // 바로 들어갈 수 있게 됨), 이 세션에서 쓸 임시 Enrollment도 realStudentBridge가
 // 채워준다.
+function loginResultFromRealStudent(data: RealStudentData): LoginResult {
+  const linkedId = linkedIdForRealStudent(data.studentId);
+  const actor: Actor = { role: "student", accountId: linkedId, linkedId, permissions: [] };
+  return {
+    actor,
+    displayName: data.englishName || data.name,
+    preferredLanguage: undefined,
+    isRealAccount: true,
+    apiToken: data.apiToken,
+    profile: data.profile,
+    adminApiToken: null,
+    adminBridgeToken: null,
+  };
+}
+
 async function loginAsRealStudent(loginId: string, password: string): Promise<LoginResult | null> {
   let res: Response;
   try {
@@ -87,18 +102,96 @@ async function loginAsRealStudent(loginId: string, password: string): Promise<Lo
   if (!res.ok) return null;
 
   const data = (await res.json()) as RealStudentData;
-  const linkedId = linkedIdForRealStudent(data.studentId);
-  const actor: Actor = { role: "student", accountId: linkedId, linkedId, permissions: [] };
-  return {
-    actor,
-    displayName: data.englishName || data.name,
-    preferredLanguage: undefined,
-    isRealAccount: true,
-    apiToken: data.apiToken,
-    profile: data.profile,
-    adminApiToken: null,
-    adminBridgeToken: null,
-  };
+  return loginResultFromRealStudent(data);
+}
+
+// 카카오 로그인은 ACCOUNTS 픽스처를 거치지 않는 별도 경로라, authService의 나머지
+// 함수가 쓰는 ServiceResult<AuthErrorCode>가 아니라 이 자체 결과 타입을 쓴다
+// (studentProfileService.ts의 ProfileResult와 같은 이유).
+export type KakaoLoginResult =
+  | { ok: true; value: LoginResult }
+  | { ok: false; code: "NOT_LINKED" | "NETWORK_ERROR" | "FAILED"; message: string };
+
+export type SignupInput = {
+  name: string;
+  loginId: string;
+  password: string;
+  englishName?: string;
+  mobilePhone?: string;
+  email?: string;
+  consultRoute?: string;
+  preferredClassMethod?: string;
+  region?: string;
+  wechatId?: string;
+  kakaoId?: string;
+  referrerId?: string;
+};
+
+export type SignupResult =
+  | { ok: true; value: LoginResult }
+  | {
+      ok: false;
+      code: "LOGIN_ID_TAKEN" | "PASSWORD_TOO_SHORT" | "MISSING_FIELDS" | "NETWORK_ERROR" | "FAILED";
+      message: string;
+    };
+
+/** 마케팅 사이트 자체 회원가입 화면(SignupPage)이 쓴다. 가입=자동 로그인이라 성공
+ * 응답은 student-login과 같은 모양(RealStudentData)으로 온다. */
+export async function signup(input: SignupInput): Promise<SignupResult> {
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/student-signup`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      // 접속 도메인을 실어 보내 서버가 협력사를 자동 판별하게 한다(회원가입 화면이
+      // 그 협력사 사이트에서 열렸는지는 서버가 직접 매칭해 확인 — 클라이언트가
+      // agentId를 스스로 주장하게 하지 않는다).
+      body: JSON.stringify({ ...input, domain: getTenantDomain() }),
+    });
+  } catch {
+    return { ok: false, code: "NETWORK_ERROR", message: "관리자 서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요." };
+  }
+  if (res.status === 409) {
+    return { ok: false, code: "LOGIN_ID_TAKEN", message: "이미 사용 중인 아이디입니다." };
+  }
+  if (res.status === 400) {
+    const errBody = (await res.json().catch(() => ({}))) as { error?: string };
+    if (errBody.error === "password_too_short") {
+      return { ok: false, code: "PASSWORD_TOO_SHORT", message: "비밀번호는 4자 이상이어야 합니다." };
+    }
+    return { ok: false, code: "MISSING_FIELDS", message: "필수 항목을 모두 입력해주세요." };
+  }
+  if (!res.ok) {
+    return { ok: false, code: "FAILED", message: "회원가입에 실패했습니다." };
+  }
+  const data = (await res.json()) as RealStudentData;
+  return { ok: true, value: loginResultFromRealStudent(data) };
+}
+
+/** 카카오 로그인 콜백(KakaoCallbackPage)이 받은 인가코드로 admin의 카카오 로그인
+ * 엔드포인트를 호출한다 — 연동된 계정이 없으면 NOT_LINKED를 돌려주고, 호출부
+ * (KakaoCallbackPage)가 이걸 안내 문구로 보여준다. */
+export async function loginWithKakao(code: string, redirectUri: string): Promise<KakaoLoginResult> {
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/kakao-login`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, redirectUri }),
+    });
+  } catch {
+    return { ok: false, code: "NETWORK_ERROR", message: "관리자 서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요." };
+  }
+  if (res.status === 404) {
+    return { ok: false, code: "NOT_LINKED", message: "연동된 카카오 계정이 없습니다." };
+  }
+  if (!res.ok) {
+    return { ok: false, code: "FAILED", message: "카카오 로그인에 실패했습니다." };
+  }
+  const data = (await res.json()) as RealStudentData;
+  return { ok: true, value: loginResultFromRealStudent(data) };
 }
 
 export async function login(id: string, password: string): Promise<ServiceResult<LoginResult>> {

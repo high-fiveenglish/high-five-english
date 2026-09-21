@@ -1,41 +1,81 @@
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { TERMINAL_PROGRESS_STATUSES } from "@/lib/levelTestOptions";
+import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
-import { parseAppDateTime, formatAppDate } from "@/lib/appTime";
+import { parseAppDateTime, formatAppDate, appDayStart, appDayEnd } from "@/lib/appTime";
 import { buildTeacherStats } from "@/lib/teacherStats";
+import { closeExpiredEnrollments } from "@/lib/enrollmentLifecycle";
 
 async function getCounts() {
-  const [students, teachers, activeEnrollments, pendingLevelTests, todaySessions] =
+  await closeExpiredEnrollments();
+  // "오늘"은 서버 프로세스의 로컬 시간이 아니라 항상 Asia/Seoul 기준이어야 한다 — 그래야
+  // 서버가 UTC로 떠 있어도 자정 경계가 실제 한국 시간과 어긋나지 않는다.
+  const todayStart = appDayStart();
+  const todayEnd = appDayEnd();
+
+  const [students, teachers, activeEnrollments, pendingLevelTests, todaySessionRows, todayLeaveRequests] =
     await Promise.all([
-      prisma.student.count({ where: { siteId: DEFAULT_SITE_ID } }),
-      prisma.teacher.count({ where: { siteId: DEFAULT_SITE_ID } }),
+      prisma.student.count({ where: { siteId: DEFAULT_SITE_ID, deletedAt: null } }),
+      // 비활성/정지 강사(85명 중 72명)까지 다 세면 "지금 몇 명이 일하고 있나"라는 실제
+      // 질문에 대한 답이 안 되므로, 활성 강사만 센다.
+      prisma.teacher.count({ where: { siteId: DEFAULT_SITE_ID, accountStatus: "ACTIVE" } }),
       prisma.enrollment.count({
         where: { siteId: DEFAULT_SITE_ID, status: { in: ["ACTIVE", "PAID"] } },
       }),
       prisma.levelTest.count({
         where: { siteId: DEFAULT_SITE_ID, progressStatus: { notIn: [...TERMINAL_PROGRESS_STATUSES] } },
       }),
-      prisma.classSession.count({
+      prisma.classSession.findMany({
+        where: { siteId: DEFAULT_SITE_ID, scheduledAt: { gte: todayStart, lt: todayEnd } },
+        select: { teacherId: true, durationMin: true },
+      }),
+      // 학생이 직접 신청한 연기 + 관리자가 대신 등록한 연기를 합산한, 오늘 접수된 연기
+      // 건수. 어학원 전체휴강(academyClosureId 있음)으로 한 번에 생긴 건은 개별 연기
+      // 신청과 성격이 달라 제외한다.
+      prisma.leaveRequest.count({
         where: {
           siteId: DEFAULT_SITE_ID,
-          scheduledAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
-            lt: new Date(new Date().setHours(24, 0, 0, 0)),
-          },
+          status: "APPROVED",
+          academyClosureId: null,
+          createdAt: { gte: todayStart, lt: todayEnd },
         },
       }),
     ]);
 
-  return { students, teachers, activeEnrollments, pendingLevelTests, todaySessions };
+  // 수업 건수는 25분을 1건으로 놓고 환산한다 — 50분 수업은 25분 수업 2개 분량이라 2건으로 센다.
+  const UNIT_MINUTES = 25;
+  const sessionUnits = (durationMin: number) => durationMin / UNIT_MINUTES;
+  const todaySessions = todaySessionRows.reduce((sum, s) => sum + sessionUnits(s.durationMin), 0);
+
+  const unitsByTeacher = new Map<number, number>();
+  for (const s of todaySessionRows) {
+    unitsByTeacher.set(s.teacherId, (unitsByTeacher.get(s.teacherId) ?? 0) + sessionUnits(s.durationMin));
+  }
+  const teacherIds = [...unitsByTeacher.keys()];
+  const teacherNames = await prisma.teacher.findMany({
+    where: { id: { in: teacherIds } },
+    select: TEACHER_SUMMARY_SELECT,
+  });
+  const teacherNameById = new Map(teacherNames.map((t) => [t.id, t.realName]));
+  const teacherSessionsToday = [...unitsByTeacher.entries()]
+    .map(([teacherId, count]) => ({ teacherName: teacherNameById.get(teacherId) ?? "알 수 없음", count }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    counts: { activeEnrollments, pendingLevelTests, todaySessions, todayLeaveRequests, students, teachers },
+    teacherSessionsToday,
+  };
 }
 
+// 수업 관련 항목을 앞으로, 학생 수/강사 수는 참고용이라 뒤로 뺐다.
 const CARDS = [
-  { key: "students", label: "학생 수" },
-  { key: "teachers", label: "강사 수" },
   { key: "activeEnrollments", label: "진행중 수강" },
   { key: "pendingLevelTests", label: "진행중 레벨테스트" },
   { key: "todaySessions", label: "오늘 수업 건수" },
+  { key: "todayLeaveRequests", label: "오늘 연기 건수" },
+  { key: "students", label: "학생 수" },
+  { key: "teachers", label: "강사 수" },
 ] as const;
 
 function todayIsoDate(): string {
@@ -50,7 +90,7 @@ export default async function DashboardPage({
   const actor = await requireBackofficeActor();
   const canViewTeacherStats = actor.role === "ADMIN" || actor.permissions.includes("teacher_stats.view");
 
-  const [counts, { from, to }] = await Promise.all([getCounts(), searchParams]);
+  const [{ counts, teacherSessionsToday }, { from, to }] = await Promise.all([getCounts(), searchParams]);
 
   const RAW_ROW_PREVIEW_LIMIT = 500;
   let statResult: Awaited<ReturnType<typeof buildTeacherStats>> | null = null;
@@ -71,6 +111,35 @@ export default async function DashboardPage({
             <p className="mt-2 text-2xl font-bold text-slate-900">{counts[card.key]}</p>
           </div>
         ))}
+      </div>
+
+      <div className="mt-8">
+        <h2 className="mb-3 text-lg font-bold text-slate-900">강사별 수업 회수 (오늘)</h2>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
+                <th className="px-4 py-3">강사</th>
+                <th className="px-4 py-3">수업 건수</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teacherSessionsToday.map((t) => (
+                <tr key={t.teacherName} className="border-b border-slate-100 last:border-0">
+                  <td className="px-4 py-3 font-medium text-slate-900">{t.teacherName}</td>
+                  <td className="px-4 py-3 text-slate-600">{t.count}건</td>
+                </tr>
+              ))}
+              {teacherSessionsToday.length === 0 && (
+                <tr>
+                  <td colSpan={2} className="px-4 py-10 text-center text-slate-400">
+                    오늘 예정된 수업이 없습니다.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {canViewTeacherStats && (
@@ -122,22 +191,22 @@ export default async function DashboardPage({
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
                       <th className="px-4 py-3">강사명</th>
-                      <th className="px-4 py-3">레이트(25분/원)</th>
+                      <th className="px-4 py-3">레이트(25분/₱)</th>
                       <th className="px-4 py-3">출석 회차</th>
                       <th className="px-4 py-3">결석 회차</th>
                       <th className="px-4 py-3">유급휴가 건수</th>
-                      <th className="px-4 py-3">총 급여(원)</th>
+                      <th className="px-4 py-3">총 급여(₱)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {statResult.summary.map((s) => (
                       <tr key={s.teacherName} className="border-b border-slate-100 last:border-0">
                         <td className="px-4 py-3 font-medium text-slate-900">{s.teacherName}</td>
-                        <td className="px-4 py-3 text-slate-600">{s.ratePerUnit.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-slate-600">₱{s.ratePerUnit.toLocaleString()}</td>
                         <td className="px-4 py-3 text-slate-600">{s.presentUnits}</td>
                         <td className="px-4 py-3 text-slate-600">{s.absentUnits}</td>
                         <td className="px-4 py-3 text-slate-600">{s.paidLeaveCount}</td>
-                        <td className="px-4 py-3 font-semibold text-slate-900">{s.totalPayKRW.toLocaleString()}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-900">₱{s.totalPayPHP.toLocaleString()}</td>
                       </tr>
                     ))}
                     {statResult.summary.length === 0 && (
@@ -162,7 +231,7 @@ export default async function DashboardPage({
                       <th className="px-4 py-3">시간(분)</th>
                       <th className="px-4 py-3">협력사</th>
                       <th className="px-4 py-3">수업종류</th>
-                      <th className="px-4 py-3">급여(원)</th>
+                      <th className="px-4 py-3">급여(₱)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -175,7 +244,7 @@ export default async function DashboardPage({
                         <td className="px-4 py-3 text-slate-600">{r.durationMin}</td>
                         <td className="px-4 py-3 text-slate-600">{r.agentName}</td>
                         <td className="px-4 py-3 text-slate-600">{r.sessionUnits}</td>
-                        <td className="px-4 py-3 text-slate-600">{r.payKRW.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-slate-600">₱{r.payPHP.toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>

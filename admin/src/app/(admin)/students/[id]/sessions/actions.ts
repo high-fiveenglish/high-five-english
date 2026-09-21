@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission, logAudit } from "@/lib/rbac";
 import { applyClassLeave } from "@/lib/leaveApply";
+import { syncTeacherScheduleToGoogleSheet } from "@/lib/teacherScheduleSheet";
 import { findTeacherScheduleConflict } from "@/lib/scheduleConflict";
 import { parseAppDateTime } from "@/lib/appTime";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
@@ -168,6 +169,7 @@ async function createLeaveForSession(
   revalidatePath("/leave-requests");
   revalidatePath("/student/sessions");
   revalidatePath("/teacher/schedule");
+  syncTeacherScheduleToGoogleSheet().catch(() => {});
   return {};
 }
 

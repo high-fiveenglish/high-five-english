@@ -1,11 +1,22 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { TEXTBOOK_OPTIONS } from "@/lib/textbookCatalog";
 import { saveEvaluationAdmin } from "../actions";
 
 const MAX_LENGTH = 2000;
 
-export function EvaluationAdminForm({ sessionId, defaultContent }: { sessionId: number; defaultContent: string }) {
+export function EvaluationAdminForm({
+  sessionId,
+  defaultContent,
+  defaultTextbook,
+  defaultProgress,
+}: {
+  sessionId: number;
+  defaultContent: string;
+  defaultTextbook: string;
+  defaultProgress: string;
+}) {
   const action = saveEvaluationAdmin.bind(null, sessionId);
   const [state, formAction, pending] = useActionState(action, undefined);
   const [content, setContent] = useState(defaultContent);
@@ -14,6 +25,32 @@ export function EvaluationAdminForm({ sessionId, defaultContent }: { sessionId: 
 
   return (
     <form action={formAction} className="flex max-w-2xl flex-col gap-3">
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-600">교재</span>
+          <select
+            name="textbookName"
+            defaultValue={defaultTextbook}
+            className="rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none focus:border-slate-500"
+          >
+            <option value="">선택 안 함</option>
+            {TEXTBOOK_OPTIONS.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-600">진도</span>
+          <input
+            name="progressNote"
+            defaultValue={defaultProgress}
+            placeholder="예: 5과, 20페이지"
+            className="rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none focus:border-slate-500"
+          />
+        </label>
+      </div>
       <textarea
         name="content"
         value={content}

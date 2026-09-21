@@ -13,7 +13,8 @@ export type RealLessonStatus =
   | "rescheduled"
   | "teacher_absent"
   | "academy_closed"
-  | "admin_cancelled";
+  | "admin_cancelled"
+  | "on_hold";
 
 export type RealLesson = {
   id: number;
@@ -25,6 +26,8 @@ export type RealLesson = {
 };
 
 export type RealClosure = { id: number; date: string; reason: string };
+
+export type RealEnrollmentStatus = "APPLIED" | "PAID" | "ACTIVE" | "HOLDING" | "COMPLETED";
 
 export type RealClassroomSnapshot = {
   enrollment: {
@@ -38,6 +41,7 @@ export type RealClassroomSnapshot = {
     teacherId: number | null;
     teacherName: string | null;
     teacherMeetingLinks: Partial<Record<RealMeetingPlatform, string>>;
+    status: RealEnrollmentStatus;
   };
   allEnrollments: { id: number; startDate: string; endDate: string }[];
   lessons: RealLesson[];
@@ -126,6 +130,26 @@ export async function requestRealReschedule(
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ lessonId, reason }),
+    });
+  } catch {
+    return errResult("NETWORK_ERROR", "관리자 서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
+  }
+  return parseSnapshotResponse(res);
+}
+
+// "홀드 해제 요청" — 승인 대기 없이 요청 즉시 적용된다(요청 자체가 곧 실행). 멈춰뒀던
+// 예정 수업들이 쉬었던 주(週) 수만큼 뒤로 밀려 다시 예정으로 돌아오고, 수강 종료일도
+// 같은 만큼 늘어난다(admin/src/lib/holdApply.ts releaseHold 참고).
+export async function requestRealHoldRelease(
+  token: string,
+  enrollmentId: number,
+): Promise<BridgeResult<RealClassroomSnapshot>> {
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/classroom/hold-release`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ enrollmentId }),
     });
   } catch {
     return errResult("NETWORK_ERROR", "관리자 서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");

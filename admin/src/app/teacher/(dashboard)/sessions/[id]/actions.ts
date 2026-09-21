@@ -17,6 +17,8 @@ export async function saveEvaluation(
   requirePermission(actor, "own_evaluations.update");
 
   const content = String(formData.get("content") ?? "").trim();
+  const textbookName = String(formData.get("textbookName") ?? "").trim();
+  const progressNote = String(formData.get("progressNote") ?? "").trim();
   if (!content) {
     return { error: "Please enter the evaluation content." };
   }
@@ -34,8 +36,8 @@ export async function saveEvaluation(
   // 관리자가 수동으로 COMPLETED 처리해야만 평가서를 쓸 수 있던 기존 방식 대신, 수업
   // 시작 시각이 지나면 강사가 직접 평가서를 작성할 수 있다 — 평가서 저장 자체가
   // "수업이 진행되었다"는 확정 신호이므로 아래에서 상태를 COMPLETED로 전환한다.
-  if (session.status === "CANCELLED" || session.status === "LEAVE") {
-    return { error: "Evaluations cannot be written for a cancelled or hold class." };
+  if (session.status === "CANCELLED" || session.status === "LEAVE" || session.status === "HOLD") {
+    return { error: "Evaluations cannot be written for a cancelled, on-hold, or paused class." };
   }
   if (session.scheduledAt.getTime() > Date.now()) {
     return { error: "You can write an evaluation once the class time has arrived." };
@@ -47,9 +49,16 @@ export async function saveEvaluation(
     update: { content },
     create: { classSessionId: sessionId, content },
   });
-  if (session.status !== "COMPLETED") {
-    await prisma.classSession.update({ where: { id: sessionId }, data: { status: "COMPLETED" } });
-  }
+  // 교재는 이 수업 한 건이 아니라 수강 건 전체에 걸린 값이라 Enrollment에 저장한다 —
+  // 평가서에서 바꾸면 그 수강 건의 다음 수업들에도 그대로 이어진다. 진도는 그날 수업
+  // 하나에만 해당하는 메모라 ClassSession에 저장한다.
+  await prisma.$transaction([
+    prisma.classSession.update({
+      where: { id: sessionId },
+      data: { progressNote: progressNote || null, status: session.status !== "COMPLETED" ? "COMPLETED" : undefined },
+    }),
+    prisma.enrollment.update({ where: { id: session.enrollmentId }, data: { textbookName: textbookName || null } }),
+  ]);
   await logAudit({
     actor,
     action: existing ? "EVALUATION_UPDATED" : "EVALUATION_CREATED",

@@ -7,7 +7,7 @@
 import type { HomeNotice } from "../lib/community/types";
 import type { AuthErrorCode, ServiceResult } from "../lib/auth/types";
 import { errResult, okResult } from "../lib/auth/types";
-import { ADMIN_API_URL } from "../lib/adminApi";
+import { ADMIN_API_URL, getTenantDomain } from "../lib/adminApi";
 
 async function parseErrorCode(res: Response): Promise<AuthErrorCode> {
   try {
@@ -22,7 +22,8 @@ async function parseErrorCode(res: Response): Promise<AuthErrorCode> {
 
 export async function listPublishedHomeNotices(): Promise<HomeNotice[]> {
   try {
-    const res = await fetch(`${ADMIN_API_URL}/api/public/home-notices`);
+    const domain = encodeURIComponent(getTenantDomain());
+    const res = await fetch(`${ADMIN_API_URL}/api/public/home-notices?domain=${domain}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return (await res.json()) as HomeNotice[];
   } catch (err) {

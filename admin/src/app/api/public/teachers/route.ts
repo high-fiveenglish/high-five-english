@@ -50,5 +50,5 @@ export async function GET(request: Request) {
     workingHours: formatAvailableTimeRanges(t.availableHours),
   }));
 
-  return NextResponse.json(payload, { headers });
+  return NextResponse.json(payload, { headers: { ...headers, "Cache-Control": "no-store" } });
 }

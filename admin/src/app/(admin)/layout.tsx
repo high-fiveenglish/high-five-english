@@ -36,6 +36,7 @@ const NAV_GROUPS = [
     title: "수업 운영",
     items: [
       { href: "/schedule", label: "전체 일정표", permission: "schedules.view" },
+      { href: "/reservations", label: "강사 자리 예약", permission: "reservations.view" },
       { href: "/leave-requests", label: "휴강 관리", permission: "leave_requests.view" },
     ],
   },
@@ -49,6 +50,7 @@ const NAV_GROUPS = [
   {
     title: "메인 사이트 관리",
     items: [
+      { href: "/agencies", label: "협력사 관리", permission: "agencies.view" },
       { href: "/home-notices", label: "홈페이지 공지 관리", permission: "home_notices.view" },
       { href: "/reviews", label: "수강후기 게시판", permission: "reviews.view" },
       { href: "/consult-channels", label: "상담채널 설정", permission: "consult_channels.view" },

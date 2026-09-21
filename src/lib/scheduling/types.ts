@@ -15,7 +15,8 @@ export type LessonStatus =
   | "rescheduled" // 연기 (student-initiated, superseded)
   | "teacher_absent" // 강사결석
   | "academy_closed" // 휴강
-  | "admin_cancelled"; // 관리자취소
+  | "admin_cancelled" // 관리자취소
+  | "on_hold"; // 수강 홀드로 정지된 수업 — 해제되면 뒤로 밀려 다시 예정으로 돌아온다.
 
 /** Lesson statuses that represent a slot being vacated and replaced by a new tail lesson. */
 export type CauseStatus = Extract<
@@ -38,6 +39,7 @@ export const LESSON_STATUS_RULES: Record<
   teacher_absent: { decrementsRemaining: false, extendsSchedule: true },
   academy_closed: { decrementsRemaining: false, extendsSchedule: true },
   admin_cancelled: { decrementsRemaining: false, extendsSchedule: true },
+  on_hold: { decrementsRemaining: false, extendsSchedule: true },
 };
 
 export type EvaluationStatus = "not_started" | "in_progress" | "completed";

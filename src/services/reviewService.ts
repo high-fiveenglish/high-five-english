@@ -8,7 +8,7 @@
 import type { AuthErrorCode, ServiceResult } from "../lib/auth/types";
 import { errResult, okResult } from "../lib/auth/types";
 import type { ReviewPost } from "../lib/community/types";
-import { ADMIN_API_URL } from "../lib/adminApi";
+import { ADMIN_API_URL, getTenantDomain } from "../lib/adminApi";
 
 async function parseErrorCode(res: Response): Promise<AuthErrorCode> {
   try {
@@ -28,7 +28,8 @@ export async function listBoardPosts(token: string | null): Promise<ServiceResul
   if (!token) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
   let res: Response;
   try {
-    res = await fetch(`${ADMIN_API_URL}/api/public/reviews`, {
+    const domain = encodeURIComponent(getTenantDomain());
+    res = await fetch(`${ADMIN_API_URL}/api/public/reviews?domain=${domain}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
   } catch {
@@ -52,20 +53,23 @@ export async function getBoardPost(token: string | null, id: string): Promise<Se
   return okResult((await res.json()) as ReviewPost);
 }
 
+/** token: studentApiToken(학생 본인 작성) 또는 adminApiToken(관리자 작성 — 댓글 포함,
+ * 최상위 후기 글은 제목이 필요하지만 댓글(parentId 있음)은 제목 없이 바로 달 수 있다). */
 export async function createBoardPost(
-  studentApiToken: string | null,
+  token: string | null,
   input: { title: string; content: string; parentId?: string },
 ): Promise<ServiceResult<ReviewPost>> {
-  if (!studentApiToken) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
+  if (!token) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
   const title = input.title.trim();
   const content = input.content.trim();
-  if (!title || !content) return errResult("NOT_FOUND", "제목과 내용을 모두 입력해주세요.");
+  if (!content || (!input.parentId && !title)) return errResult("NOT_FOUND", "제목과 내용을 모두 입력해주세요.");
 
   let res: Response;
   try {
-    res = await fetch(`${ADMIN_API_URL}/api/public/reviews`, {
+    const domain = encodeURIComponent(getTenantDomain());
+    res = await fetch(`${ADMIN_API_URL}/api/public/reviews?domain=${domain}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${studentApiToken}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ title, content, parentId: input.parentId }),
     });
   } catch {
@@ -76,20 +80,20 @@ export async function createBoardPost(
 }
 
 export async function updateBoardPost(
-  studentApiToken: string | null,
+  token: string | null,
   id: string,
-  input: { title: string; content: string },
+  input: { title: string; content: string; isReply?: boolean },
 ): Promise<ServiceResult<void>> {
-  if (!studentApiToken) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
+  if (!token) return errResult("UNAUTHENTICATED", "로그인이 필요합니다.");
   const title = input.title.trim();
   const content = input.content.trim();
-  if (!title || !content) return errResult("NOT_FOUND", "제목과 내용을 모두 입력해주세요.");
+  if (!content || (!input.isReply && !title)) return errResult("NOT_FOUND", "제목과 내용을 모두 입력해주세요.");
 
   let res: Response;
   try {
     res = await fetch(`${ADMIN_API_URL}/api/public/reviews/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${studentApiToken}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ title, content }),
     });
   } catch {

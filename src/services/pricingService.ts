@@ -9,11 +9,12 @@ import type { PricingDuration } from "../data/pricing";
 import type { CurrencyCode } from "../data/currencies";
 import type { ServiceResult } from "../lib/auth/types";
 import { errResult, okResult } from "../lib/auth/types";
-import { ADMIN_API_URL } from "../lib/adminApi";
+import { ADMIN_API_URL, getTenantDomain } from "../lib/adminApi";
 
 export async function listPricing(): Promise<PricingDuration[]> {
   try {
-    const res = await fetch(`${ADMIN_API_URL}/api/public/pricing`);
+    const domain = encodeURIComponent(getTenantDomain());
+    const res = await fetch(`${ADMIN_API_URL}/api/public/pricing?domain=${domain}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return (await res.json()) as PricingDuration[];
   } catch (err) {

@@ -25,18 +25,14 @@ export default async function SessionEvaluationPage({
   return (
     <div>
       <h1 className="mb-1 text-xl font-bold text-slate-900">Daily Evaluation</h1>
-      <p className="mb-1 text-sm text-slate-500">
+      <p className="mb-6 text-sm text-slate-500">
         {studentDisplayName(session.student.name, session.student.englishName)} ·{" "}
         {fmtDateTime(session.scheduledAt)} · {session.durationMin} min · {session.enrollment.classMethod}
-        {session.enrollment.textbookName ? ` · ${session.enrollment.textbookName}` : ""}
-      </p>
-      <p className="mb-6 whitespace-pre-wrap text-sm text-slate-500">
-        <span className="font-semibold text-slate-600">Progress:</span> {session.progressNote ?? "No record"}
       </p>
 
-      {session.status === "CANCELLED" || session.status === "LEAVE" ? (
+      {session.status === "CANCELLED" || session.status === "LEAVE" || session.status === "HOLD" ? (
         <p className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-500">
-          Evaluations cannot be written for a cancelled or hold class. (Current status:{" "}
+          Evaluations cannot be written for a cancelled, on-hold, or paused class. (Current status:{" "}
           {SESSION_STATUS_LABEL_EN[session.status]})
         </p>
       ) : session.scheduledAt.getTime() > Date.now() ? (
@@ -44,7 +40,12 @@ export default async function SessionEvaluationPage({
           You can write an evaluation once the class time has arrived.
         </p>
       ) : (
-        <EvaluationForm sessionId={session.id} defaultContent={session.evaluation?.content ?? ""} />
+        <EvaluationForm
+          sessionId={session.id}
+          defaultContent={session.evaluation?.content ?? ""}
+          defaultTextbook={session.enrollment.textbookName ?? ""}
+          defaultProgress={session.progressNote ?? ""}
+        />
       )}
     </div>
   );

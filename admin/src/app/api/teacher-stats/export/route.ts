@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     { header: "시간(분)", key: "durationMin", width: 10 },
     { header: "협력사", key: "agentName", width: 14 },
     { header: "수업종류", key: "sessionUnits", width: 10 },
-    { header: "급여(원)", key: "payKRW", width: 12 },
+    { header: "급여(₱)", key: "payPHP", width: 12 },
   ];
   rawSheet.getRow(1).font = { bold: true };
   for (const r of rows) rawSheet.addRow(r);
@@ -41,17 +41,17 @@ export async function GET(request: Request) {
   const summarySheet = workbook.addWorksheet("Summary");
   summarySheet.columns = [
     { header: "강사명", key: "teacherName", width: 14 },
-    { header: "레이트(25분/원)", key: "ratePerUnit", width: 16 },
+    { header: "레이트(25분/₱)", key: "ratePerUnit", width: 16 },
     { header: "출석 회차", key: "presentUnits", width: 10 },
     { header: "결석 회차", key: "absentUnits", width: 10 },
     { header: "유급휴가 건수", key: "paidLeaveCount", width: 12 },
-    { header: "총 급여(원)", key: "totalPayKRW", width: 14 },
+    { header: "총 급여(₱)", key: "totalPayPHP", width: 14 },
   ];
   summarySheet.getRow(1).font = { bold: true };
   for (const r of summary) summarySheet.addRow(r);
   const totalRow = summarySheet.addRow({
     teacherName: "합계",
-    totalPayKRW: summary.reduce((sum, r) => sum + r.totalPayKRW, 0),
+    totalPayPHP: summary.reduce((sum, r) => sum + r.totalPayPHP, 0),
   });
   totalRow.font = { bold: true };
 

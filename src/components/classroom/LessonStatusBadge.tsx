@@ -12,6 +12,7 @@ const LESSON_STATUS_CLASSES: Record<LessonStatus, string> = {
   teacher_absent: "bg-purple-50 text-purple-600",
   academy_closed: "bg-purple-50 text-purple-600",
   admin_cancelled: "bg-purple-50 text-purple-600",
+  on_hold: "bg-orange-50 text-orange-600",
 };
 
 /** 캘린더 칸 안의 작은 텍스트 태그용 — 큰 배지와 같은 색 계열을 그대로 쓴다. */

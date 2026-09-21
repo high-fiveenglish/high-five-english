@@ -10,7 +10,7 @@ export type TeacherCalendarSession = {
   id: number;
   scheduledAt: Date;
   durationMin: number;
-  status: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "MAKEUP_NEEDED" | "LEAVE";
+  status: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "MAKEUP_NEEDED" | "LEAVE" | "HOLD";
   progressNote: string | null;
   studentName: string;
   studentEnglishName: string | null;
@@ -344,6 +344,8 @@ export function TeacherCalendarView({
         <EvaluationModal
           sessionId={openEvalSession.id}
           defaultContent={openEvalSession.evaluationContent ?? ""}
+          defaultTextbook={openEvalSession.textbookName ?? ""}
+          defaultProgress={openEvalSession.progressNote ?? ""}
           studentLabel={studentDisplayName(openEvalSession.studentName, openEvalSession.studentEnglishName)}
           metaLine={`${fmtDate(openEvalSession.scheduledAt)} ${fmtTime(openEvalSession.scheduledAt)} · ${openEvalSession.durationMin} min · ${openEvalSession.classMethod}`}
           onClose={() => setOpenEvalSession(null)}

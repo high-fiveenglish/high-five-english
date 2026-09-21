@@ -5,6 +5,7 @@ import { AlertCircle } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { useAuth } from "../../context/AuthContext";
 import type { Role } from "../../lib/auth/types";
+import { buildKakaoAuthorizeUrl } from "../../lib/kakaoAuth";
 
 // 관리자 계정은 더 이상 이 사이트의 자체 /admin(예전 mock 패널)로 자동 이동하지 않는다 —
 // 실제 관리자 페이지(별도 Next.js 앱)는 상단바의 "홈페이지관리" 링크에서 새 탭으로
@@ -92,7 +93,7 @@ export function LoginModal({
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-1 text-sm">
+        <div className="pt-1 text-sm">
           <label className="flex items-center gap-1.5 text-slate-500">
             <input
               type="checkbox"
@@ -102,13 +103,6 @@ export function LoginModal({
             />
             {t("login.remember_me")}
           </label>
-          <button
-            type="button"
-            onClick={onSwitchToFind}
-            className="font-medium text-brand-600 hover:underline"
-          >
-            {t("login.find_account")}
-          </button>
         </div>
         <button
           type="submit"
@@ -117,6 +111,40 @@ export function LoginModal({
         >
           {submitting ? t("login.submitting") : t("login.submit")}
         </button>
+
+        <div className="flex items-center justify-center gap-2 pt-1 text-sm">
+          <button
+            type="button"
+            onClick={() => {
+              handleClose();
+              navigate("/signup");
+            }}
+            className="font-medium text-brand-600 hover:underline"
+          >
+            {t("login.signup_link")}
+          </button>
+          <span className="text-slate-300">·</span>
+          <button
+            type="button"
+            onClick={onSwitchToFind}
+            className="font-medium text-brand-600 hover:underline"
+          >
+            {t("login.find_account")}
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 pt-1 text-xs text-slate-300">
+          <div className="h-px flex-1 bg-slate-200" />
+          {t("login.or_divider")}
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
+        <a
+          href={buildKakaoAuthorizeUrl("login")}
+          className="flex w-full items-center justify-center rounded-lg bg-[#FEE500] py-3 text-sm font-semibold text-[#191600] transition hover:brightness-95"
+        >
+          {t("login.kakao_login")}
+        </a>
+
         <p className="pt-1 text-center text-xs text-slate-400">
           {t("login.demo_hint")}
         </p>

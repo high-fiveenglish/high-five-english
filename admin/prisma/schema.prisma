@@ -141,10 +141,16 @@ model Site {
   homeNotices        HomeNotice[]
   consultChannels    ConsultChannel[]
   reviewPosts        ReviewPost[]
+  slotReservations   SlotReservation[]
 
   @@map("sites")
 }
 
+// 협력사(맘앤맘/시너지 등) — 본사(highfive)를 포함해 전부 이 모델의 행이다. 아래
+// 브랜딩/회사정보/계좌 필드는 협력사 마케팅사이트(같은 코드, 접속 도메인으로 구분)가
+// 자기 정보를 동적으로 보여주는 데 쓴다 — 본사 관리자가 이 필드들을 수정하면 다음
+// 요청부터 그 협력사 사이트에 바로 반영된다(agency-branding 공개 API 참고). 전부
+// null이면 본사(highfive) 사이트의 정적 기본값으로 대체된다.
 model Agent {
   id        Int      @id @default(autoincrement())
   siteId    Int
@@ -153,9 +159,29 @@ model Agent {
   code      String   @unique
   createdAt DateTime @default(now())
 
-  students    Student[]
-  enrollments Enrollment[]
-  levelTests  LevelTest[]
+  // 마케팅사이트 접속 도메인 — 이 값으로 "지금 어느 협력사 사이트인지" 판별한다.
+  domain String? @unique
+  // 로고 이미지 URL(협력사 업로드분 또는 관리자가 직접 입력한 링크).
+  logoUrl String?
+  brandTagline String?
+  // 회사(사업자) 정보 — 마케팅사이트 하단 푸터에 그대로 노출된다.
+  bizName    String?
+  bizCeo     String?
+  bizRegNo   String?
+  bizAddress String?
+  // 무통장입금 계좌 정보.
+  bankName          String?
+  bankAccountNumber String?
+  bankAccountHolder String?
+
+  students         Student[]
+  enrollments      Enrollment[]
+  levelTests       LevelTest[]
+  slotReservations SlotReservation[]
+  consultChannels  ConsultChannel[]
+  pricingDurations PricingDuration[]
+  homeNotices      HomeNotice[]
+  reviewPosts      ReviewPost[]
 
   @@index([siteId])
   @@map("agents")
@@ -190,6 +216,13 @@ enum ResidenceRegion {
   JAPAN
   AUSTRALIA
   USA_OTHER
+}
+
+// 상담을 위챗/카카오톡 중 어느 채널로 하는지 — 강사 스케줄 구글시트에서 학생 이름
+// 앞에 위챗 표시(w)를 붙이는 데 쓰인다(연락처 ID 필드와는 별개로, "주 상담 채널"만 표시).
+enum ConsultRoute {
+  WECHAT
+  KAKAOTALK
 }
 
 model Student {
@@ -230,6 +263,8 @@ model Student {
   teamsId              String?
   kakaoId              String?
   wechatId             String?
+  consultRoute         ConsultRoute?
+  kakaoUserId          String?          @unique
   email                String?
   referrerId           String?
 
@@ -334,6 +369,7 @@ model Teacher {
   classSessions      ClassSession[]
   levelTests         LevelTest[]
   monthlyEvaluations MonthlyEvaluation[]
+  slotReservations   SlotReservation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -391,6 +427,10 @@ model Enrollment {
   startDate        DateTime
   endDate          DateTime
   status           EnrollmentStatus @default(APPLIED)
+  // status가 HOLDING인 동안 홀드가 시작된 시점 — 해제 시 이 값으로부터 며칠(주 단위로
+  // 올림) 홀드됐는지 계산해 예정 수업(HOLD 상태)들을 그만큼 뒤로 밀고 수강기간도 같이
+  // 늘린다(holdApply.ts 참고). HOLDING이 아닐 때는 항상 null이다.
+  holdStartedAt    DateTime?
   paymentStatus    PaymentStatus?
   orderNo          String?
   classType        String           @default("1:1")
@@ -419,10 +459,19 @@ model Enrollment {
   // 뜻이다. 지인할인·프로모션·포인트 사용 등으로 기본 수강료와 실제 청구액이 다를 때만
   // 값이 채워진다 — "수강내역관리 > 결제 > 수정" 화면에서만 설정한다.
   actualPriceKRW   Int?
+  // "재수강" 등록 화면(/enrollments/new?renewFrom=<원본 id>)에서 저장할 때만 채워진다 —
+  // 원본 수강 건을 이어서 새로 만든 건임을 표시한다. 원본 쪽에서 이 값으로 자신을
+  // 가리키는 건이 있는지(renewals) 확인해 "재수강" 버튼 대신 "재수강 완료"를 보여준다.
+  renewedFromId    Int?
+  renewedFrom      Enrollment?         @relation("EnrollmentRenewal", fields: [renewedFromId], references: [id])
+  renewals         Enrollment[]        @relation("EnrollmentRenewal")
 
   classSessions      ClassSession[]
   leaveRequests      LeaveRequest[]
   monthlyEvaluations MonthlyEvaluation[]
+  // 이 수강 건이 어떤 가예약에서 등록전환된 것인지(있다면) — SlotReservation.convertedEnrollmentId의
+  // 반대편. 대부분의 수강 건은 가예약 없이 바로 등록되므로 null이다.
+  convertedFromReservation SlotReservation?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -430,7 +479,60 @@ model Enrollment {
   @@index([siteId])
   @@index([studentId])
   @@index([teacherId])
+  @@index([renewedFromId])
   @@map("enrollments")
+}
+
+// ---------------------------------------------------------------------------
+// 강사 자리 가예약 (상담 단계 — 본사/협력사가 강사 빈자리를 미리 표시)
+// ---------------------------------------------------------------------------
+
+// 3곳(본사+협력사 2곳)이 같은 강사 풀을 공유한다. 상담 중 강사 빈자리를 미리
+// 구글시트에 표시해뒀다가, 실제 등록으로 이어지면 CONVERTED로 바꾸고(자리는 그대로
+// 유지, 표시만 정규 수업으로 바뀜), 상담이 불발되면 CANCELLED로 바꿔 자리를 비운다.
+enum ReservationStatus {
+  RESERVED
+  CONVERTED
+  CANCELLED
+}
+
+model SlotReservation {
+  id     Int    @id @default(autoincrement())
+  siteId Int
+  site   Site   @relation(fields: [siteId], references: [id])
+
+  teacherId Int
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+  // 이 자리를 가져가는 협력사 — null이면 본사(직영) 상담 건.
+  agentId Int?
+  agent   Agent? @relation(fields: [agentId], references: [id])
+
+  // 0=일 ~ 6=토(WEEKDAY_DISPLAY_ORDER와 동일한 값 체계).
+  weekday      Int
+  classTime    String
+  durationMin  Int    @default(25)
+
+  // 아직 학생 계정이 없는(상담 단계) 예비 수강생 정보라 Student를 참조하지 않고
+  // 자유 텍스트로 남긴다.
+  prospectName String
+  contactPhone String?
+  note         String? @db.Text
+
+  status ReservationStatus @default(RESERVED)
+
+  // 등록으로 전환되면 실제 Enrollment를 가리킨다(CONVERTED 상태에서만 값이 있음).
+  convertedEnrollmentId Int?        @unique
+  convertedEnrollment   Enrollment? @relation(fields: [convertedEnrollmentId], references: [id])
+
+  createdById Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
+  @@index([teacherId])
+  @@index([agentId])
+  @@map("slot_reservations")
 }
 
 enum SessionStatus {
@@ -439,6 +541,8 @@ enum SessionStatus {
   CANCELLED
   MAKEUP_NEEDED
   LEAVE // 학생 휴강 신청으로 결석 처리된 수업 — 회차 미차감, 수강기간 자동 연장
+  HOLD // 수강 홀드(Enrollment.status=HOLDING) 기간 동안 멈춘 예정 수업 — holdApply.ts 참고.
+       // 홀드가 풀리면 held된 일수만큼 뒤로 밀려 SCHEDULED로 복귀한다.
 }
 
 model ClassSession {
@@ -689,17 +793,23 @@ model LevelTest {
 // 아니다(src/data/currencies.ts의 기존 설계 원칙 그대로 유지).
 // ---------------------------------------------------------------------------
 
+// agentId가 null이면 본사(직영) 기본 가격표, 값이 있으면 그 협력사 전용 가격표다 —
+// 협력사 사이트는 자기 agentId의 행이 있으면 그걸 쓰고 없으면 null(본사) 행으로
+// 대체한다(agency-branding과 같은 폴백 규칙).
 model PricingDuration {
   id       Int          @id @default(autoincrement())
   siteId   Int
   site     Site         @relation(fields: [siteId], references: [id])
+  agentId  Int?
+  agent    Agent?       @relation(fields: [agentId], references: [id])
   code     String
   hasBadge Boolean      @default(false)
   order    Int          @default(0)
   rows     PricingRow[]
 
-  @@unique([siteId, code])
+  @@unique([siteId, agentId, code])
   @@index([siteId])
+  @@index([agentId])
   @@map("pricing_durations")
 }
 
@@ -762,10 +872,15 @@ model EnrollmentRequest {
 // 홈페이지 메인에 노출되는 공지 — 비로그인 방문자도 읽을 수 있는 공개 게시물.
 // authorAdminId는 Bulletin과 동일하게 작성한 관리자를 참조만 하고(감사용), 정합성을
 // 위해 강제 FK로 걸지 않는다.
+// agentId가 null이면 본사 홈페이지 공지, 값이 있으면 그 협력사 사이트에만 노출되는
+// 공지다 — 협력사 사이트는 자기 agentId 공지만 보여주고(본사 공지와 섞지 않는다,
+// "각각 진행" 요구사항), 본사 사이트는 agentId가 null인 것만 보여준다.
 model HomeNotice {
   id            Int      @id @default(autoincrement())
   siteId        Int
   site          Site     @relation(fields: [siteId], references: [id])
+  agentId       Int?
+  agent         Agent?   @relation(fields: [agentId], references: [id])
   title         String
   content       String   @db.Text
   published     Boolean  @default(false)
@@ -775,39 +890,61 @@ model HomeNotice {
   updatedAt     DateTime @updatedAt
 
   @@index([siteId])
+  @@index([agentId])
   @@map("home_notices")
 }
 
-// 상담채널 설정(카카오톡/위챗/고객센터 등) — 행 자체는 seed로 고정된 소수만 존재하고,
-// 관리자는 값/URL/노출여부만 수정한다(새 채널 추가는 코드 변경 필요, MeetingPlatformId와
-// 동일한 확장 정책).
+// 상담채널 설정(카카오톡/위챗/고객센터 등) — 채널 종류(code: "kakao"/"wechat"/
+// "customerService")는 seed로 고정된 소수만 존재하고, 관리자는 값/URL/노출여부만
+// 수정한다(새 채널 추가는 코드 변경 필요, MeetingPlatformId와 동일한 확장 정책).
+// agentId가 null이면 본사 기본 채널, 값이 있으면 그 협력사 전용 채널이다 — 협력사
+// 사이트는 같은 code에 자기 agentId 행이 있으면 그걸 쓰고 없으면 null(본사) 행으로
+// 대체한다.
 model ConsultChannel {
-  id          String   @id
+  id          Int      @id @default(autoincrement())
   siteId      Int
   site        Site     @relation(fields: [siteId], references: [id])
+  agentId     Int?
+  agent       Agent?   @relation(fields: [agentId], references: [id])
+  code        String
   displayName String
   value       String
   url         String?
   enabled     Boolean  @default(true)
   updatedAt   DateTime @updatedAt
 
+  @@unique([siteId, agentId, code])
   @@index([siteId])
+  @@index([agentId])
   @@map("consult_channels")
 }
 
 // 수강후기 게시판 — 로그인한 실제 학생만 글/답글 작성 가능. parentId가 없으면 최상위
 // 게시글, 있으면 그 글의 답글(한 단계 중첩, 기존 mock 게시판과 동일). 홈페이지 노출용
 // 큐레이션(featuredOnHome)은 폐기 — 이 게시판은 로그인 후에만 보이는 순수 게시판이다.
+// agentId는 글쓴 학생의 소속 협력사를 저장 시점에 그대로 복사해둔 값이다(글쓴 뒤
+// 학생이 협력사를 옮겨도 게시글은 원래 협력사 게시판에 남아야 하므로 매번 조인하지
+// 않고 스냅샷으로 저장) — "각각 진행" 요구사항대로 협력사 사이트는 자기 agentId
+// 글만, 본사 사이트는 agentId가 null인 글만 보여준다.
 model ReviewPost {
   id        Int          @id @default(autoincrement())
   siteId    Int
   site      Site         @relation(fields: [siteId], references: [id])
+  agentId   Int?
+  agent     Agent?       @relation(fields: [agentId], references: [id])
   parentId  Int?
   parent    ReviewPost?  @relation("ReviewReplies", fields: [parentId], references: [id])
   replies   ReviewPost[] @relation("ReviewReplies")
-  studentId Int
-  student   Student      @relation(fields: [studentId], references: [id])
-  title     String
+  // 학생 글은 studentId로, 관리자 글(댓글 포함 — "관리자도 댓글/작성 가능")은 authorAdminName만
+  // 채우고 studentId는 비운다. 관리자에게는 별도 계정 테이블 참조가 필요 없어(로그인 주체가
+  // AdminUser라 Student가 아니다) 이름을 문자열로 그대로 저장한다 — logAudit의 actorName과
+  // 같은 방식이다.
+  studentId       Int?
+  student         Student? @relation(fields: [studentId], references: [id])
+  authorAdminName String?
+  // 댓글(대댓글, parentId가 있는 글)은 제목 없이 바로 달 수 있어야 해서 선택값이다 —
+  // 최상위 후기 글만 제목을 요구한다(admin-login 라우트가 이를 검증한다).
+  title     String?
   content   String       @db.Text
   views     Int          @default(0)
   createdAt DateTime     @default(now())
@@ -815,5 +952,6 @@ model ReviewPost {
   @@index([siteId])
   @@index([studentId])
   @@index([parentId])
+  @@index([agentId])
   @@map("review_posts")
 }

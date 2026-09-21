@@ -24,6 +24,7 @@
   "topbar": {
     "home": "Home",
     "login": "Log In",
+    "signup": "Sign Up",
     "find_account": "Find ID/Password",
     "welcome": "Welcome, <b>{{name}}</b>",
     "my_classroom": "My Classroom",

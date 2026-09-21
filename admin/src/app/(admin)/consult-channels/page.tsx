@@ -3,8 +3,10 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { ChannelRow } from "./ChannelRow";
 
 export default async function ConsultChannelsPage() {
+  // 이 화면은 본사(직영) 채널만 다룬다 — 협력사별 상담채널은 "협력사 관리" 화면에서
+  // 함께 관리한다(agentId가 null인 행만 여기 보임).
   const channels = await prisma.consultChannel.findMany({
-    where: { siteId: DEFAULT_SITE_ID },
+    where: { siteId: DEFAULT_SITE_ID, agentId: null },
     orderBy: { id: "asc" },
   });
 

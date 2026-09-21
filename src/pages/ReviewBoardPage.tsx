@@ -17,8 +17,9 @@ function formatDate(iso: string) {
 function ReviewBoardContent() {
   const { userName, studentApiToken, adminApiToken, isRealAccount, studentProfile } = useAuth();
   // 관리자(general_manager/general_admin)는 studentApiToken이 없으므로, 조회는
-  // adminApiToken으로도 가능하게 한다(api/public/reviews GET이 이미 이를 지원한다) —
-  // 글쓰기/수정은 여전히 studentApiToken(실제 학생 본인)만 가능하다.
+  // adminApiToken으로도 가능하게 한다(api/public/reviews GET/POST/PATCH/DELETE 모두
+  // 이를 지원한다) — 글쓰기/댓글도 관리자 계정으로 그대로 가능하다(ReviewPostFormModal
+  // 참고).
   const viewToken = studentApiToken ?? adminApiToken;
   const { t } = useTranslation("reviewBoard");
   const location = useLocation();
@@ -167,7 +168,7 @@ function ReviewBoardContent() {
                         className={`flex items-center gap-1.5 text-left font-semibold text-brand-950 hover:underline ${isReply ? "pl-5 text-slate-600" : ""}`}
                       >
                         {isReply && <CornerDownRight size={13} className="shrink-0 text-slate-400" />}
-                        {post.title}
+                        {post.title || post.content.slice(0, 40)}
                       </button>
                     </td>
                     <td className="px-3 py-3 text-slate-600">{post.authorName}</td>
@@ -182,7 +183,7 @@ function ReviewBoardContent() {
 
         {selected && (
           <div className="mt-8 rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_8px_24px_rgba(20,44,88,0.06)] sm:p-8">
-            <h3 className="text-base font-bold text-brand-950">{selected.title}</h3>
+            {selected.title && <h3 className="text-base font-bold text-brand-950">{selected.title}</h3>}
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-slate-100 pb-4 text-xs text-slate-400">
               <span>{selected.authorName}</span>
               <span>{selected.createdAt.slice(0, 16).replace("T", " ")}</span>

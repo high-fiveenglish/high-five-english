@@ -4,7 +4,8 @@ import { useAuth } from "../context/AuthContext";
 import { Container } from "../components/ui/Container";
 import { SectionHeading } from "../components/ui/SectionHeading";
 import { PlaceholderPage } from "./PlaceholderPage";
-import { updateMyProfile, type StudentProfileSnapshot } from "../services/studentProfileService";
+import { updateMyProfile, unlinkKakao, type StudentProfileSnapshot } from "../services/studentProfileService";
+import { buildKakaoAuthorizeUrl, KAKAO_LINK_TOKEN_STORAGE_KEY } from "../lib/kakaoAuth";
 
 // "정보변경" 화면. 실제 admin DB 학생 계정 세션(직접 로그인했든, 관리자의 "회원으로
 // 로그인"으로 들어왔든 — isRealAccount)에서만 진짜 폼을 보여준다. 마케팅 사이트를
@@ -96,6 +97,22 @@ function StudentProfileForm({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [unlinkingKakao, setUnlinkingKakao] = useState(false);
+  const [kakaoError, setKakaoError] = useState<string | null>(null);
+
+  async function handleUnlinkKakao() {
+    setUnlinkingKakao(true);
+    setKakaoError(null);
+    const res = await unlinkKakao(token);
+    setUnlinkingKakao(false);
+    if (!res.ok) {
+      setKakaoError(res.error.message);
+      return;
+    }
+    const next = { ...snapshot, kakaoLinked: false };
+    setSnapshot(next);
+    onSaved(next);
+  }
 
   const set =
     (key: keyof FormState) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -200,6 +217,47 @@ function StudentProfileForm({
               <input value={form.teamsId} onChange={set("teamsId")} className={inputClass} />
             </Field>
           </div>
+        </Section>
+
+        <Section title="카카오 로그인 연동">
+          {snapshot.kakaoLinked ? (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-slate-600">
+                카카오 계정이 연동되어 있습니다. 다음부터 카카오 로그인만으로 접속할 수 있습니다.
+              </p>
+              <button
+                type="button"
+                onClick={handleUnlinkKakao}
+                disabled={unlinkingKakao}
+                className="shrink-0 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                {unlinkingKakao ? "해제 중..." : "연동 해제"}
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-slate-600">
+                카카오 계정을 연동하면 다음부터 아이디/비밀번호 없이 카카오 로그인만으로 접속할 수 있습니다.
+              </p>
+              <a
+                href={buildKakaoAuthorizeUrl("link")}
+                onClick={() => {
+                  // 카카오 인가 화면으로 나갔다 돌아오면 이 앱의 로그인 세션(메모리 상태)이
+                  // 날아가므로, KakaoCallbackPage가 이 토큰으로 세션을 복구할 수 있게 잠깐
+                  // sessionStorage에 남겨둔다.
+                  try {
+                    sessionStorage.setItem(KAKAO_LINK_TOKEN_STORAGE_KEY, token);
+                  } catch {
+                    /* 프라이빗 모드 등으로 저장이 막혀도 링크 이동 자체는 막지 않는다. */
+                  }
+                }}
+                className="shrink-0 rounded-lg bg-[#FEE500] px-4 py-2 text-sm font-semibold text-[#191600] hover:brightness-95"
+              >
+                카카오 연동하기
+              </a>
+            </div>
+          )}
+          {kakaoError && <p className="text-sm text-red-600">{kakaoError}</p>}
         </Section>
 
         <Section title="비밀번호 변경">

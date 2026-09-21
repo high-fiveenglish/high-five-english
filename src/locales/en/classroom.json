@@ -13,9 +13,12 @@
     "rescheduled": "Student Rescheduled",
     "teacher_absent": "Admin Rescheduled",
     "academy_closed": "Admin Rescheduled",
-    "admin_cancelled": "Admin Rescheduled"
+    "admin_cancelled": "Admin Rescheduled",
+    "on_hold": "On Hold"
   },
   "summary_card": {
+    "hold_release_cta": "Request Hold Release",
+    "hold_release_pending": "Processing...",
     "enrollment_period": "Enrollment Period",
     "lesson_count": "Lessons",
     "lesson_count_value": "{{total}} total · {{remaining}} remaining",

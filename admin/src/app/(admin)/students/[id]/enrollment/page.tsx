@@ -37,6 +37,7 @@ export default async function StudentEnrollmentPage({
         studentLabel={`${student.loginId} (${student.name})`}
         studentName={student.name}
         defaultEnglishName={student.englishName}
+        returnTo="/students?notice=enrollment-created"
       />
     </div>
   );

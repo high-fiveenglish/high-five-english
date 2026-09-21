@@ -9,7 +9,8 @@ import { requirePermission, logAudit } from "@/lib/rbac";
 import { startStudentImpersonation, stopStudentImpersonation } from "@/lib/studentAuth";
 import { createSsoToken } from "@/lib/sso";
 import { DEFAULT_SITE_ID, HIGHFIVE_AGENT_CODE } from "@/lib/constants";
-import type { StudentGrade, StudentStatus, Sex, ResidenceRegion } from "@/generated/prisma/client";
+import { syncTeacherScheduleToGoogleSheet } from "@/lib/teacherScheduleSheet";
+import type { StudentGrade, StudentStatus, Sex, ResidenceRegion, ConsultRoute } from "@/generated/prisma/client";
 
 // 회원등급이 GENERAL(일반회원)이고 협력사를 명시적으로 고르지 않았다면 직영에이전트를
 // 기본값으로 채운다. 다른 등급이거나 협력사를 명시적으로 골랐다면 그 값을 그대로 쓴다.
@@ -31,6 +32,21 @@ export async function createStudent(_prevState: { error?: string } | undefined, 
   const status = String(formData.get("status") ?? "ACTIVE") as StudentStatus;
   const discountRate = Number(formData.get("discountRate") ?? 0);
   const agentIdRaw = String(formData.get("agentId") ?? "");
+  const consultRouteRaw = String(formData.get("consultRoute") ?? "");
+
+  const englishName = String(formData.get("englishName") ?? "").trim();
+  const sexRaw = String(formData.get("sex") ?? "");
+  const birthDateRaw = String(formData.get("birthDate") ?? "");
+  const occupation = String(formData.get("occupation") ?? "").trim();
+  const regionRaw = String(formData.get("region") ?? "");
+  const address = String(formData.get("address") ?? "").trim();
+  const mobilePhone = String(formData.get("mobilePhone") ?? "").trim();
+  const etcNote = String(formData.get("etcNote") ?? "").trim();
+  const preferredClassMethod = String(formData.get("preferredClassMethod") ?? "").trim();
+  const teamsId = String(formData.get("teamsId") ?? "").trim();
+  const kakaoId = String(formData.get("kakaoId") ?? "").trim();
+  const wechatId = String(formData.get("wechatId") ?? "").trim();
+  const referrerId = String(formData.get("referrerId") ?? "").trim();
 
   if (!name || !loginId || !password) {
     return { error: "이름, 로그인 ID, 비밀번호는 필수입니다." };
@@ -53,11 +69,26 @@ export async function createStudent(_prevState: { error?: string } | undefined, 
       status,
       discountRate,
       agentId: await resolveAgentId(grade, agentIdRaw),
+      consultRoute: consultRouteRaw ? (consultRouteRaw as ConsultRoute) : null,
+      englishName: englishName || null,
+      sex: sexRaw ? (sexRaw as Sex) : null,
+      birthDate: birthDateRaw ? new Date(birthDateRaw) : null,
+      occupation: occupation || null,
+      region: regionRaw ? (regionRaw as ResidenceRegion) : null,
+      address: address || null,
+      mobilePhone: mobilePhone || null,
+      etcNote: etcNote || null,
+      preferredClassMethod: preferredClassMethod || null,
+      teamsId: teamsId || null,
+      kakaoId: kakaoId || null,
+      wechatId: wechatId || null,
+      referrerId: referrerId || null,
     },
   });
   await logAudit({ actor, action: "ACCOUNT_CREATED", targetType: "Student", targetId: student.id, description: `학생 등록: ${name}` });
 
   revalidatePath("/students");
+  syncTeacherScheduleToGoogleSheet().catch(() => {});
   redirect("/students");
 }
 
@@ -84,6 +115,7 @@ export async function updateStudent(id: number, _prevState: { error?: string } |
   const teamsId = String(formData.get("teamsId") ?? "").trim();
   const kakaoId = String(formData.get("kakaoId") ?? "").trim();
   const wechatId = String(formData.get("wechatId") ?? "").trim();
+  const consultRouteRaw = String(formData.get("consultRoute") ?? "");
   const referrerId = String(formData.get("referrerId") ?? "").trim();
   const agentIdRaw = String(formData.get("agentId") ?? "");
 
@@ -111,6 +143,7 @@ export async function updateStudent(id: number, _prevState: { error?: string } |
       teamsId: teamsId || null,
       kakaoId: kakaoId || null,
       wechatId: wechatId || null,
+      consultRoute: consultRouteRaw ? (consultRouteRaw as ConsultRoute) : null,
       referrerId: referrerId || null,
       agentId: await resolveAgentId(grade, agentIdRaw),
       ...(newPassword ? { passwordHash: await bcrypt.hash(newPassword, 10) } : {}),
@@ -120,6 +153,7 @@ export async function updateStudent(id: number, _prevState: { error?: string } |
 
   revalidatePath("/students");
   revalidatePath(`/students/${id}`);
+  syncTeacherScheduleToGoogleSheet().catch(() => {});
   redirect("/students");
 }
 
@@ -138,24 +172,6 @@ export async function restoreStudent(id: number) {
   requirePermission(actor, "students.delete");
   await prisma.student.update({ where: { id }, data: { deletedAt: null } });
   await logAudit({ actor, action: "UPDATE", targetType: "Student", targetId: id, description: "학생 삭제 취소(복원)" });
-  revalidatePath("/students");
-}
-
-export async function updateStudentAgent(id: number, agentId: number | null) {
-  const actor = await requireBackofficeActor();
-  requirePermission(actor, "students.update");
-  await prisma.student.update({ where: { id }, data: { agentId } });
-  await logAudit({ actor, action: "UPDATE", targetType: "Student", targetId: id, description: "협력사 변경" });
-  revalidatePath("/students");
-}
-
-export async function updateStudentGrade(id: number, grade: StudentGrade) {
-  const actor = await requireBackofficeActor();
-  requirePermission(actor, "students.update");
-  const student = await prisma.student.findUnique({ where: { id } });
-  const agentId = grade === "GENERAL" && !student?.agentId ? await resolveAgentId(grade, "") : undefined;
-  await prisma.student.update({ where: { id }, data: { grade, ...(agentId !== undefined ? { agentId } : {}) } });
-  await logAudit({ actor, action: "UPDATE", targetType: "Student", targetId: id, description: `회원등급 변경: ${grade}` });
   revalidatePath("/students");
 }
 

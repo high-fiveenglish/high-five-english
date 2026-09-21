@@ -168,6 +168,58 @@ export async function endTeacherImpersonation() {
   redirect("/teachers");
 }
 
+// 비활성/정지 강사 목록에서 여러 명을 골라 완전히(하드) 삭제한다 — 위 deleteTeacher의
+// 소프트 비활성화와 달리, 이건 관리자가 "테스트/더 이상 안 쓰는 계정이라 정말 지워도
+// 된다"고 명시적으로 확인한 경우에만 쓰는 별도 기능이다. 강사와 연결된 수강내역
+// (Enrollment)·그 수강내역의 수업/휴강/월평가서까지 전부 함께 지워지므로 되돌릴 수
+// 없다 — 이미 비활성 상태인 강사만 대상으로 한다(활성 강사를 실수로 지우는 걸 막기 위해).
+export async function bulkHardDeleteTeachers(ids: number[]) {
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "teachers.delete");
+  if (ids.length === 0) return;
+
+  const teachers = await prisma.teacher.findMany({
+    where: { id: { in: ids }, accountStatus: { not: "ACTIVE" } },
+    select: { id: true, realName: true },
+  });
+  const teacherIds = teachers.map((t) => t.id);
+  if (teacherIds.length === 0) return;
+
+  const enrollments = await prisma.enrollment.findMany({ where: { teacherId: { in: teacherIds } }, select: { id: true } });
+  const enrollmentIds = enrollments.map((e) => e.id);
+  const sessions = await prisma.classSession.findMany({ where: { enrollmentId: { in: enrollmentIds } }, select: { id: true } });
+  const sessionIds = sessions.map((s) => s.id);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.leaveRequest.deleteMany({ where: { enrollmentId: { in: enrollmentIds } } });
+    await tx.monthlyEvaluation.deleteMany({ where: { enrollmentId: { in: enrollmentIds } } });
+    await tx.lessonEvaluation.deleteMany({ where: { classSessionId: { in: sessionIds } } });
+    await tx.classSession.deleteMany({ where: { enrollmentId: { in: enrollmentIds } } });
+    await tx.monthlyEvaluation.updateMany({
+      where: { teacherId: { in: teacherIds }, enrollmentId: { notIn: enrollmentIds } },
+      data: { teacherId: null },
+    });
+    await tx.levelTest.updateMany({ where: { teacherId: { in: teacherIds } }, data: { teacherId: null } });
+    await tx.teacher.updateMany({ where: { teamLeaderId: { in: teacherIds } }, data: { teamLeaderId: null } });
+    await tx.enrollment.updateMany({
+      where: { renewedFromId: { in: enrollmentIds }, id: { notIn: enrollmentIds } },
+      data: { renewedFromId: null },
+    });
+    await tx.teacherRate.deleteMany({ where: { teacherId: { in: teacherIds } } });
+    await tx.enrollment.deleteMany({ where: { id: { in: enrollmentIds } } });
+    await tx.teacher.deleteMany({ where: { id: { in: teacherIds } } });
+  });
+
+  await logAudit({
+    actor,
+    action: "DELETE",
+    targetType: "Teacher",
+    description: `강사 일괄 완전삭제 ${teacherIds.length}명 (연결된 수강내역 ${enrollmentIds.length}건 포함): ${teachers.map((t) => t.realName).join(", ")}`,
+  });
+
+  revalidatePath("/teachers");
+}
+
 export async function updateTeacherAccountStatus(id: number, accountStatus: AccountStatus) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "teachers.update");

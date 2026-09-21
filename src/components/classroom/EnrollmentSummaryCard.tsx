@@ -34,6 +34,8 @@ export function EnrollmentSummaryCard({
   lessons,
   teacherMeetingLinks,
   onOpenTeacher,
+  onRequestHoldRelease,
+  requestingHoldRelease,
 }: {
   enrollment: Enrollment;
   course: ClassroomCourse;
@@ -42,6 +44,9 @@ export function EnrollmentSummaryCard({
   lessons: Lesson[];
   teacherMeetingLinks: TeacherMeetingLinks;
   onOpenTeacher: () => void;
+  /** status가 "paused"일 때만 쓰인다 — 없으면(=지원하지 않는 상황) 버튼 자체를 숨긴다. */
+  onRequestHoldRelease?: () => void;
+  requestingHoldRelease?: boolean;
 }) {
   const { t } = useTranslation("classroom");
   const weekdayLabels = t("weekdays_short", { returnObjects: true }) as string[];
@@ -62,9 +67,21 @@ export function EnrollmentSummaryCard({
           <p className="text-xs font-semibold text-accent-500">{course.productName}</p>
           <h2 className="mt-1 text-lg font-extrabold text-brand-950">{course.courseName}</h2>
         </div>
-        <span className="rounded-full bg-brand-600/10 px-3 py-1.5 text-xs font-bold text-brand-700">
-          {t(`enrollment_status.${enrollment.status}`)}
-        </span>
+        <div className="flex flex-col items-end gap-1.5">
+          <span className="rounded-full bg-brand-600/10 px-3 py-1.5 text-xs font-bold text-brand-700">
+            {t(`enrollment_status.${enrollment.status}`)}
+          </span>
+          {enrollment.status === "paused" && onRequestHoldRelease && (
+            <button
+              type="button"
+              onClick={onRequestHoldRelease}
+              disabled={requestingHoldRelease}
+              className="rounded-full bg-accent-500 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-accent-600 disabled:opacity-50"
+            >
+              {requestingHoldRelease ? t("summary_card.hold_release_pending") : t("summary_card.hold_release_cta")}
+            </button>
+          )}
+        </div>
       </div>
 
       {nextLesson && (

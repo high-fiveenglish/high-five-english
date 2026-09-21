@@ -12,15 +12,18 @@ function addMonths(yearMonth: string, delta: number): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+const PAGE_SIZE = 20;
+
 export default async function EvaluationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string; month?: string }>;
+  searchParams: Promise<{ date?: string; month?: string; page?: string }>;
 }) {
-  const { date, month } = await searchParams;
+  const { date, month, page: pageParam } = await searchParams;
   const today = formatAppDate(new Date());
   const selectedDate = date ?? today;
   const viewMonth = month ?? selectedDate.slice(0, 7);
+  const page = Math.max(1, Number(pageParam) || 1);
 
   const monthStart = parseAppDateTime(`${viewMonth}-01T00:00`);
   const monthEnd = parseAppDateTime(`${addMonths(viewMonth, 1)}-01T00:00`);
@@ -30,8 +33,8 @@ export default async function EvaluationsPage({
       siteId: DEFAULT_SITE_ID,
       // 강사가 평가서를 저장해야만 COMPLETED로 바뀌므로(teacher/sessions/[id]/actions.ts),
       // 여기서 COMPLETED만 필터링하면 아직 평가서를 안 쓴 "오늘 수업"이 통째로 빠져
-      // 미작성 건수를 영원히 볼 수 없게 된다. 취소/휴강이 아닌 그날의 모든 수업을 대상으로 한다.
-      status: { notIn: ["CANCELLED", "LEAVE"] },
+      // 미작성 건수를 영원히 볼 수 없게 된다. 취소/휴강/홀드가 아닌 그날의 모든 수업을 대상으로 한다.
+      status: { notIn: ["CANCELLED", "LEAVE", "HOLD"] },
       scheduledAt: { gte: monthStart, lt: monthEnd },
     },
     orderBy: { scheduledAt: "asc" },
@@ -47,6 +50,14 @@ export default async function EvaluationsPage({
   }
   const selectedSessions = byDate.get(selectedDate) ?? [];
   const selectedWritten = selectedSessions.filter((s) => s.evaluation).length;
+  const totalPages = Math.max(1, Math.ceil(selectedSessions.length / PAGE_SIZE));
+  const pageSessions = selectedSessions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  function pageHref(p: number): string {
+    const params = new URLSearchParams({ month: viewMonth, date: selectedDate });
+    if (p > 1) params.set("page", String(p));
+    return `/evaluations?${params.toString()}`;
+  }
 
   const [y, m] = viewMonth.split("-").map(Number);
   const firstOfMonth = new Date(Date.UTC(y, m - 1, 1));
@@ -146,10 +157,11 @@ export default async function EvaluationsPage({
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
+                  <th className="px-4 py-3">No.</th>
                   <th className="px-4 py-3">시간</th>
                   <th className="px-4 py-3">학생</th>
                   <th className="px-4 py-3">강사</th>
@@ -158,8 +170,9 @@ export default async function EvaluationsPage({
                 </tr>
               </thead>
               <tbody>
-                {selectedSessions.map((s) => (
+                {pageSessions.map((s, i) => (
                   <tr key={s.id} className="border-b border-slate-100 last:border-0">
+                    <td className="px-4 py-3 text-slate-500">{(page - 1) * PAGE_SIZE + i + 1}</td>
                     <td className="px-4 py-3 text-slate-900">{formatAppTime(s.scheduledAt)}</td>
                     <td className="px-4 py-3 text-slate-600">{s.student.name}</td>
                     <td className="px-4 py-3 text-slate-600">{s.teacher.realName}</td>
@@ -183,7 +196,7 @@ export default async function EvaluationsPage({
                 ))}
                 {selectedSessions.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center text-slate-400">
+                    <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
                       이 날짜에 수업이 없습니다.
                     </td>
                   </tr>
@@ -191,6 +204,32 @@ export default async function EvaluationsPage({
               </tbody>
             </table>
           </div>
+
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-center gap-2 text-sm">
+              <Link
+                href={pageHref(Math.max(1, page - 1))}
+                aria-disabled={page <= 1}
+                className={`rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600 ${
+                  page <= 1 ? "pointer-events-none opacity-40" : "hover:bg-slate-50"
+                }`}
+              >
+                이전
+              </Link>
+              <span className="px-2 text-slate-500">
+                {page} / {totalPages.toLocaleString()} 페이지 (총 {selectedSessions.length.toLocaleString()}건)
+              </span>
+              <Link
+                href={pageHref(Math.min(totalPages, page + 1))}
+                aria-disabled={page >= totalPages}
+                className={`rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600 ${
+                  page >= totalPages ? "pointer-events-none opacity-40" : "hover:bg-slate-50"
+                }`}
+              >
+                다음
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>

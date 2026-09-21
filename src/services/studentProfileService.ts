@@ -20,7 +20,7 @@ function errResult<T>(code: "NETWORK_ERROR" | "SESSION_EXPIRED" | "REQUEST_FAILE
   return { ok: false, error: { code, message } };
 }
 
-export type StudentProfileUpdateInput = Omit<StudentProfileSnapshot, "studentId" | "loginId" | "name"> & {
+export type StudentProfileUpdateInput = Omit<StudentProfileSnapshot, "studentId" | "loginId" | "name" | "kakaoLinked"> & {
   newPassword: string;
   newPasswordConfirm: string;
 };
@@ -64,4 +64,46 @@ export async function updateMyProfile(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
+}
+
+/** 카카오 연동(KakaoCallbackPage) 뒤 세션을 복구할 때 쓴다 — 토큰만 갖고 있고 나머지
+ * 세션 상태(actor/studentProfile)는 카카오 리다이렉트로 날아간 상태라, 이 토큰으로
+ * 최신 프로필을 다시 조회해 AuthContext.hydrateActor에 그대로 넘긴다. */
+export async function getMyProfile(token: string): Promise<ProfileResult<StudentProfileSnapshot>> {
+  return callProfileApi(token, { method: "GET" });
+}
+
+export type KakaoLinkResult =
+  | { ok: true }
+  | { ok: false; error: { code: "NETWORK_ERROR" | "ALREADY_LINKED" | "REQUEST_FAILED"; message: string } };
+
+async function callKakaoLinkApi(token: string, init: RequestInit): Promise<KakaoLinkResult> {
+  let res: Response;
+  try {
+    res = await fetch(`${ADMIN_API_URL}/api/public/kakao-link`, {
+      ...init,
+      headers: { ...init.headers, Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    return { ok: false, error: { code: "NETWORK_ERROR", message: "관리자 서버에 연결할 수 없습니다." } };
+  }
+  if (res.status === 409) {
+    return { ok: false, error: { code: "ALREADY_LINKED", message: "이미 다른 계정에 연동된 카카오 계정입니다." } };
+  }
+  if (!res.ok) {
+    return { ok: false, error: { code: "REQUEST_FAILED", message: "요청을 처리하지 못했습니다." } };
+  }
+  return { ok: true };
+}
+
+export async function linkKakao(token: string, code: string, redirectUri: string): Promise<KakaoLinkResult> {
+  return callKakaoLinkApi(token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code, redirectUri }),
+  });
+}
+
+export async function unlinkKakao(token: string): Promise<KakaoLinkResult> {
+  return callKakaoLinkApi(token, { method: "DELETE" });
 }

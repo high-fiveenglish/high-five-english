@@ -23,6 +23,7 @@ import {
   classifyEnrollmentTimeline,
   getMyClassroom,
   listMyEnrollmentHistory,
+  requestHoldRelease,
   type EnrollmentHistoryRow,
   type MyClassroomSnapshot,
 } from "../services/classroomService";
@@ -69,6 +70,7 @@ function ClassroomContent({ onOpenLevelTest }: { onOpenLevelTest: () => void }) 
   const [levelTestLoading, setLevelTestLoading] = useState(true);
   const [levelTestEligibility, setLevelTestEligibility] = useState<LevelTestEligibility | null>(null);
   const [levelTestRows, setLevelTestRows] = useState<MyLevelTestRow[]>([]);
+  const [holdReleasePending, setHoldReleasePending] = useState(false);
 
   const load = (enrollmentId?: string) => {
     if (!actor) return;
@@ -105,6 +107,18 @@ function ClassroomContent({ onOpenLevelTest }: { onOpenLevelTest: () => void }) 
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actor]);
+
+  const handleHoldReleaseRequest = async () => {
+    if (!actor || !snapshot) return;
+    setHoldReleasePending(true);
+    const result = await requestHoldRelease(actor, snapshot.enrollment.id, studentApiToken);
+    setHoldReleasePending(false);
+    if (!result.ok) {
+      alert(t(`service_errors.${result.error.code}`, { ns: "common", defaultValue: t("service_errors.unknown", { ns: "common" }) }));
+      return;
+    }
+    load(selectedEnrollmentId);
+  };
 
   if (!snapshot && !loadError) {
     return (
@@ -235,6 +249,8 @@ function ClassroomContent({ onOpenLevelTest }: { onOpenLevelTest: () => void }) 
             lessons={lessons}
             teacherMeetingLinks={teacherMeetingLinks}
             onOpenTeacher={() => setTeacherModalOpen(true)}
+            onRequestHoldRelease={handleHoldReleaseRequest}
+            requestingHoldRelease={holdReleasePending}
           />
           <div className="flex flex-col gap-5">
             <TextbookInfoCard textbook={textbook} />

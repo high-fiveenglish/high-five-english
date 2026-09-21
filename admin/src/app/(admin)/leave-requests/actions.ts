@@ -8,6 +8,7 @@ import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { applyClassLeave } from "@/lib/leaveApply";
 import { parseAppDateTime } from "@/lib/appTime";
+import { syncTeacherScheduleToGoogleSheet } from "@/lib/teacherScheduleSheet";
 
 const EXTENDED_DAYS = 1;
 
@@ -81,6 +82,7 @@ export async function createLeaveRequestAdmin(
   await logAudit({ actor, action: "LEAVE_REQUESTED", targetType: "LeaveRequest", targetId: leaveRequest.id, description: "관리자가 연기 생성·적용" });
 
   revalidatePath("/leave-requests");
+  syncTeacherScheduleToGoogleSheet().catch(() => {});
   redirect("/leave-requests");
 }
 
@@ -111,6 +113,7 @@ export async function approveLeaveRequest(id: number) {
 
   revalidatePath("/leave-requests");
   revalidatePath("/teacher/hold");
+  syncTeacherScheduleToGoogleSheet().catch(() => {});
 }
 
 export async function rejectLeaveRequest(id: number) {
@@ -164,6 +167,7 @@ export async function revertLeaveRequest(id: number) {
   revalidatePath("/schedule");
   revalidatePath("/teacher/schedule");
   revalidatePath("/student/sessions");
+  syncTeacherScheduleToGoogleSheet().catch(() => {});
 }
 
 // 전체수업휴강(어학원 휴강) — 고른 날짜에 예정(SCHEDULED)된 모든 수업을 한 번에
@@ -265,6 +269,7 @@ export async function createAcademyClosure(
   for (const studentId of new Set(sessions.map((s) => s.studentId))) {
     revalidatePath(`/students/${studentId}/sessions`);
   }
+  syncTeacherScheduleToGoogleSheet().catch(() => {});
 
   return {
     success:
@@ -328,4 +333,5 @@ export async function revertAcademyClosure(id: number) {
   for (const studentId of new Set(closure.leaveRequests.map((lr) => lr.studentId))) {
     revalidatePath(`/students/${studentId}/sessions`);
   }
+  syncTeacherScheduleToGoogleSheet().catch(() => {});
 }

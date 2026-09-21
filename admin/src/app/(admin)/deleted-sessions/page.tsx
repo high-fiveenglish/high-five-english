@@ -8,21 +8,25 @@ import { formatAppDateTime } from "@/lib/appTime";
 const fmtDateTime = formatAppDateTime;
 
 export default async function DeletedSessionsPage() {
-  const sessions = await prisma.classSession.findMany({
-    where: { siteId: DEFAULT_SITE_ID, deletedAt: { not: null } },
-    orderBy: { deletedAt: "desc" },
-    include: { student: true, teacher: { select: TEACHER_SUMMARY_SELECT } },
-    take: 200,
-  });
+  const [sessions, totalCount] = await Promise.all([
+    prisma.classSession.findMany({
+      where: { siteId: DEFAULT_SITE_ID, deletedAt: { not: null } },
+      orderBy: { deletedAt: "desc" },
+      include: { student: true, teacher: { select: TEACHER_SUMMARY_SELECT } },
+      take: 200,
+    }),
+    prisma.classSession.count({ where: { siteId: DEFAULT_SITE_ID, deletedAt: { not: null } } }),
+  ]);
 
   return (
     <div>
       <h1 className="mb-6 text-xl font-bold text-slate-900">수업 삭제 내역</h1>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
+              <th className="px-4 py-3">No.</th>
               <th className="px-4 py-3">삭제일시</th>
               <th className="px-4 py-3">수업 일시</th>
               <th className="px-4 py-3">학생</th>
@@ -32,8 +36,9 @@ export default async function DeletedSessionsPage() {
             </tr>
           </thead>
           <tbody>
-            {sessions.map((s) => (
+            {sessions.map((s, i) => (
               <tr key={s.id} className="border-b border-slate-100 last:border-0">
+                <td className="px-4 py-3 text-slate-500">{totalCount - i}</td>
                 <td className="px-4 py-3 text-slate-500">{s.deletedAt ? fmtDateTime(s.deletedAt) : "-"}</td>
                 <td className="px-4 py-3 text-slate-900">{fmtDateTime(s.scheduledAt)}</td>
                 <td className="px-4 py-3 text-slate-600">{s.student.name}</td>
@@ -46,7 +51,7 @@ export default async function DeletedSessionsPage() {
             ))}
             {sessions.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
                   삭제된 수업이 없습니다.
                 </td>
               </tr>

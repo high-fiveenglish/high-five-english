@@ -1,11 +1,26 @@
+import Link from "next/link";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { findAllOverlappingSessions } from "@/lib/scheduleConflict";
 import { formatAppDateTime } from "@/lib/appTime";
 
 const fmtDateTime = formatAppDateTime;
+const PAGE_SIZE = 20;
 
-export default async function OverlappingSessionsPage() {
-  const pairs = await findAllOverlappingSessions(DEFAULT_SITE_ID);
+export default async function OverlappingSessionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam) || 1);
+
+  const allPairs = await findAllOverlappingSessions(DEFAULT_SITE_ID);
+  const totalPages = Math.max(1, Math.ceil(allPairs.length / PAGE_SIZE));
+  const pairs = allPairs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  function pageHref(p: number): string {
+    return p > 1 ? `/overlapping-sessions?page=${p}` : "/overlapping-sessions";
+  }
 
   return (
     <div>
@@ -16,10 +31,11 @@ export default async function OverlappingSessionsPage() {
         점검용 화면입니다.
       </p>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
+              <th className="px-4 py-3">No.</th>
               <th className="px-4 py-3">강사</th>
               <th className="px-4 py-3">수업 A</th>
               <th className="px-4 py-3">수업 B</th>
@@ -28,6 +44,7 @@ export default async function OverlappingSessionsPage() {
           <tbody>
             {pairs.map((p, i) => (
               <tr key={i} className="border-b border-slate-100 last:border-0">
+                <td className="px-4 py-3 text-slate-500">{(page - 1) * PAGE_SIZE + i + 1}</td>
                 <td className="px-4 py-3 font-medium text-slate-900">{p.teacherName}</td>
                 <td className="px-4 py-3 text-slate-600">
                   {fmtDateTime(p.a.scheduledAt)} ({p.a.durationMin}분) · {p.a.studentName} 학생
@@ -39,7 +56,7 @@ export default async function OverlappingSessionsPage() {
             ))}
             {pairs.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={4} className="px-4 py-10 text-center text-slate-400">
                   겹치는 수업이 없습니다.
                 </td>
               </tr>
@@ -47,6 +64,32 @@ export default async function OverlappingSessionsPage() {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-2 text-sm">
+          <Link
+            href={pageHref(Math.max(1, page - 1))}
+            aria-disabled={page <= 1}
+            className={`rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600 ${
+              page <= 1 ? "pointer-events-none opacity-40" : "hover:bg-slate-50"
+            }`}
+          >
+            이전
+          </Link>
+          <span className="px-2 text-slate-500">
+            {page} / {totalPages.toLocaleString()} 페이지 (총 {allPairs.length.toLocaleString()}건)
+          </span>
+          <Link
+            href={pageHref(Math.min(totalPages, page + 1))}
+            aria-disabled={page >= totalPages}
+            className={`rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600 ${
+              page >= totalPages ? "pointer-events-none opacity-40" : "hover:bg-slate-50"
+            }`}
+          >
+            다음
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

@@ -13,9 +13,12 @@
     "rescheduled": "학생연기",
     "teacher_absent": "관리자연기",
     "academy_closed": "관리자연기",
-    "admin_cancelled": "관리자연기"
+    "admin_cancelled": "관리자연기",
+    "on_hold": "홀드"
   },
   "summary_card": {
+    "hold_release_cta": "홀드 해제 요청",
+    "hold_release_pending": "처리 중...",
     "enrollment_period": "수강 기간",
     "lesson_count": "수업 횟수",
     "lesson_count_value": "총 {{total}}회 · 잔여 {{remaining}}회",

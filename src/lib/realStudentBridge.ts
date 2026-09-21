@@ -25,6 +25,7 @@ export type StudentProfileSnapshot = {
   teamsId: string | null;
   kakaoId: string | null;
   wechatId: string | null;
+  kakaoLinked: boolean;
 };
 
 export type RealStudentData = {

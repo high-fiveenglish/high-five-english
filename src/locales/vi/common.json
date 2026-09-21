@@ -24,6 +24,7 @@
   "topbar": {
     "home": "Trang chủ",
     "login": "Đăng nhập",
+    "signup": "Đăng ký",
     "find_account": "Tìm ID/Mật khẩu",
     "welcome": "Chào mừng, <b>{{name}}</b>",
     "my_classroom": "Lớp học của tôi",

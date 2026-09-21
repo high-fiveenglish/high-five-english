@@ -20,12 +20,19 @@ export function ReviewPostFormModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { studentApiToken } = useAuth();
+  const { studentApiToken, adminApiToken } = useAuth();
+  // 관리자(general_manager/general_admin)는 studentApiToken이 없으므로 adminApiToken으로
+  // 대신 쓴다 — "관리자도 댓글/작성 가능"해야 하기 때문이다.
+  const token = studentApiToken ?? adminApiToken;
   const { t } = useTranslation("reviewBoard");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // 댓글(대댓글)은 제목이 없다 — 새로 달 때는 parentId로, 기존 댓글을 고칠 때는
+  // editingPost.parentId로 판단한다.
+  const isReply = Boolean(parentId ?? editingPost?.parentId);
 
   useEffect(() => {
     if (!open) return;
@@ -36,15 +43,15 @@ export function ReviewPostFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim()) {
+    if (!content.trim() || (!isReply && !title.trim())) {
       setError(t("form.validation_error"));
       return;
     }
     setSubmitting(true);
     setError(null);
     const result = editingPost
-      ? await updateBoardPost(studentApiToken, editingPost.id, { title, content })
-      : await createBoardPost(studentApiToken, { title, content, parentId });
+      ? await updateBoardPost(token, editingPost.id, { title, content, isReply })
+      : await createBoardPost(token, { title, content, parentId });
     setSubmitting(false);
     if (!result.ok) {
       setError(t(`service_errors.${result.error.code}`, { ns: "common", defaultValue: t("service_errors.unknown", { ns: "common" }) }));
@@ -59,15 +66,17 @@ export function ReviewPostFormModal({
   return (
     <Modal open={open} onClose={onClose} title={title_}>
       <form onSubmit={handleSubmit} className="space-y-3.5">
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-600">{t("form.field_title")}</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-          />
-        </div>
+        {!isReply && (
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-600">{t("form.field_title")}</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            />
+          </div>
+        )}
         <div>
           <label className="mb-1.5 block text-sm font-medium text-slate-600">{t("form.field_content")}</label>
           <textarea

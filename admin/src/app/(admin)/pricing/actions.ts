@@ -25,3 +25,46 @@ export async function updatePricingCell(rowId: number, field: FieldName, amount:
   await logAudit({ actor, action: "UPDATE", targetType: "PricingRow", targetId: rowId, description: `${field} = ${amount}` });
   revalidatePath("/pricing");
 }
+
+// 협력사 탭을 처음 열었을 때 그 협력사의 가격표 행이 하나도 없으면, 본사(직영) 기준
+// 가격표를 그대로 복제해 시작점으로 삼는다 — 협력사는 그 뒤로 이 화면(또는 이후
+// 협력사 관리자 페이지)에서 자기 값으로 자유롭게 수정하면 된다. 이미 있으면 아무 것도
+// 하지 않는다(멱등).
+export async function ensureAgentPricing(agentId: number) {
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "pricing.update");
+
+  const existingCount = await prisma.pricingDuration.count({ where: { agentId } });
+  if (existingCount > 0) return;
+
+  const agent = await prisma.agent.findUnique({ where: { id: agentId } });
+  if (!agent) throw new Error("존재하지 않는 협력사입니다.");
+
+  const hqDurations = await prisma.pricingDuration.findMany({
+    where: { siteId: agent.siteId, agentId: null },
+    include: { rows: true },
+    orderBy: { order: "asc" },
+  });
+
+  for (const d of hqDurations) {
+    const created = await prisma.pricingDuration.create({
+      data: { siteId: agent.siteId, agentId, code: d.code, hasBadge: d.hasBadge, order: d.order },
+    });
+    for (const r of d.rows) {
+      await prisma.pricingRow.create({
+        data: {
+          durationId: created.id,
+          frequencyId: r.frequencyId,
+          price25KRW: r.price25KRW,
+          price25CNY: r.price25CNY,
+          price25VND: r.price25VND,
+          price50KRW: r.price50KRW,
+          price50CNY: r.price50CNY,
+          price50VND: r.price50VND,
+        },
+      });
+    }
+  }
+  await logAudit({ actor, action: "CREATE", targetType: "PricingDuration", targetId: agentId, description: `협력사 가격표 본사 기준 초기화` });
+  revalidatePath("/pricing");
+}

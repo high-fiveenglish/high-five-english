@@ -13,9 +13,12 @@
     "rescheduled": "Học viên dời lịch",
     "teacher_absent": "Quản trị viên dời lịch",
     "academy_closed": "Quản trị viên dời lịch",
-    "admin_cancelled": "Quản trị viên dời lịch"
+    "admin_cancelled": "Quản trị viên dời lịch",
+    "on_hold": "Đang tạm dừng"
   },
   "summary_card": {
+    "hold_release_cta": "Yêu cầu bỏ tạm dừng",
+    "hold_release_pending": "Đang xử lý...",
     "enrollment_period": "Thời gian học",
     "lesson_count": "Số buổi học",
     "lesson_count_value": "Tổng {{total}} buổi · Còn lại {{remaining}} buổi",

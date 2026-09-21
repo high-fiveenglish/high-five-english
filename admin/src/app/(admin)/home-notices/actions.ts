@@ -14,17 +14,19 @@ export async function createHomeNotice(_prevState: { error?: string } | undefine
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
   const published = formData.get("published") === "on";
+  const agentIdRaw = String(formData.get("agentId") ?? "");
+  const agentId = agentIdRaw ? Number(agentIdRaw) : null;
   if (!title || !content) {
     return { error: "제목과 내용을 모두 입력해주세요." };
   }
 
   const notice = await prisma.homeNotice.create({
-    data: { siteId: DEFAULT_SITE_ID, title, content, published, authorAdminId: actor.id },
+    data: { siteId: DEFAULT_SITE_ID, agentId, title, content, published, authorAdminId: actor.id },
   });
   await logAudit({ actor, action: "CREATE", targetType: "HomeNotice", targetId: notice.id });
 
   revalidatePath("/home-notices");
-  redirect("/home-notices");
+  redirect(agentId ? `/home-notices?agentId=${agentId}` : "/home-notices");
 }
 
 export async function updateHomeNotice(

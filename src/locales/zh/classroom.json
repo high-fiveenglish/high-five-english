@@ -13,9 +13,12 @@
     "rescheduled": "学生调课",
     "teacher_absent": "管理员调课",
     "academy_closed": "管理员调课",
-    "admin_cancelled": "管理员调课"
+    "admin_cancelled": "管理员调课",
+    "on_hold": "暂停"
   },
   "summary_card": {
+    "hold_release_cta": "申请解除暂停",
+    "hold_release_pending": "处理中...",
     "enrollment_period": "学习期间",
     "lesson_count": "课程次数",
     "lesson_count_value": "共{{total}}次 · 剩余{{remaining}}次",

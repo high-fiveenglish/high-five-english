@@ -3,9 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { corsHeaders, corsOptionsResponse } from "@/lib/cors";
 import { verifyStudentLogin, createStudentSession } from "@/lib/studentAuth";
 import { logAudit } from "@/lib/rbac";
-import { createStudentApiToken } from "@/lib/studentApiToken";
-import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
-import { getStudentProfileSnapshot } from "@/lib/studentProfileUpdate";
+import { buildStudentLoginPayload } from "@/lib/studentLoginResponse";
 
 // 메인 마케팅 사이트(Vite)의 일반 로그인창이 실제 admin DB 학생 계정으로 직접
 // 로그인할 수 있게 해주는 공개 엔드포인트. admin의 "회원으로 로그인"(sso/verify)과
@@ -52,38 +50,6 @@ export async function POST(request: Request) {
     description: "마케팅 사이트에서 직접 로그인",
   });
 
-  const [enrollment, profile] = await Promise.all([
-    prisma.enrollment.findFirst({
-      where: { studentId, status: { in: ["ACTIVE", "PAID", "APPLIED"] } },
-      orderBy: { id: "desc" },
-      include: { teacher: { select: TEACHER_SUMMARY_SELECT } },
-    }),
-    getStudentProfileSnapshot(studentId),
-  ]);
-
-  return NextResponse.json(
-    {
-      studentId: student.id,
-      loginId: student.loginId,
-      name: student.name,
-      englishName: student.englishName,
-      apiToken: createStudentApiToken(student.id),
-      profile,
-      enrollment: enrollment
-        ? {
-            scheduleDays: enrollment.scheduleDays,
-            classTime: enrollment.classTime,
-            classTimes: enrollment.classTimes,
-            classDurationMin: enrollment.classDurationMin,
-            totalSessions: enrollment.totalSessions,
-            startDate: enrollment.startDate.toISOString().slice(0, 10),
-            endDate: enrollment.endDate.toISOString().slice(0, 10),
-            classMethod: enrollment.classMethod,
-            textbookName: enrollment.textbookName,
-            teacherName: enrollment.teacher?.realName ?? null,
-          }
-        : null,
-    },
-    { status: 200, headers },
-  );
+  const payload = await buildStudentLoginPayload(studentId);
+  return NextResponse.json(payload, { status: 200, headers });
 }

@@ -6,7 +6,16 @@ import { parseScheduleDaysLabel } from "@/lib/weekdays";
 import { sessionsPerCycleFor, computeCompletedCycles, type CycleInfo } from "@/lib/monthlyEvaluationCycle";
 import { formatAppDate } from "@/lib/appTime";
 
-export default async function MonthlyEvaluationsPage() {
+const PAGE_SIZE = 20;
+
+export default async function MonthlyEvaluationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam) || 1);
+
   const enrollments = await prisma.enrollment.findMany({
     where: { siteId: DEFAULT_SITE_ID },
     orderBy: { id: "desc" },
@@ -53,6 +62,16 @@ export default async function MonthlyEvaluationsPage() {
     })
     .filter((r): r is { enrollment: (typeof enrollments)[number]; cycles: (CycleInfo & { updatedAt: Date | null })[] } => r !== null);
 
+  // 표에서 실제로 한 줄씩 그려지는 순서 그대로 일련번호를 매기기 위해 먼저 평평하게 편다
+  // (학생별로 묶고 그 안에서 회차 오름차순인 현재 표시 순서는 그대로 유지).
+  const flatRows = rows.flatMap(({ enrollment, cycles }) => cycles.map((c) => ({ enrollment, cycle: c })));
+  const totalPages = Math.max(1, Math.ceil(flatRows.length / PAGE_SIZE));
+  const pageRows = flatRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  function pageHref(p: number): string {
+    return p > 1 ? `/monthly-evaluations?page=${p}` : "/monthly-evaluations";
+  }
+
   return (
     <div>
       <div className="mb-6">
@@ -63,10 +82,11 @@ export default async function MonthlyEvaluationsPage() {
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
+              <th className="px-4 py-3">No.</th>
               <th className="px-4 py-3">학생</th>
               <th className="px-4 py-3">강사</th>
               <th className="px-4 py-3">회차</th>
@@ -76,9 +96,9 @@ export default async function MonthlyEvaluationsPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.flatMap(({ enrollment, cycles }) =>
-              cycles.map((c) => (
+            {pageRows.map(({ enrollment, cycle: c }, i) => (
                 <tr key={`${enrollment.id}-${c.cycleNumber}`} className="border-b border-slate-100 last:border-0">
+                  <td className="px-4 py-3 text-slate-500">{(page - 1) * PAGE_SIZE + i + 1}</td>
                   <td className="px-4 py-3 font-medium text-slate-900">{enrollment.student.name}</td>
                   <td className="px-4 py-3 text-slate-600">{enrollment.teacher?.realName ?? "-"}</td>
                   <td className="px-4 py-3 text-slate-600">{c.cycleNumber}차 ({c.sessionsPerCycle}회)</td>
@@ -101,11 +121,10 @@ export default async function MonthlyEvaluationsPage() {
                     </Link>
                   </td>
                 </tr>
-              )),
-            )}
+            ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
                   아직 완료된 회차가 없습니다.
                 </td>
               </tr>
@@ -113,6 +132,32 @@ export default async function MonthlyEvaluationsPage() {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-2 text-sm">
+          <Link
+            href={pageHref(Math.max(1, page - 1))}
+            aria-disabled={page <= 1}
+            className={`rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600 ${
+              page <= 1 ? "pointer-events-none opacity-40" : "hover:bg-slate-50"
+            }`}
+          >
+            이전
+          </Link>
+          <span className="px-2 text-slate-500">
+            {page} / {totalPages.toLocaleString()} 페이지 (총 {flatRows.length.toLocaleString()}건)
+          </span>
+          <Link
+            href={pageHref(Math.min(totalPages, page + 1))}
+            aria-disabled={page >= totalPages}
+            className={`rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600 ${
+              page >= totalPages ? "pointer-events-none opacity-40" : "hover:bg-slate-50"
+            }`}
+          >
+            다음
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,12 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Actor, PermissionKey, Role } from "../lib/auth/types";
-import { login as loginRequest } from "../services/authService";
+import {
+  login as loginRequest,
+  loginWithKakao as loginWithKakaoRequest,
+  signup as signupRequest,
+  type LoginResult,
+  type SignupInput,
+} from "../services/authService";
 import type { StudentProfileSnapshot } from "../lib/realStudentBridge";
 
 type AuthContextValue = {
@@ -21,6 +27,13 @@ type AuthContextValue = {
    * translate the code themselves (see auth.json's login.* keys) rather than displaying
    * the raw mock-service message, which is only ever in Korean. */
   login: (id: string, password: string) => Promise<{ ok: true; role: Role } | { ok: false; code: string }>;
+  /** Same shape as login(), but exchanges a Kakao authorization code instead of id/password —
+   * used by KakaoCallbackPage after the user completes the Kakao consent screen. */
+  loginWithKakao: (code: string, redirectUri: string) => Promise<{ ok: true; role: Role } | { ok: false; code: string }>;
+  /** Same shape as login(), but creates a brand-new student account (see SignupPage) —
+   * signup implies immediate login, so on success this hydrates the session exactly like
+   * login()/loginWithKakao() do. */
+  signup: (input: SignupInput) => Promise<{ ok: true; role: Role } | { ok: false; code: string }>;
   logout: () => void;
   /** True only when the current session was hydrated via the admin SSO bridge
    * (see SsoLoginPage) rather than a normal login — drives the "대리 로그인 중" banner. */
@@ -75,19 +88,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [adminBridgeToken, setAdminBridgeToken] = useState<string | null>(null);
   const [studentProfile, setStudentProfile] = useState<StudentProfileSnapshot | null>(null);
 
+  const applyLoginResult = (value: LoginResult) => {
+    setActor(value.actor);
+    setUserName(value.displayName);
+    setPreferredLanguage(value.preferredLanguage ?? null);
+    setIsImpersonating(false);
+    setIsRealAccount(value.isRealAccount);
+    setStudentApiToken(value.apiToken ?? null);
+    setAdminApiToken(value.adminApiToken ?? null);
+    setAdminBridgeToken(value.adminBridgeToken ?? null);
+    setStudentProfile(value.profile ?? null);
+    return { ok: true as const, role: value.actor.role };
+  };
+
   const login = async (id: string, password: string) => {
     const result = await loginRequest(id, password);
     if (!result.ok) return { ok: false as const, code: result.error.code };
-    setActor(result.value.actor);
-    setUserName(result.value.displayName);
-    setPreferredLanguage(result.value.preferredLanguage ?? null);
-    setIsImpersonating(false);
-    setIsRealAccount(result.value.isRealAccount);
-    setStudentApiToken(result.value.apiToken ?? null);
-    setAdminApiToken(result.value.adminApiToken ?? null);
-    setAdminBridgeToken(result.value.adminBridgeToken ?? null);
-    setStudentProfile(result.value.profile ?? null);
-    return { ok: true as const, role: result.value.actor.role };
+    return applyLoginResult(result.value);
+  };
+
+  const loginWithKakao = async (code: string, redirectUri: string) => {
+    const result = await loginWithKakaoRequest(code, redirectUri);
+    if (!result.ok) return { ok: false as const, code: result.code };
+    return applyLoginResult(result.value);
+  };
+
+  const signup = async (input: SignupInput) => {
+    const result = await signupRequest(input);
+    if (!result.ok) return { ok: false as const, code: result.code };
+    return applyLoginResult(result.value);
   };
 
   const logout = () => {
@@ -129,6 +158,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         actor,
         preferredLanguage,
         login,
+        loginWithKakao,
+        signup,
         logout,
         isImpersonating,
         isRealAccount,

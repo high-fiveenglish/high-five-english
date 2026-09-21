@@ -4,6 +4,7 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { corsHeaders, corsOptionsResponse } from "@/lib/cors";
 import { actorFromAdminApiToken } from "@/lib/adminApiToken";
 import { requirePermission, logAudit, ForbiddenError } from "@/lib/rbac";
+import { resolveAgentIdFromDomain } from "@/lib/agencyBranding";
 
 // 메인 마케팅 사이트의 가격표 섹션(src/services/pricingService.ts)이 호출하는
 // 공개 읽기 전용 엔드포인트. 응답 shape은 그 사이트의 PricingDuration/PricingRow
@@ -17,22 +18,35 @@ export async function OPTIONS(request: Request) {
 
 export async function GET(request: Request) {
   const headers = corsHeaders(request.headers.get("origin"));
+  const { searchParams } = new URL(request.url);
+  const agentId = await resolveAgentIdFromDomain(searchParams.get("domain"));
 
   const durations = await prisma.pricingDuration.findMany({
-    where: { siteId: DEFAULT_SITE_ID },
+    where: {
+      siteId: DEFAULT_SITE_ID,
+      OR: agentId ? [{ agentId }, { agentId: null }] : [{ agentId: null }],
+    },
     orderBy: { order: "asc" },
     include: { rows: true },
   });
+  // 같은 code(1m/3m/6m)가 협력사 행/본사 행 둘 다 있을 수 있으니, 협력사 행을 우선한다.
+  const byCode = new Map<string, (typeof durations)[number]>();
+  for (const d of durations) {
+    const existing = byCode.get(d.code);
+    if (!existing || (d.agentId !== null && existing.agentId === null)) byCode.set(d.code, d);
+  }
 
-  const payload = durations.map((d) => ({
-    id: d.code,
-    hasBadge: d.hasBadge,
-    rows: d.rows.map((r) => ({
-      frequencyId: r.frequencyId,
-      price25: { KRW: r.price25KRW, CNY: r.price25CNY, VND: r.price25VND },
-      price50: { KRW: r.price50KRW, CNY: r.price50CNY, VND: r.price50VND },
-    })),
-  }));
+  const payload = [...byCode.values()]
+    .sort((a, b) => a.order - b.order)
+    .map((d) => ({
+      id: d.code,
+      hasBadge: d.hasBadge,
+      rows: d.rows.map((r) => ({
+        frequencyId: r.frequencyId,
+        price25: { KRW: r.price25KRW, CNY: r.price25CNY, VND: r.price25VND },
+        price50: { KRW: r.price50KRW, CNY: r.price50CNY, VND: r.price50VND },
+      })),
+    }));
 
   return NextResponse.json(payload, { headers });
 }
@@ -76,8 +90,8 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400, headers });
   }
 
-  const duration = await prisma.pricingDuration.findUnique({
-    where: { siteId_code: { siteId: DEFAULT_SITE_ID, code: durationId } },
+  const duration = await prisma.pricingDuration.findFirst({
+    where: { siteId: DEFAULT_SITE_ID, agentId: null, code: durationId },
   });
   if (!duration) return NextResponse.json({ error: "not_found" }, { status: 404, headers });
 

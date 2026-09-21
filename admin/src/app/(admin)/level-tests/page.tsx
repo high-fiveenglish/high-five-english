@@ -20,12 +20,19 @@ const PROGRESS_BADGE_STYLE: Record<string, string> = {
   취소: "bg-slate-200 text-slate-500",
 };
 
+const PROGRESS_ORDER = ["접수", "수업확정", "수업완료", "결석", "취소"] as const;
+
 export default async function LevelTestsPage() {
-  const levelTests = await prisma.levelTest.findMany({
-    where: { siteId: DEFAULT_SITE_ID },
-    orderBy: { id: "desc" },
-    include: { student: true, teacher: { select: TEACHER_SUMMARY_SELECT } },
-  });
+  const [levelTests, progressGroups] = await Promise.all([
+    prisma.levelTest.findMany({
+      where: { siteId: DEFAULT_SITE_ID },
+      orderBy: { id: "desc" },
+      include: { student: true, teacher: { select: TEACHER_SUMMARY_SELECT } },
+    }),
+    prisma.levelTest.groupBy({ by: ["progressStatus"], where: { siteId: DEFAULT_SITE_ID }, _count: true }),
+  ]);
+  const countByStatus = new Map(progressGroups.map((g) => [g.progressStatus ?? "접수", g._count]));
+  const total = levelTests.length;
 
   return (
     <div>
@@ -39,10 +46,23 @@ export default async function LevelTestsPage() {
         </Link>
       </div>
 
+      <div className="mb-6 flex flex-wrap gap-2 text-sm">
+        <span className="rounded-lg bg-slate-900 px-3 py-1.5 font-medium text-white">전체 ({total.toLocaleString()})</span>
+        {PROGRESS_ORDER.map((status) => (
+          <span
+            key={status}
+            className={`rounded-lg px-3 py-1.5 font-medium ${PROGRESS_BADGE_STYLE[status]}`}
+          >
+            {status} ({(countByStatus.get(status) ?? 0).toLocaleString()})
+          </span>
+        ))}
+      </div>
+
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
         <table className="w-full min-w-[1300px] text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
+              <th className="px-4 py-3">No.</th>
               <th className="px-4 py-3">구분</th>
               <th className="px-4 py-3">이름</th>
               <th className="px-4 py-3">아이디</th>
@@ -60,7 +80,7 @@ export default async function LevelTestsPage() {
             </tr>
           </thead>
           <tbody>
-            {levelTests.map((lt) => {
+            {levelTests.map((lt, i) => {
               const isLead = !lt.studentId;
               const name = lt.student?.name ?? lt.leadStudentEnglishName ?? lt.leadContactName ?? "-";
               const method = lt.classMethod ?? lt.leadMeetingPlatform ?? "-";
@@ -72,6 +92,7 @@ export default async function LevelTestsPage() {
               const classDate = lt.scheduledClassDatetime ? formatAppDateTime(lt.scheduledClassDatetime) : "-";
               return (
                 <tr key={lt.id} className="border-b border-slate-100 last:border-0">
+                  <td className="px-4 py-3 text-slate-500">{total - i}</td>
                   <td className="px-4 py-3">
                     <span
                       className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
@@ -146,7 +167,7 @@ export default async function LevelTestsPage() {
             })}
             {levelTests.length === 0 && (
               <tr>
-                <td colSpan={14} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={15} className="px-4 py-10 text-center text-slate-400">
                   등록된 레벨테스트 신청이 없습니다.
                 </td>
               </tr>

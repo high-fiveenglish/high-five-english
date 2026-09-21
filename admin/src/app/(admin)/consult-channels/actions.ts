@@ -6,7 +6,7 @@ import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission, logAudit } from "@/lib/rbac";
 
 export async function updateConsultChannel(
-  id: string,
+  id: number,
   input: { displayName: string; value: string; url: string; enabled: boolean },
 ) {
   const actor = await requireBackofficeActor();

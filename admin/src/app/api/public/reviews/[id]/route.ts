@@ -33,9 +33,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     {
       id: String(updated.id),
       parentId: updated.parentId ? String(updated.parentId) : undefined,
-      title: updated.title,
+      title: updated.title ?? "",
       content: updated.content,
-      authorName: updated.student.name,
+      authorName: updated.student?.name ?? updated.authorAdminName ?? "관리자",
       createdAt: updated.createdAt.toISOString(),
       views: updated.views,
     },
@@ -49,11 +49,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const postId = Number(id);
 
   const studentId = studentIdFromAuthHeader(request);
-  if (!studentId) return NextResponse.json({ error: "login_required" }, { status: 401, headers });
+  const admin = studentId ? null : await actorFromAdminApiToken(request);
+  if (!studentId && !admin) return NextResponse.json({ error: "login_required" }, { status: 401, headers });
 
   const existing = await prisma.reviewPost.findUnique({ where: { id: postId } });
   if (!existing) return NextResponse.json({ error: "not_found" }, { status: 404, headers });
-  if (existing.studentId !== studentId) {
+  // 본인 글만 수정 가능 — 학생은 studentId로, 관리자는 자기 이름으로 쓴 글만.
+  const isOwner = studentId ? existing.studentId === studentId : existing.authorAdminName === admin?.name;
+  if (!isOwner) {
     return NextResponse.json({ error: "forbidden" }, { status: 403, headers });
   }
 
@@ -66,9 +69,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const input = body as Record<string, unknown>;
   const title = String(input.title ?? "").trim();
   const content = String(input.content ?? "").trim();
-  if (!title || !content) return NextResponse.json({ error: "invalid_input" }, { status: 400, headers });
+  // 댓글(parentId가 있는 글)은 제목 없이 수정할 수 있다 — 최상위 후기 글만 제목이 필요하다.
+  if (!content || (existing.parentId === null && !title)) {
+    return NextResponse.json({ error: "invalid_input" }, { status: 400, headers });
+  }
 
-  await prisma.reviewPost.update({ where: { id: postId }, data: { title, content } });
+  await prisma.reviewPost.update({ where: { id: postId }, data: { title: title || null, content } });
   return NextResponse.json({ ok: true }, { headers });
 }
 

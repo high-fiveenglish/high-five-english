@@ -4,11 +4,14 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { DeleteButton } from "../DeleteButton";
 import { ImpersonateButton } from "../students/ImpersonateButton";
-import { deleteEnrollment, renewEnrollment } from "./actions";
+import { PopupLink } from "./PopupLink";
+import { deleteEnrollment } from "./actions";
 import { StatusSelect } from "./StatusSelect";
 import { RequestStatusSelect } from "./RequestStatusSelect";
 import { FILTER_TABS, buildEnrollmentWhere } from "./filters";
+import { formatScheduleDayTime } from "./scheduleUtils";
 import { formatAppDate, formatAppDateTime } from "@/lib/appTime";
+import { closeExpiredEnrollments } from "@/lib/enrollmentLifecycle";
 
 const PAYMENT_STATUS_LABEL: Record<string, string> = { UNPAID: "미결제", PAID: "결제완료", FAILED: "결제실패" };
 const PAYMENT_STATUS_CLASS: Record<string, string> = {
@@ -51,39 +54,56 @@ function trackLabel(track: string): string {
 const REQUEST_DURATION_LABEL: Record<string, string> = { "1m": "1개월", "3m": "3개월", "6m": "6개월" };
 const REQUEST_FREQUENCY_LABEL: Record<string, string> = { freq5: "주 5회", freq3: "주 3회", freq2: "주 2회" };
 const REQUEST_PLATFORM_LABEL: Record<string, string> = { zoom: "Zoom", voov: "VooV", teams: "Teams" };
+const CONSULT_ROUTE_LABEL: Record<string, string> = { WECHAT: "위챗", KAKAOTALK: "카카오톡" };
 
 function fmtDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+const PAGE_SIZE = 20;
+
 export default async function EnrollmentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; q?: string }>;
+  searchParams: Promise<{ filter?: string; q?: string; page?: string }>;
 }) {
-  const { filter, q } = await searchParams;
+  const { filter, q, page: pageParam } = await searchParams;
   // 필터를 지정하지 않고 들어오면(메뉴 클릭 시 기본 진입) "진행중"을 기본으로 보여준다 —
   // 관리자가 매번 "전체"에서 다시 걸러야 했던 문제. 전체 목록은 "전체" 탭에서 명시적으로 본다.
   const effectiveFilter = filter ?? "active";
   const query = q?.trim();
+  const page = Math.max(1, Number(pageParam) || 1);
 
-  const [enrollments, pendingRequests] = await Promise.all([
+  await closeExpiredEnrollments();
+
+  const listWhere = {
+    siteId: DEFAULT_SITE_ID,
+    ...buildEnrollmentWhere(effectiveFilter),
+    ...(query
+      ? {
+          OR: [
+            { student: { name: { contains: query, mode: "insensitive" as const } } },
+            { student: { loginId: { contains: query, mode: "insensitive" as const } } },
+            { agent: { name: { contains: query, mode: "insensitive" as const } } },
+          ],
+        }
+      : {}),
+  };
+
+  const [enrollments, matchingCount, pendingRequests] = await Promise.all([
     prisma.enrollment.findMany({
-      where: {
-        siteId: DEFAULT_SITE_ID,
-        ...buildEnrollmentWhere(effectiveFilter),
-        ...(query
-          ? {
-              student: {
-                OR: [{ name: { contains: query, mode: "insensitive" } }, { loginId: { contains: query, mode: "insensitive" } }],
-              },
-            }
-          : {}),
+      where: listWhere,
+      orderBy: { createdAt: "desc" },
+      include: {
+        student: true,
+        teacher: { select: TEACHER_SUMMARY_SELECT },
+        agent: true,
+        renewals: { select: { id: true }, take: 1 },
       },
-      orderBy: { id: "desc" },
-      include: { student: true, teacher: { select: TEACHER_SUMMARY_SELECT } },
-      take: 300,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     }),
+    prisma.enrollment.count({ where: listWhere }),
     // 마케팅 사이트에서 학생이 제출했지만 아직 관리자가 확인(연락완료/등록전환/취소)하지
     // 않은 수강신청 리드 — 필터와 무관하게 이 화면 맨 위에 "신청"으로 항상 노출한다.
     prisma.enrollmentRequest.findMany({
@@ -92,6 +112,43 @@ export default async function EnrollmentsPage({
       include: { student: true },
     }),
   ]);
+  const totalPages = Math.max(1, Math.ceil(matchingCount / PAGE_SIZE));
+
+  function pageHref(p: number): string {
+    const params = new URLSearchParams();
+    if (effectiveFilter !== "active") params.set("filter", effectiveFilter);
+    if (query) params.set("q", query);
+    if (p > 1) params.set("page", String(p));
+    const qs = params.toString();
+    return qs ? `/enrollments?${qs}` : "/enrollments";
+  }
+
+  // 출석/결석/잔여 회차는 ClassSession을 상태별로 묶어서 한 번에 집계한다(수강 건마다
+  // 개별 쿼리를 날리지 않기 위함) — "결석"의 기준(MAKEUP_NEEDED)은 학생 강의실 화면의
+  // 잔여 회차 계산(studentClassroom.ts)과 동일하게 맞췄다.
+  const sessionCounts = await prisma.classSession.groupBy({
+    by: ["enrollmentId", "status"],
+    where: { enrollmentId: { in: enrollments.map((e) => e.id) } },
+    _count: true,
+  });
+  const attendanceByEnrollment = new Map<number, { present: number; absent: number }>();
+  for (const row of sessionCounts) {
+    const entry = attendanceByEnrollment.get(row.enrollmentId) ?? { present: 0, absent: 0 };
+    if (row.status === "COMPLETED") entry.present += row._count;
+    if (row.status === "MAKEUP_NEEDED") entry.absent += row._count;
+    attendanceByEnrollment.set(row.enrollmentId, entry);
+  }
+
+  // 탭 옆 숫자 — 지금 몇 건이 각 상태에 있는지 한눈에 보이도록. 탭마다 조건이 달라(상태별,
+  // 종료일 임박순 등) buildEnrollmentWhere를 그대로 재사용해 개별 count 쿼리를 병렬로 날린다.
+  const tabCounts = Object.fromEntries(
+    await Promise.all(
+      FILTER_TABS.map(async (tab) => [
+        tab.key,
+        await prisma.enrollment.count({ where: { siteId: DEFAULT_SITE_ID, ...buildEnrollmentWhere(tab.key) } }),
+      ]),
+    ),
+  ) as Record<string, number>;
 
   return (
     <div>
@@ -119,6 +176,7 @@ export default async function EnrollmentsPage({
                 <th className="px-4 py-3">희망 시작일</th>
                 <th className="px-4 py-3">방식</th>
                 <th className="px-4 py-3">상태</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -149,6 +207,14 @@ export default async function EnrollmentsPage({
                   <td className="px-4 py-3">
                     <RequestStatusSelect id={r.id} status={r.status} />
                   </td>
+                  <td className="px-4 py-3 text-right">
+                    <Link
+                      href={`/enrollments/new?fromRequest=${r.id}`}
+                      className="rounded-lg px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                    >
+                      수정
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -172,7 +238,7 @@ export default async function EnrollmentsPage({
                 active ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-600"
               }`}
             >
-              {tab.label}
+              {tab.label} ({(tabCounts[tab.key] ?? 0).toLocaleString()})
             </Link>
           );
         })}
@@ -184,7 +250,7 @@ export default async function EnrollmentsPage({
           type="text"
           name="q"
           defaultValue={q ?? ""}
-          placeholder="학생 이름 또는 아이디로 검색"
+          placeholder="학생 이름, 아이디 또는 협력사로 검색"
           className="w-64 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
         />
         <button
@@ -203,38 +269,81 @@ export default async function EnrollmentsPage({
         )}
       </form>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
+              <th className="px-4 py-3">No.</th>
+              <th className="px-4 py-3">사이트</th>
               <th className="px-4 py-3">학생</th>
+              <th className="px-4 py-3">상담루트</th>
               <th className="px-4 py-3" />
               <th className="px-4 py-3">강사</th>
               <th className="px-4 py-3">패키지</th>
               <th className="px-4 py-3">방식</th>
-              <th className="px-4 py-3">요일</th>
+              <th className="px-4 py-3">요일/시간</th>
               <th className="px-4 py-3">기간</th>
               <th className="px-4 py-3">총 회차</th>
+              <th className="px-4 py-3">출결석</th>
+              <th className="px-4 py-3">잔여 회차</th>
               <th className="px-4 py-3">상태</th>
               <th className="px-4 py-3">결제</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
-            {enrollments.map((e) => (
+            {enrollments.map((e, i) => {
+              const attendance = attendanceByEnrollment.get(e.id) ?? { present: 0, absent: 0 };
+              const remaining = Math.max(0, e.totalSessions - attendance.present - attendance.absent);
+              // 오래된 순 1부터의 일련번호 — 현재 필터·검색어에 맞는 전체 건수(matchingCount)에서
+              // 페이지 오프셋을 더한 최신순 정렬상 위치를 빼서, 가장 오래된 건이 1번이 되게 한다.
+              const no = matchingCount - ((page - 1) * PAGE_SIZE + i);
+              return (
               <tr key={e.id} className="border-b border-slate-100 last:border-0">
+                <td className="px-4 py-3 text-slate-500">{no}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-slate-600">{e.agent?.name ?? "본사"}</td>
                 <td className="px-4 py-3 font-medium text-slate-900">{e.student.name}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-slate-500">
+                  {e.student.consultRoute ? CONSULT_ROUTE_LABEL[e.student.consultRoute] : "-"}
+                </td>
                 <td className="whitespace-nowrap px-4 py-3">
-                  <ImpersonateButton studentId={e.studentId} studentName={e.student.name} />
+                  <div className="flex flex-col items-start gap-1">
+                    <ImpersonateButton studentId={e.studentId} studentName={e.student.name} />
+                    {/* 실제 수업이 있었거나 있는 건(진행중/종료)만 그대로 이어서 재수강 신청을
+                        만들 수 있다 — 아직 접수만 된 건(APPLIED)은 재수강의 대상이 될 "기존
+                        수강"이 아니다. 클릭하면 바로 만들어지지 않고, 기존 스케줄이 기본값으로
+                        채워진 등록 화면(/enrollments/new)에서 관리자가 확인·수정한 뒤 저장해야
+                        실제로 등록된다. 이미 재수강으로 이어진 건(renewals가 있음)은 중복 신청을
+                        막기 위해 버튼 대신 "재수강 완료"만 표시한다. */}
+                    {e.renewals.length > 0 ? (
+                      <span className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-400">재수강 완료</span>
+                    ) : (
+                      (e.status === "ACTIVE" || e.status === "COMPLETED") && (
+                        <PopupLink
+                          href={`/enrollments/new?renewFrom=${e.id}`}
+                          windowName="renewEnrollmentPopup"
+                          className="rounded-lg px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                        >
+                          재수강
+                        </PopupLink>
+                      )
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-slate-600">{e.teacher?.realName ?? "미배정"}</td>
                 <td className="px-4 py-3 text-slate-600">{e.packageMonths}개월</td>
                 <td className="px-4 py-3 text-slate-600">{e.classMethod}</td>
-                <td className="px-4 py-3 text-slate-600">{e.scheduleDays}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                  {formatScheduleDayTime(e.scheduleDays, e.classTime, e.classTimes)}
+                </td>
                 <td className="px-4 py-3 text-slate-500">
                   {fmtDate(e.startDate)} ~ {fmtDate(e.endDate)}
                 </td>
                 <td className="px-4 py-3 text-slate-600">{e.totalSessions}회</td>
+                <td className="px-4 py-3 text-slate-600">
+                  출석 {attendance.present} · 결석 {attendance.absent}
+                </td>
+                <td className="px-4 py-3 text-slate-600">{remaining}회</td>
                 <td className="px-4 py-3">
                   <StatusSelect id={e.id} status={e.status} />
                 </td>
@@ -249,44 +358,32 @@ export default async function EnrollmentsPage({
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-1">
-                    {/* 실제로 수업이 진행 중인(진행중=ACTIVE) 수강 건에서만 수업관리로
-                        들어갈 수 있다 — 접수/종료/이탈 등은 아직 진행할 실제 수업이
-                        없거나 더 이상 없으므로 여기서 굳이 노출하지 않는다. */}
-                    {e.status === "ACTIVE" && (
-                      <Link
-                        href={`/students/${e.studentId}/sessions`}
-                        className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                      >
-                        수업관리
-                      </Link>
-                    )}
+                    {/* 예전엔 진행중(ACTIVE) 건에서만 노출했지만, 신청/종료 등 다른 상태의
+                        수강 건도 지난 수업 이력을 보거나 보충수업을 잡아야 할 수 있어 모든
+                        상태에서 열 수 있게 했다. 목록 화면을 벗어나지 않도록 같은 탭이 아닌
+                        별도 팝업 창으로 띄운다(PopupLink — 팝업이 차단되면 안내를 보여준다). */}
+                    <PopupLink
+                      href={`/students/${e.studentId}/sessions`}
+                      windowName="classManagementPopup"
+                      className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                    >
+                      수업관리
+                    </PopupLink>
                     <Link
                       href={`/enrollments/${e.id}/edit`}
                       className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
                     >
                       수정
                     </Link>
-                    {/* 실제 수업이 있었거나 있는 건(진행중/종료)만 그대로 이어서 재수강
-                        신청을 만들 수 있다 — 아직 접수만 된 건(APPLIED)은 재수강의
-                        대상이 될 "기존 수강"이 아니다. */}
-                    {(e.status === "ACTIVE" || e.status === "COMPLETED") && (
-                      <form action={renewEnrollment.bind(null, e.id)}>
-                        <button
-                          type="submit"
-                          className="rounded-lg px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
-                        >
-                          재수강
-                        </button>
-                      </form>
-                    )}
                     <DeleteButton action={deleteEnrollment.bind(null, e.id)} />
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
             {enrollments.length === 0 && (
               <tr>
-                <td colSpan={11} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={16} className="px-4 py-10 text-center text-slate-400">
                   해당하는 수강내역이 없습니다.
                 </td>
               </tr>
@@ -294,6 +391,32 @@ export default async function EnrollmentsPage({
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-2 text-sm">
+          <Link
+            href={pageHref(Math.max(1, page - 1))}
+            aria-disabled={page <= 1}
+            className={`rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600 ${
+              page <= 1 ? "pointer-events-none opacity-40" : "hover:bg-slate-50"
+            }`}
+          >
+            이전
+          </Link>
+          <span className="px-2 text-slate-500">
+            {page} / {totalPages.toLocaleString()} 페이지 (총 {matchingCount.toLocaleString()}건)
+          </span>
+          <Link
+            href={pageHref(Math.min(totalPages, page + 1))}
+            aria-disabled={page >= totalPages}
+            className={`rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600 ${
+              page >= totalPages ? "pointer-events-none opacity-40" : "hover:bg-slate-50"
+            }`}
+          >
+            다음
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

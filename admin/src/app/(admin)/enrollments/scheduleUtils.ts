@@ -1,6 +1,57 @@
-import { parseScheduleDaysLabel } from "@/lib/weekdays";
+import { WEEKDAYS, parseScheduleDaysLabel } from "@/lib/weekdays";
 
 export { parseScheduleDaysLabel };
+
+// 월~일 표시 순서 — enrollments/actions.ts의 체크박스 제출 순서 정렬과 동일한 기준.
+const WEEKDAY_DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+function dayLabel(day: number): string {
+  return WEEKDAYS.find((d) => d.value === day)!.label;
+}
+
+/** 같은 시간을 쓰는 요일끼리 묶어 "월~금" 또는 "월수금"처럼 표시용 라벨을 만든다.
+ * 3일 이상 연속된 요일일 때만 물결표로 축약하고, 그 외에는 글자를 이어붙인다. */
+function formatDayGroupLabel(days: number[]): string {
+  const sorted = [...days].sort((a, b) => WEEKDAY_DISPLAY_ORDER.indexOf(a) - WEEKDAY_DISPLAY_ORDER.indexOf(b));
+  const indices = sorted.map((d) => WEEKDAY_DISPLAY_ORDER.indexOf(d));
+  const isContiguousRun = sorted.length >= 3 && indices.every((idx, i) => i === 0 || idx === indices[i - 1] + 1);
+  if (isContiguousRun) return `${dayLabel(sorted[0])}~${dayLabel(sorted[sorted.length - 1])}`;
+  return sorted.map(dayLabel).join("");
+}
+
+/**
+ * 수강내역관리 목록의 "요일" 컬럼용 — scheduleDays + classTime(s)로부터 요일과 실제 시각을
+ * 함께 보여주는 문자열을 만든다. 모든 요일 시간이 같으면 "월~금 - 17:30"처럼 한 덩어리로,
+ * 요일별로 시간이 다르면 같은 시간을 쓰는 요일끼리 묶어 "월수 - 17:30, 금 - 17:00"처럼
+ * 쉼표로 나열한다.
+ */
+export function formatScheduleDayTime(scheduleDays: string, classTime: string | null, classTimes: unknown): string {
+  const days = parseScheduleDaysLabel(scheduleDays).sort(
+    (a, b) => WEEKDAY_DISPLAY_ORDER.indexOf(a) - WEEKDAY_DISPLAY_ORDER.indexOf(b),
+  );
+  if (days.length === 0) return "-";
+
+  const byTime = new Map<string, number[]>();
+  for (const day of days) {
+    const time = resolveScheduleTime(classTime, classTimes, day) ?? "";
+    const list = byTime.get(time) ?? [];
+    list.push(day);
+    byTime.set(time, list);
+  }
+
+  const groups = [...byTime.entries()].sort(
+    (a, b) =>
+      Math.min(...a[1].map((d) => WEEKDAY_DISPLAY_ORDER.indexOf(d))) -
+      Math.min(...b[1].map((d) => WEEKDAY_DISPLAY_ORDER.indexOf(d))),
+  );
+
+  return groups
+    .map(([time, groupDays]) => {
+      const label = formatDayGroupLabel(groupDays);
+      return time ? `${label} - ${time}` : label;
+    })
+    .join(", ");
+}
 
 function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);

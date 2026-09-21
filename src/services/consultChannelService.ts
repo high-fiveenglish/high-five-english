@@ -5,7 +5,7 @@
 import type { ConsultChannel, ConsultChannelId } from "../lib/community/types";
 import type { AuthErrorCode, ServiceResult } from "../lib/auth/types";
 import { errResult, okResult } from "../lib/auth/types";
-import { ADMIN_API_URL } from "../lib/adminApi";
+import { ADMIN_API_URL, getTenantDomain } from "../lib/adminApi";
 
 async function parseErrorCode(res: Response): Promise<AuthErrorCode> {
   try {
@@ -21,7 +21,8 @@ async function parseErrorCode(res: Response): Promise<AuthErrorCode> {
 
 export async function listActiveConsultChannels(): Promise<ConsultChannel[]> {
   try {
-    const res = await fetch(`${ADMIN_API_URL}/api/public/consult-channels`);
+    const domain = encodeURIComponent(getTenantDomain());
+    const res = await fetch(`${ADMIN_API_URL}/api/public/consult-channels?domain=${domain}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return (await res.json()) as ConsultChannel[];
   } catch (err) {

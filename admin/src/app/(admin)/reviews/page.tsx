@@ -28,8 +28,8 @@ export default async function ReviewsPage() {
               <div>
                 <p className="text-sm font-bold text-slate-900">
                   {p.parentId && <span className="mr-1 font-normal text-slate-400">RE</span>}
-                  {p.title}
-                  <span className="ml-2 font-normal text-slate-400">{p.student.name}</span>
+                  {p.title || <span className="font-normal italic text-slate-400">(제목 없음)</span>}
+                  <span className="ml-2 font-normal text-slate-400">{p.student?.name ?? p.authorAdminName ?? "관리자"}</span>
                 </p>
                 <p className="mt-0.5 font-mono text-[11px] text-slate-400">{formatAppDateTime(p.createdAt)}</p>
               </div>

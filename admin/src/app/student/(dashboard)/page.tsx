@@ -4,6 +4,7 @@ import { requireStudent } from "@/lib/studentAuth";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { EnrollmentSelect } from "./EnrollmentSelect";
 import { CalendarView } from "./CalendarView";
+import { HoldReleaseButton } from "./HoldReleaseButton";
 import { ENGLISH_LEVEL_OPTIONS } from "@/lib/levelTestOptions";
 import { formatAppDate, formatAppTime } from "@/lib/appTime";
 import type { EnrollmentStatus, SessionStatus } from "@/generated/prisma/client";
@@ -31,6 +32,7 @@ const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
   CANCELLED: "취소",
   MAKEUP_NEEDED: "보충필요",
   LEAVE: "휴강",
+  HOLD: "홀드",
 };
 
 export default async function StudentHomePage({
@@ -118,7 +120,10 @@ export default async function StudentHomePage({
             <InfoItem label="교재" value={selected!.textbookName ?? "-"} />
             <InfoItem label="수업 방식" value={selected!.classMethod} />
             <InfoItem label="수업 타입" value={selected!.classType} />
-            <InfoItem label="수강 상태" value={ENROLLMENT_STATUS_LABEL[selected!.status]} />
+            <div>
+              <InfoItem label="수강 상태" value={ENROLLMENT_STATUS_LABEL[selected!.status]} />
+              {selected!.status === "HOLDING" && <HoldReleaseButton enrollmentId={selected!.id} />}
+            </div>
             <InfoItem label="총 회차" value={`${selected!.totalSessions}회`} />
             <InfoItem label="요일" value={selected!.scheduleDays} />
           </div>

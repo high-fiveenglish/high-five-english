@@ -21,7 +21,7 @@ export function ChannelRow({ channel }: { channel: ConsultChannel }) {
 
   return (
     <tr className="border-b border-slate-100 last:border-0">
-      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-400">{channel.id}</td>
+      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-400">{channel.code}</td>
       <td className="px-2 py-3">
         <input
           value={displayName}
