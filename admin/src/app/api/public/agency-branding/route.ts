@@ -51,6 +51,11 @@ export async function GET(request: Request) {
         accountHolder: agent.bankAccountHolder,
       },
     },
-    { headers },
+    // 이 GET은 Authorization 헤더에 따라 응답이 달라지지 않는 순수 공개 조회이고
+    // (?domain= 쿼리스트링만으로 응답이 정해짐), 협력사별로 URL 자체가 달라지므로
+    // 브라우저/CDN 캐시가 도메인을 쿼리스트링까지 포함해 키로 쓰는 한 다른 협력사
+    // 데이터와 섞일 수 없다. 관리자가 협력사 정보를 수정해도 늦어도 30초 내엔
+    // 반영되도록 TTL을 짧게 잡는다.
+    { headers: { ...headers, "Cache-Control": "public, max-age=30" } },
   );
 }

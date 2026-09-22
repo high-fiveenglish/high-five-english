@@ -83,11 +83,16 @@ function BrandNameSync({ branding }: { branding: AgencyBranding }) {
   useEffect(() => {
     const brandName = branding.isHeadquarters ? t("footer.brand_name") : branding.name;
     // 약관/개인정보처리방침의 "개인정보 관리책임자" 같은 항목도 협력사 사이트에서는
-    // 본사(우종범) 값이 아니라 그 협력사 값이 나와야 한다 — 아직 값이 없는 협력사는
-    // 기존 본사 기본값으로 자연스럽게 떨어진다.
-    const ceoName = branding.biz.ceo ?? "우종범";
-    const brandEmail = branding.biz.email ?? "jongbum1010@hanmail.net";
-    const brandPhone = branding.biz.phone ?? "010-2777-5463";
+    // 본사(우종범) 값이 아니라 그 협력사 값이 나와야 한다 — 본사 자체는 DB에 값이
+    // 없어 하드코딩된 기본값으로 대체하지만, 협력사는 값이 비어있어도 본사 값으로
+    // 대체하지 않는다(빈 문자열이면 해당 문구에서 그냥 빈칸으로 보인다).
+    const ceoName = branding.isHeadquarters ? (branding.biz.ceo ?? "우종범") : (branding.biz.ceo ?? "");
+    const brandEmail = branding.isHeadquarters
+      ? (branding.biz.email ?? "jongbum1010@hanmail.net")
+      : (branding.biz.email ?? "");
+    const brandPhone = branding.isHeadquarters
+      ? (branding.biz.phone ?? "010-2777-5463")
+      : (branding.biz.phone ?? "");
     i18n.options.interpolation = {
       ...i18n.options.interpolation,
       defaultVariables: { brandName, ceoName, brandEmail, brandPhone },

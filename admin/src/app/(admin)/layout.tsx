@@ -59,19 +59,37 @@ const NAV_GROUPS = [
   },
 ] as const;
 
-// AGENT(협력사 관리자)는 위 NAV_GROUPS/ADMIN_ONLY_GROUP을 전혀 쓰지 않고 이 고정된
-// 단일 목록만 본다 — 본사가 정해준 화면 밖으로 절대 못 나가게(현재 쓰는 협력사
-// 관리자페이지 레퍼런스를 참고해 필요한 항목만 추림).
-const AGENT_NAV_ITEMS = [
-  { href: "/schedule", label: "전체일정조회" },
-  { href: "/level-tests", label: "레벨테스트신청내역" },
-  { href: "/students", label: "회원목록" },
-  { href: "/enrollments", label: "수강신청내역" },
-  { href: "/settlements", label: "정산내역" },
-  { href: "/pricing", label: "수강료관리" },
-  { href: "/leave-requests?tab=academy", label: "전체휴강" },
-  { href: "/student-holds", label: "학생홀드관리" },
-  { href: "/my-profile", label: "정보수정" },
+// AGENT(협력사 관리자)는 위 NAV_GROUPS/ADMIN_ONLY_GROUP을 전혀 쓰지 않고 본사가 정해준
+// 화면 밖으로 절대 못 나간다 — 대신 본사 홈과 똑같은 "그룹형 메뉴" 생김새를 쓰도록
+// 같은 그룹 제목 아래에 협력사에게 허용된 항목만 모아둔다(권한 테이블이 아니라
+// 고정 목록인 것은 기존과 동일 — 표시되는 화면 자체가 이미 협력사 전용 데이터로
+// 스코핑돼 있어서 AGENT에게 permission 관리 UI까지 열어줄 필요가 없다).
+const AGENT_NAV_GROUPS = [
+  { title: "대시보드", items: [{ href: "/", label: "홈" }] },
+  { title: "회원 관리", items: [{ href: "/students", label: "회원목록" }] },
+  { title: "레벨테스트", items: [{ href: "/level-tests", label: "신청/진행 관리" }] },
+  {
+    title: "수강내역관리",
+    items: [
+      { href: "/enrollments", label: "수강신청내역" },
+      { href: "/student-holds", label: "학생홀드관리" },
+    ],
+  },
+  {
+    title: "수업 운영",
+    items: [
+      { href: "/schedule", label: "전체일정조회" },
+      { href: "/leave-requests?tab=academy", label: "전체휴강" },
+    ],
+  },
+  {
+    title: "정산/가격",
+    items: [
+      { href: "/settlements", label: "정산내역" },
+      { href: "/pricing", label: "수강료관리" },
+    ],
+  },
+  { title: "계정", items: [{ href: "/my-profile", label: "정보수정" }] },
 ] as const;
 
 // ADMIN에게만 보이는 그룹 — role을 직접 확인하며, 권한 테이블과 무관하게 항상
@@ -119,16 +137,20 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
         <nav className="flex flex-1 flex-col gap-5 overflow-y-auto">
           {isAgent ? (
-            <div>
-              <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                관리자메뉴
-              </p>
-              <div className="flex flex-col gap-0.5">
-                {AGENT_NAV_ITEMS.map((item) => (
-                  <NavLink key={item.href} href={item.href} label={item.label} />
-                ))}
-              </div>
-            </div>
+            <>
+              {AGENT_NAV_GROUPS.map((group) => (
+                <div key={group.title}>
+                  <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    {group.title}
+                  </p>
+                  <div className="flex flex-col gap-0.5">
+                    {group.items.map((item) => (
+                      <NavLink key={item.href} href={item.href} label={item.label} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </>
           ) : (
             <>
               {visibleGroups.map((group) => (

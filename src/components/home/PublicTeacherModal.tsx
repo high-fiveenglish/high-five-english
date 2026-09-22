@@ -1,8 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pause, Play } from "lucide-react";
 import { Modal } from "../ui/Modal";
-import type { PublicTeacher } from "../../services/instructorService";
+import { getTeacherVoice, type PublicTeacher } from "../../services/instructorService";
 import { flagForNationality } from "../../lib/nationalityFlag";
 
 // 홈페이지 강사소개 섹션 전용 상세 모달 — 실제 강사 계정(PublicTeacher) 기반이라
@@ -19,6 +19,22 @@ export function PublicTeacherModal({
   const { t } = useTranslation("home");
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
+  // undefined = 아직 조회 전(로딩), null = 조회 완료했는데 음성 없음. 목록 응답엔
+  // audioUrl이 더 이상 없어서(instructorService.ts 참고) 모달이 열릴 때 그 강사
+  // 것만 따로 받는다.
+  const [audioUrl, setAudioUrl] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!instructor) return;
+    setAudioUrl(undefined);
+    let cancelled = false;
+    getTeacherVoice(instructor.id).then((url) => {
+      if (!cancelled) setAudioUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [instructor]);
 
   const handleClose = () => {
     audioRef.current?.pause();
@@ -78,7 +94,12 @@ export function PublicTeacherModal({
             </div>
           </div>
 
-          {instructor.audioUrl && (
+          {audioUrl === undefined && (
+            <div className="mt-5 animate-pulse rounded-xl bg-slate-50 p-4">
+              <div className="h-10 w-10 rounded-full bg-slate-200" />
+            </div>
+          )}
+          {audioUrl && (
             <div className="mt-5 rounded-xl bg-slate-50 p-4">
               <div className="flex items-center gap-3">
                 <button
@@ -95,7 +116,7 @@ export function PublicTeacherModal({
                 ref={audioRef}
                 className="mt-3 w-full"
                 controls
-                src={instructor.audioUrl}
+                src={audioUrl}
                 onPlay={() => setPlaying(true)}
                 onPause={() => setPlaying(false)}
                 onEnded={() => setPlaying(false)}

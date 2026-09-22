@@ -11,6 +11,10 @@
 // 캐시가 채워져 있어 로딩 스켈레톤이 거의 보이지 않는다.
 import { ADMIN_API_URL } from "../lib/adminApi";
 
+// audioUrl(음성)은 목록 응답에 더 이상 포함되지 않는다 — 강사 1인당 최대 수MB(base64)라
+// 13명 전체를 한 번에 받으면 응답이 18.9MB까지 커지는데, 실제로 음성이 필요한 시점은
+// 강사소개 카드를 클릭해서 상세 모달을 열 때 그 한 명뿐이다(getTeacherVoice로 그때
+// 지연 조회). 목록 단계에서는 항상 undefined다.
 export type PublicTeacher = {
   id: number;
   name: string;
@@ -18,7 +22,6 @@ export type PublicTeacher = {
   nationality: string | null;
   grade: string;
   photoUrl: string | null;
-  audioUrl: string | null;
   bio: string | null;
   experience: string | null;
   videoYoutubeCode: string | null;
@@ -56,4 +59,22 @@ export function listPublicInstructors(): Promise<PublicTeacher[]> {
       });
   }
   return inflight;
+}
+
+// 강사 상세 모달(PublicTeacherModal)을 열 때만 그 한 명의 음성을 지연 조회한다.
+// 같은 강사를 다시 열 때 매번 다시 받지 않도록 강사별로 결과를 캐시한다.
+const voiceCache = new Map<number, string | null>();
+
+export async function getTeacherVoice(teacherId: number): Promise<string | null> {
+  if (voiceCache.has(teacherId)) return voiceCache.get(teacherId)!;
+  try {
+    const res = await fetch(`${ADMIN_API_URL}/api/public/teachers/${teacherId}/voice`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = (await res.json()) as { audioUrl: string | null };
+    voiceCache.set(teacherId, data.audioUrl);
+    return data.audioUrl;
+  } catch (err) {
+    console.warn("[instructorService] voice fetch failed", err);
+    return null;
+  }
 }

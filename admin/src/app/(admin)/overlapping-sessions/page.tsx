@@ -2,6 +2,7 @@ import Link from "next/link";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { findAllOverlappingSessions } from "@/lib/scheduleConflict";
 import { formatAppDateTime } from "@/lib/appTime";
+import { RefreshButton } from "./RefreshButton";
 
 const fmtDateTime = formatAppDateTime;
 const PAGE_SIZE = 20;
@@ -24,7 +25,10 @@ export default async function OverlappingSessionsPage({
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-bold text-slate-900">겹치는 수업 내역</h1>
+      <div className="mb-1 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-slate-900">겹치는 수업 내역</h1>
+        <RefreshButton />
+      </div>
       <p className="mb-6 text-sm text-slate-500">
         같은 강사에게 시간이 겹치게 배정된 수업을 진단합니다. 수업 등록·강사 배정 시 겹침을 미리 막고
         있으므로 정상적으로는 비어 있어야 합니다 — 상태를 수동으로 되돌리는 등의 예외 상황을 잡아내는

@@ -20,17 +20,21 @@ export function ReceiptModal({ row, onClose }: { row: EnrollmentHistoryRow | nul
   const { enrollment, teacher, stats } = row;
   const studentName = `${findStudentName(enrollment.studentId)} (${findStudentEnglishName(enrollment.studentId)})`;
   // 영수증은 실제 계약/결제 상대방을 보여줘야 하므로, 협력사 학생이면 그 협력사의
-  // 사업자 정보로 대체한다(값이 없는 항목만 본사 기본값으로 떨어짐) — Footer.tsx와
-  // 동일한 병합 규칙.
+  // 사업자 정보로 대체한다. 본사는 DB에 사업자 정보가 없어 하드코딩된 CONTACT
+  // 기본값으로 대체하지만, 협력사는 값이 비어있어도 본사 값으로 대체하지 않는다 —
+  // Footer.tsx와 동일한 병합 규칙.
   const company = {
-    name: tenant.biz.name ?? CONTACT.company.name,
-    ceo: tenant.biz.ceo ?? CONTACT.company.ceo,
-    bizRegNo: tenant.biz.regNo ?? CONTACT.company.bizRegNo,
-    address: tenant.biz.address ?? CONTACT.company.address,
+    name: (tenant.isHeadquarters ? (tenant.biz.name ?? CONTACT.company.name) : tenant.biz.name) ?? "",
+    ceo: (tenant.isHeadquarters ? (tenant.biz.ceo ?? CONTACT.company.ceo) : tenant.biz.ceo) ?? "",
+    bizRegNo: (tenant.isHeadquarters ? (tenant.biz.regNo ?? CONTACT.company.bizRegNo) : tenant.biz.regNo) ?? "",
+    address: (tenant.isHeadquarters ? (tenant.biz.address ?? CONTACT.company.address) : tenant.biz.address) ?? "",
   };
   const bank = {
-    bankName: tenant.bank.name ?? CONTACT.bank.bankName,
-    accountNumber: tenant.bank.accountNumber ?? CONTACT.bank.accountNumber,
+    bankName: (tenant.isHeadquarters ? (tenant.bank.name ?? CONTACT.bank.bankName) : tenant.bank.name) ?? "",
+    accountNumber:
+      (tenant.isHeadquarters
+        ? (tenant.bank.accountNumber ?? CONTACT.bank.accountNumber)
+        : tenant.bank.accountNumber) ?? "",
   };
 
   return (

@@ -23,7 +23,7 @@ export default async function EditAgencyPage({ params }: { params: Promise<{ id:
 
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5">
         <h2 className="text-sm font-bold text-slate-900">상담채널 (이 사이트 전용)</h2>
-        <p className="-mt-2 text-xs text-slate-500">비워두면 본사 기본 상담채널이 대신 노출됩니다.</p>
+        <p className="-mt-2 text-xs text-slate-500">비워두면 이 사이트에는 표시되지 않습니다(본사 값으로 대체되지 않음).</p>
         <AgentConsultChannelField
           agentId={agent.id}
           code="kakao"

@@ -144,10 +144,6 @@ export function LoginModal({
         >
           {t("login.kakao_login")}
         </a>
-
-        <p className="pt-1 text-center text-xs text-slate-400">
-          {t("login.demo_hint")}
-        </p>
       </form>
     </Modal>
   );

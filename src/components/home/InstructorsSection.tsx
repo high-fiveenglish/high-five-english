@@ -69,12 +69,14 @@ export function InstructorsSection() {
                       {flag}
                     </span>
                   )}
-                  {ins.audioUrl && (
-                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 bg-brand-950/40 py-2.5 opacity-0 backdrop-blur-sm transition group-hover:opacity-100">
-                      <Volume2 size={14} className="text-white" />
-                      <span className="text-xs font-semibold text-white">{t("instructors.listen_hover")}</span>
-                    </div>
-                  )}
+                  {/* 목록 응답엔 더 이상 audioUrl이 없어(instructorService.ts 참고) 카드
+                      단계에서는 실제로 음성이 있는지 미리 알 수 없다 — 상세 모달을 열어야
+                      알 수 있으므로 이 호버 힌트는 항상 보여준다(현재 활성 강사는 전원
+                      음성이 있음). */}
+                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 bg-brand-950/40 py-2.5 opacity-0 backdrop-blur-sm transition group-hover:opacity-100">
+                    <Volume2 size={14} className="text-white" />
+                    <span className="text-xs font-semibold text-white">{t("instructors.listen_hover")}</span>
+                  </div>
                 </div>
                 <p className="mt-3 text-[15px] font-bold text-brand-950">{ins.name}</p>
                 <p className="mt-0.5 truncate text-xs text-slate-400">

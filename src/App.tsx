@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { AuthProvider } from "./context/AuthContext";
 import { TenantProvider } from "./context/TenantContext";
 import { listPublicInstructors } from "./services/instructorService";
+import { listPublishedHomeNoticesForHome } from "./services/homeNoticeService";
 import { LanguageProvider } from "./context/LanguageContext";
 import { Header } from "./components/layout/Header";
 import { Footer } from "./components/layout/Footer";
@@ -55,8 +56,10 @@ function App() {
   // "강사소개"는 홈 화면 밖에서 눌러도(다른 페이지 → 홈 이동 + 스크롤) 버퍼링 없이
   // 바로 보이도록, 어느 페이지에 있든 앱이 뜨자마자 미리 한 번 조회해 캐시를 데운다
   // (실제 렌더링은 InstructorsSection이 캐시를 읽어서 처리 — services/instructorService).
+  // 홈페이지 "공지사항" 섹션도 동일한 이유로 같이 데운다(HomeNoticesSection 참고).
   useEffect(() => {
     listPublicInstructors();
+    listPublishedHomeNoticesForHome();
   }, []);
 
   return (

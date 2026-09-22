@@ -15,29 +15,39 @@ export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
   // 카카오톡/위챗 표시는 더 이상 본사 값을 하드코딩해서 보여주지 않는다 — 협력사가
   // 관리자 화면(/agencies/:id)에서 직접 설정한 채널만 뜨고, 아직 설정 안 했으면(본사
   // 채널로 대체하지 않고) 그냥 빈칸으로 둔다.
+  // listActiveConsultChannels()는 내부적으로 getTenantDomain()(window.location 기준)만
+  // 보고 도메인을 정하지, tenant(agentId)를 인자로 넘기지 않는다 — 즉 이 값은 처음부터
+  // 마운트 시점에 이미 확정돼 있어 tenant가 "준비"될 때까지 기다릴 필요가 없다.
+  // 예전엔 [tenant.agentId]가 의존성에 있어서 TenantContext가 기본값(agentId: 0)에서
+  // 실제 값으로 바뀔 때 같은 데이터를 한 번 더(불필요하게) 요청했다 — 마운트 시 한
+  // 번만 부르도록 고쳐서 그 중복을 없앤다.
   const [channels, setChannels] = useState<ConsultChannel[]>([]);
   useEffect(() => {
     listActiveConsultChannels().then(setChannels);
-  }, [tenant.agentId]);
+  }, []);
   const kakao = channels.find((c) => c.id === "kakao");
   const wechat = channels.find((c) => c.id === "wechat");
-  // 협력사 사이트는 회사정보/계좌를 그 협력사 값으로 대체한다 — 값이 비어있는 항목은
-  // (아직 관리자가 안 채운 경우) 본사 기본값으로 떨어진다.
+  // 협력사 사이트는 회사정보/계좌를 그 협력사 값으로 대체한다. 본사(highfive) 자체는
+  // DB에 사업자 정보를 입력해두지 않아 하드코딩된 CONTACT 기본값으로 대체하지만,
+  // 협력사는 값이 비어있어도 본사 값으로 대체하지 않고 그냥 빈칸(행 미노출)으로
+  // 둔다 — 협력사 화면에 본사 사업자 정보가 새어나가면 안 되기 때문이다.
   const company = {
-    name: tenant.biz.name ?? CONTACT.company.name,
-    ceo: tenant.biz.ceo ?? CONTACT.company.ceo,
-    bizRegNo: tenant.biz.regNo ?? CONTACT.company.bizRegNo,
-    address: tenant.biz.address ?? CONTACT.company.address,
-    // 상담전화/이메일/통신판매업신고번호는 본사 기본값이 아직 없어 협력사에만 값이
-    // 있을 때만 표시한다(비어있으면 행 자체를 렌더링하지 않음).
+    name: tenant.isHeadquarters ? (tenant.biz.name ?? CONTACT.company.name) : tenant.biz.name,
+    ceo: tenant.isHeadquarters ? (tenant.biz.ceo ?? CONTACT.company.ceo) : tenant.biz.ceo,
+    bizRegNo: tenant.isHeadquarters ? (tenant.biz.regNo ?? CONTACT.company.bizRegNo) : tenant.biz.regNo,
+    address: tenant.isHeadquarters ? (tenant.biz.address ?? CONTACT.company.address) : tenant.biz.address,
     phone: tenant.biz.phone,
     email: tenant.biz.email,
     mailOrderNo: tenant.biz.mailOrderNo,
   };
   const bank = {
-    bankName: tenant.bank.name ?? CONTACT.bank.bankName,
-    accountNumber: tenant.bank.accountNumber ?? CONTACT.bank.accountNumber,
-    accountHolder: tenant.bank.accountHolder ?? CONTACT.bank.accountHolder,
+    bankName: tenant.isHeadquarters ? (tenant.bank.name ?? CONTACT.bank.bankName) : tenant.bank.name,
+    accountNumber: tenant.isHeadquarters
+      ? (tenant.bank.accountNumber ?? CONTACT.bank.accountNumber)
+      : tenant.bank.accountNumber,
+    accountHolder: tenant.isHeadquarters
+      ? (tenant.bank.accountHolder ?? CONTACT.bank.accountHolder)
+      : tenant.bank.accountHolder,
   };
 
   return (
@@ -51,22 +61,30 @@ export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
           <div>
             <h4 className="mb-3 text-sm font-bold text-white">{t("footer.company_info")}</h4>
             <dl className="space-y-1.5 text-[13px] leading-relaxed text-white/55">
-              <div className="flex gap-1.5">
-                <dt className="shrink-0 text-white/35">{t("footer.biz_name_label")}</dt>
-                <dd>{company.name}</dd>
-              </div>
-              <div className="flex gap-1.5">
-                <dt className="shrink-0 text-white/35">{t("footer.ceo_label")}</dt>
-                <dd>{company.ceo}</dd>
-              </div>
-              <div className="flex gap-1.5">
-                <dt className="shrink-0 text-white/35">{t("footer.biz_reg_no_label")}</dt>
-                <dd>{company.bizRegNo}</dd>
-              </div>
-              <div className="flex gap-1.5">
-                <dt className="shrink-0 text-white/35">{t("footer.address_label")}</dt>
-                <dd>{company.address}</dd>
-              </div>
+              {company.name && (
+                <div className="flex gap-1.5">
+                  <dt className="shrink-0 text-white/35">{t("footer.biz_name_label")}</dt>
+                  <dd>{company.name}</dd>
+                </div>
+              )}
+              {company.ceo && (
+                <div className="flex gap-1.5">
+                  <dt className="shrink-0 text-white/35">{t("footer.ceo_label")}</dt>
+                  <dd>{company.ceo}</dd>
+                </div>
+              )}
+              {company.bizRegNo && (
+                <div className="flex gap-1.5">
+                  <dt className="shrink-0 text-white/35">{t("footer.biz_reg_no_label")}</dt>
+                  <dd>{company.bizRegNo}</dd>
+                </div>
+              )}
+              {company.address && (
+                <div className="flex gap-1.5">
+                  <dt className="shrink-0 text-white/35">{t("footer.address_label")}</dt>
+                  <dd>{company.address}</dd>
+                </div>
+              )}
               {company.phone && (
                 <div className="flex gap-1.5">
                   <dt className="shrink-0 text-white/35">{t("footer.phone_label")}</dt>
@@ -136,20 +154,22 @@ export function Footer({ onOpenContact }: { onOpenContact: () => void }) {
             </LocalizedLink>
           </div>
 
-          <div>
-            <h4 className="mb-3 text-sm font-bold text-white">{t("footer.bank_transfer_title")}</h4>
-            <div className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3.5 text-[13px] leading-relaxed text-white/70">
-              <Landmark size={16} className="mt-0.5 shrink-0 text-accent-400" />
-              <div>
-                <p className="font-bold text-white">
-                  {bank.bankName} {bank.accountNumber}
-                </p>
-                <p className="mt-0.5 text-white/50">
-                  {t("footer.account_holder")} {bank.accountHolder}
-                </p>
+          {bank.bankName && (
+            <div>
+              <h4 className="mb-3 text-sm font-bold text-white">{t("footer.bank_transfer_title")}</h4>
+              <div className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3.5 text-[13px] leading-relaxed text-white/70">
+                <Landmark size={16} className="mt-0.5 shrink-0 text-accent-400" />
+                <div>
+                  <p className="font-bold text-white">
+                    {bank.bankName} {bank.accountNumber}
+                  </p>
+                  <p className="mt-0.5 text-white/50">
+                    {t("footer.account_holder")} {bank.accountHolder}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="mt-10 flex flex-col items-center gap-2 border-t border-white/10 pt-6 text-center text-[12px] text-white/35 sm:flex-row sm:justify-between">

@@ -58,11 +58,13 @@ export function RouteGuard({
   const { isLoggedIn, actor } = useAuth();
 
   if (!isLoggedIn || !actor) return <LoginPrompt onOpenLogin={onOpenLogin} />;
-  // 관리자(general_manager/general_admin)는 강사·학생 권한을 모두 포괄하는 최상위
-  // 계정이므로, 특정 role(student/teacher)에게만 열린 페이지라도 확인 차 항상 볼 수
-  // 있어야 한다 — allow 목록에 없어도 role 자체가 admin류면 통과시킨다. 세부
-  // PermissionKey 검사(requirePermission)는 general_admin에 한해 그대로 유지된다.
-  const isAdminLike = actor.role === "general_manager" || actor.role === "general_admin";
+  // 관리자(general_manager/general_admin/agent)는 강사·학생 권한을 모두 포괄하는
+  // 최상위 계정이므로, 특정 role(student/teacher)에게만 열린 페이지라도 확인 차 항상
+  // 볼 수 있어야 한다 — allow 목록에 없어도 role 자체가 admin류면 통과시킨다. 협력사
+  // 관리자(agent)도 자기 협력사 게시판(예: 수강후기)을 볼 수 있어야 하므로 포함한다.
+  // 세부 PermissionKey 검사(requirePermission)는 general_admin에 한해 그대로 유지된다.
+  const isAdminLike =
+    actor.role === "general_manager" || actor.role === "general_admin" || actor.role === "agent";
   if (!isAdminLike && !allow.includes(actor.role)) return <ForbiddenNotice />;
   if (requirePermission) {
     const hasPermission =

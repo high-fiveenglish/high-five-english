@@ -6,7 +6,6 @@ import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { parseAppDateTime, formatAppDate, appDayStart, appDayEnd } from "@/lib/appTime";
 import { buildTeacherStats } from "@/lib/teacherStats";
 import { closeExpiredEnrollments } from "@/lib/enrollmentLifecycle";
-import { redirect } from "next/navigation";
 
 async function getCounts() {
   await closeExpiredEnrollments();
@@ -69,6 +68,59 @@ async function getCounts() {
   };
 }
 
+// AGENT(협력사 관리자)용 홈 — 위 getCounts()와 같은 지표를 그 협력사(agentId) 학생에
+// 한정해서 집계한다. 전사 통계(getCounts)와 나란히 두되 완전히 별도 함수로 둔 이유:
+// 강사 수/강사수업통계처럼 협력사에 보여주면 안 되는 항목을 아예 쿼리하지 않기 위해서다.
+async function getAgentCounts(agentId: number) {
+  await closeExpiredEnrollments();
+  const todayStart = appDayStart();
+  const todayEnd = appDayEnd();
+
+  const [students, activeEnrollments, pendingLevelTests, todaySessionRows, todayLeaveRequests] = await Promise.all([
+    prisma.student.count({ where: { siteId: DEFAULT_SITE_ID, deletedAt: null, agentId } }),
+    prisma.enrollment.count({ where: { siteId: DEFAULT_SITE_ID, status: { in: ["ACTIVE", "PAID"] }, agentId } }),
+    prisma.levelTest.count({
+      where: { siteId: DEFAULT_SITE_ID, progressStatus: { notIn: [...TERMINAL_PROGRESS_STATUSES] }, agentId },
+    }),
+    prisma.classSession.findMany({
+      where: { siteId: DEFAULT_SITE_ID, scheduledAt: { gte: todayStart, lt: todayEnd }, student: { agentId } },
+      select: { teacherId: true, durationMin: true },
+    }),
+    prisma.leaveRequest.count({
+      where: {
+        siteId: DEFAULT_SITE_ID,
+        status: "APPROVED",
+        academyClosureId: null,
+        createdAt: { gte: todayStart, lt: todayEnd },
+        student: { agentId },
+      },
+    }),
+  ]);
+
+  const UNIT_MINUTES = 25;
+  const sessionUnits = (durationMin: number) => durationMin / UNIT_MINUTES;
+  const todaySessions = todaySessionRows.reduce((sum, s) => sum + sessionUnits(s.durationMin), 0);
+
+  const unitsByTeacher = new Map<number, number>();
+  for (const s of todaySessionRows) {
+    unitsByTeacher.set(s.teacherId, (unitsByTeacher.get(s.teacherId) ?? 0) + sessionUnits(s.durationMin));
+  }
+  const teacherIds = [...unitsByTeacher.keys()];
+  const teacherNames = await prisma.teacher.findMany({
+    where: { id: { in: teacherIds } },
+    select: TEACHER_SUMMARY_SELECT,
+  });
+  const teacherNameById = new Map(teacherNames.map((t) => [t.id, t.realName]));
+  const teacherSessionsToday = [...unitsByTeacher.entries()]
+    .map(([teacherId, count]) => ({ teacherName: teacherNameById.get(teacherId) ?? "알 수 없음", count }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    counts: { activeEnrollments, pendingLevelTests, todaySessions, todayLeaveRequests, students },
+    teacherSessionsToday,
+  };
+}
+
 // 수업 관련 항목을 앞으로, 학생 수/강사 수는 참고용이라 뒤로 뺐다.
 const CARDS = [
   { key: "activeEnrollments", label: "진행중 수강" },
@@ -77,6 +129,15 @@ const CARDS = [
   { key: "todayLeaveRequests", label: "오늘 연기 건수" },
   { key: "students", label: "학생 수" },
   { key: "teachers", label: "강사 수" },
+] as const;
+
+// AGENT 홈은 강사 수(전사 지표)가 없다.
+const AGENT_CARDS = [
+  { key: "activeEnrollments", label: "진행중 수강" },
+  { key: "pendingLevelTests", label: "진행중 레벨테스트" },
+  { key: "todaySessions", label: "오늘 수업 건수" },
+  { key: "todayLeaveRequests", label: "오늘 연기 건수" },
+  { key: "students", label: "학생 수" },
 ] as const;
 
 function todayIsoDate(): string {
@@ -89,9 +150,56 @@ export default async function DashboardPage({
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
   const actor = await requireBackofficeActor();
-  // 이 대시보드는 전사(모든 협력사 합산) 통계라 AGENT에게 보여주면 안 된다 — 로그인
-  // 즉시 자기 화면으로 보낸다.
-  if (actor.role === "AGENT") redirect("/schedule");
+
+  // AGENT(협력사 관리자)는 전사(모든 협력사 합산) 통계는 볼 수 없으므로 그 화면 대신
+  // 자기 협력사 학생에 한정된 홈을 별도로 렌더링한다(강사수업통계/강사 수 등 전사
+  // 지표는 아예 쿼리하지 않는다 — getAgentCounts 참고).
+  if (actor.role === "AGENT") {
+    const { counts, teacherSessionsToday } = await getAgentCounts(actor.agentId);
+    return (
+      <div>
+        <h1 className="mb-6 text-xl font-bold text-slate-900">홈</h1>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          {AGENT_CARDS.map((card) => (
+            <div key={card.key} className="rounded-2xl border border-slate-200 bg-white p-5">
+              <p className="text-xs font-medium text-slate-500">{card.label}</p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">{counts[card.key]}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8">
+          <h2 className="mb-3 text-lg font-bold text-slate-900">강사별 수업 회수 (오늘)</h2>
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
+                  <th className="px-4 py-3">강사</th>
+                  <th className="px-4 py-3">수업 건수</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teacherSessionsToday.map((t) => (
+                  <tr key={t.teacherName} className="border-b border-slate-100 last:border-0">
+                    <td className="px-4 py-3 font-medium text-slate-900">{t.teacherName}</td>
+                    <td className="px-4 py-3 text-slate-600">{t.count}건</td>
+                  </tr>
+                ))}
+                {teacherSessionsToday.length === 0 && (
+                  <tr>
+                    <td colSpan={2} className="px-4 py-10 text-center text-slate-400">
+                      오늘 예정된 수업이 없습니다.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const canViewTeacherStats = actor.role === "ADMIN" || actor.permissions.includes("teacher_stats.view");
 
   const [{ counts, teacherSessionsToday }, { from, to }] = await Promise.all([getCounts(), searchParams]);

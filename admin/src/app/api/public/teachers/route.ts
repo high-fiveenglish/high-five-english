@@ -16,6 +16,12 @@ export async function OPTIONS(request: Request) {
 export async function GET(request: Request) {
   const headers = corsHeaders(request.headers.get("origin"));
 
+  // voiceUrl(음성 base64, @db.Text)은 여기서 절대 select하지 않는다 — 22명분만 같이
+  // 읽어도 쿼리 자체가 최대 34초 걸린 실측 기록이 있고(teacherSelect.ts 주석 참고),
+  // 응답도 강사 1인당 최대 수MB라 전체 목록 응답이 18.9MB까지 커졌었다. 실제로
+  // voiceUrl이 쓰이는 곳은 강사소개 카드를 클릭해서 상세 모달을 열었을 때뿐이라
+  // (PublicTeacherModal.tsx), 그 한 명 것만 /api/public/teachers/[id]/voice에서
+  // 따로 지연 조회한다 — 목록 로딩 자체는 이 필드를 아예 몰라도 된다.
   const teachers = await prisma.teacher.findMany({
     where: { siteId: DEFAULT_SITE_ID, accountStatus: "ACTIVE" },
     orderBy: [{ priority: "desc" }, { realName: "asc" }],
@@ -26,7 +32,6 @@ export async function GET(request: Request) {
       nationality: true,
       teacherGrade: true,
       photoUrl: true,
-      voiceUrl: true,
       selfIntroduction: true,
       experience: true,
       videoYoutubeCode: true,
@@ -42,7 +47,6 @@ export async function GET(request: Request) {
     nationality: t.nationality,
     grade: t.teacherGrade,
     photoUrl: t.photoUrl,
-    audioUrl: t.voiceUrl,
     bio: t.selfIntroduction,
     experience: t.experience,
     videoYoutubeCode: t.videoYoutubeCode,
@@ -50,5 +54,7 @@ export async function GET(request: Request) {
     workingHours: formatAvailableTimeRanges(t.availableHours),
   }));
 
-  return NextResponse.json(payload, { headers: { ...headers, "Cache-Control": "no-store" } });
+  // 이 목록은 이제 테넌트/도메인과 무관하게 항상 같은 응답이라(agentId로 나뉘지 않음)
+  // 캐시가 다른 협력사 데이터와 섞일 여지 자체가 없다 — 인증 헤더로도 응답이 안 바뀐다.
+  return NextResponse.json(payload, { headers: { ...headers, "Cache-Control": "public, max-age=60" } });
 }

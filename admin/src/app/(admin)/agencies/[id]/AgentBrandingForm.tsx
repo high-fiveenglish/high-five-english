@@ -25,6 +25,7 @@ export function AgentBrandingForm({ agent }: { agent: Agent }) {
       </Section>
 
       <Section title="사업자 정보">
+        <p className="-mt-2 text-xs text-slate-500">비워두면 이 사이트에는 표시되지 않습니다(본사 값으로 대체되지 않음).</p>
         <div className="grid grid-cols-2 gap-4">
           <Field label="상호명">
             <input name="bizName" defaultValue={agent.bizName ?? ""} className="input" />

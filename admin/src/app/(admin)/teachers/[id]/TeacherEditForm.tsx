@@ -170,6 +170,8 @@ export function TeacherEditForm({
         <div className="grid grid-cols-2 gap-4">
           <FileToBase64Field
             name="photoUrl"
+            kind="photo"
+            teacherId={t.id}
             accept="image/*"
             label="사진 (내부 참고용)"
             defaultValue={t.photoUrl}
@@ -177,6 +179,8 @@ export function TeacherEditForm({
           />
           <FileToBase64Field
             name="voiceUrl"
+            kind="voice"
+            teacherId={t.id}
             accept="audio/*"
             label="음성 (내부 참고용)"
             defaultValue={t.voiceUrl}

@@ -48,7 +48,9 @@ export async function GET(request: Request) {
       })),
     }));
 
-  return NextResponse.json(payload, { headers });
+  // agency-branding과 동일한 근거로 캐시 허용 — 이 GET은 인증 헤더로 응답이 안
+  // 바뀌고, 협력사별로 도메인 쿼리스트링 자체가 달라 캐시가 서로 섞이지 않는다.
+  return NextResponse.json(payload, { headers: { ...headers, "Cache-Control": "public, max-age=30" } });
 }
 
 const VALID_CURRENCIES = ["KRW", "CNY", "VND"] as const;
