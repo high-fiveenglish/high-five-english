@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AuthProvider } from "./context/AuthContext";
@@ -13,34 +13,64 @@ import { ScrollToHash } from "./components/layout/ScrollToHash";
 import { LangLayout, RootRedirect } from "./components/i18n/LangLayout";
 import { LevelTestModal } from "./components/modals/LevelTestModal";
 import { ContactModal } from "./components/modals/ContactModal";
+// 홈은 첫 진입 화면이라 즉시 보여야 하므로 그대로 정적 import — 나머지 페이지는
+// 전부 route에 실제로 들어갈 때만 그 페이지의 JS를 받도록 React.lazy로 바꾼다.
+// (기존엔 이 페이지들이 전부 하나의 메인 번들에 같이 들어가 있어서, 홈 하나만
+// 보러 온 방문자도 관리자/강사/게시판 등 나머지 20여 개 페이지 코드를 전부 함께
+// 받아야 했다 — 그게 첫 방문 버퍼링의 큰 축이었다.)
 import { HomePage } from "./pages/HomePage";
-import { AboutPage } from "./pages/AboutPage";
-import { ProgramPage } from "./pages/ProgramPage";
-import { CurriculumPage } from "./pages/CurriculumPage";
-import { ProcessPage } from "./pages/ProcessPage";
-import { EnrollmentRegisterPage } from "./pages/EnrollmentRegisterPage";
-import { ClassroomPage } from "./pages/ClassroomPage";
-import { SsoLoginPage } from "./pages/SsoLoginPage";
-import { KakaoCallbackPage } from "./pages/KakaoCallbackPage";
-import { SignupPage } from "./pages/SignupPage";
-import { ReviewBoardPage } from "./pages/ReviewBoardPage";
-import { NoticeBoardPage } from "./pages/NoticeBoardPage";
-import { AdminReschedulePage } from "./pages/AdminReschedulePage";
-import { InstallPage } from "./pages/InstallPage";
-import { LegalPage } from "./pages/LegalPage";
-import { AdminMeetingSettingsPage } from "./pages/AdminMeetingSettingsPage";
-import { AdminAccountsPage } from "./pages/AdminAccountsPage";
-import { AdminNoticesPage } from "./pages/AdminNoticesPage";
-import { AdminHomeNoticesPage } from "./pages/AdminHomeNoticesPage";
-import { AdminReviewsPage } from "./pages/AdminReviewsPage";
-import { AdminLevelTestPage } from "./pages/AdminLevelTestPage";
-import { AdminPricingPage } from "./pages/AdminPricingPage";
-import { AdminConsultChannelsPage } from "./pages/AdminConsultChannelsPage";
-import { ConsultPage } from "./pages/ConsultPage";
-import { TeacherDashboardPage } from "./pages/TeacherDashboardPage";
+const AboutPage = lazy(() => import("./pages/AboutPage").then((m) => ({ default: m.AboutPage })));
+const ProgramPage = lazy(() => import("./pages/ProgramPage").then((m) => ({ default: m.ProgramPage })));
+const CurriculumPage = lazy(() => import("./pages/CurriculumPage").then((m) => ({ default: m.CurriculumPage })));
+const ProcessPage = lazy(() => import("./pages/ProcessPage").then((m) => ({ default: m.ProcessPage })));
+const EnrollmentRegisterPage = lazy(() =>
+  import("./pages/EnrollmentRegisterPage").then((m) => ({ default: m.EnrollmentRegisterPage })),
+);
+const ClassroomPage = lazy(() => import("./pages/ClassroomPage").then((m) => ({ default: m.ClassroomPage })));
+const SsoLoginPage = lazy(() => import("./pages/SsoLoginPage").then((m) => ({ default: m.SsoLoginPage })));
+const KakaoCallbackPage = lazy(() =>
+  import("./pages/KakaoCallbackPage").then((m) => ({ default: m.KakaoCallbackPage })),
+);
+const SignupPage = lazy(() => import("./pages/SignupPage").then((m) => ({ default: m.SignupPage })));
+const ReviewBoardPage = lazy(() => import("./pages/ReviewBoardPage").then((m) => ({ default: m.ReviewBoardPage })));
+const NoticeBoardPage = lazy(() => import("./pages/NoticeBoardPage").then((m) => ({ default: m.NoticeBoardPage })));
+const AdminReschedulePage = lazy(() =>
+  import("./pages/AdminReschedulePage").then((m) => ({ default: m.AdminReschedulePage })),
+);
+const InstallPage = lazy(() => import("./pages/InstallPage").then((m) => ({ default: m.InstallPage })));
+const LegalPage = lazy(() => import("./pages/LegalPage").then((m) => ({ default: m.LegalPage })));
+const AdminMeetingSettingsPage = lazy(() =>
+  import("./pages/AdminMeetingSettingsPage").then((m) => ({ default: m.AdminMeetingSettingsPage })),
+);
+const AdminAccountsPage = lazy(() =>
+  import("./pages/AdminAccountsPage").then((m) => ({ default: m.AdminAccountsPage })),
+);
+const AdminNoticesPage = lazy(() =>
+  import("./pages/AdminNoticesPage").then((m) => ({ default: m.AdminNoticesPage })),
+);
+const AdminHomeNoticesPage = lazy(() =>
+  import("./pages/AdminHomeNoticesPage").then((m) => ({ default: m.AdminHomeNoticesPage })),
+);
+const AdminReviewsPage = lazy(() =>
+  import("./pages/AdminReviewsPage").then((m) => ({ default: m.AdminReviewsPage })),
+);
+const AdminLevelTestPage = lazy(() =>
+  import("./pages/AdminLevelTestPage").then((m) => ({ default: m.AdminLevelTestPage })),
+);
+const AdminPricingPage = lazy(() =>
+  import("./pages/AdminPricingPage").then((m) => ({ default: m.AdminPricingPage })),
+);
+const AdminConsultChannelsPage = lazy(() =>
+  import("./pages/AdminConsultChannelsPage").then((m) => ({ default: m.AdminConsultChannelsPage })),
+);
+const ConsultPage = lazy(() => import("./pages/ConsultPage").then((m) => ({ default: m.ConsultPage })));
+const TeacherDashboardPage = lazy(() =>
+  import("./pages/TeacherDashboardPage").then((m) => ({ default: m.TeacherDashboardPage })),
+);
+const MyInfoPage = lazy(() => import("./pages/MyInfoPage").then((m) => ({ default: m.MyInfoPage })));
 import { RouteGuard } from "./components/auth/RouteGuard";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
-import { MyInfoPage } from "./pages/MyInfoPage";
+import { PageLoadingFallback } from "./components/layout/PageLoadingFallback";
 import { ImpersonationBanner } from "./components/layout/ImpersonationBanner";
 
 function App() {
@@ -76,6 +106,7 @@ function App() {
           />
 
           <main className="flex-1">
+            <Suspense fallback={<PageLoadingFallback />}>
             <Routes>
               {/* Public/marketing pages: locale-prefixed for SEO (see src/i18n/paths.ts). */}
               <Route path="/" element={<RootRedirect />} />
@@ -173,6 +204,7 @@ function App() {
               <Route path="/mypage" element={<MyInfoPage />} />
               <Route path="*" element={<PlaceholderPage title={t("errors.not_found_title")} />} />
             </Routes>
+            </Suspense>
           </main>
 
           <Footer onOpenContact={() => setContactOpen(true)} />
