@@ -17,11 +17,20 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const domain = normalizeDomain(searchParams.get("domain"));
 
-  const matched = domain
-    ? await prisma.agent.findFirst({ where: { siteId: DEFAULT_SITE_ID, domain } })
-    : null;
+  // domain 매칭에 실패하면 본사로 폴백하는데, 예전엔 그 폴백 조회가 별도 쿼리였다
+  // (domain 매칭 실패 시 2회 왕복). Agent.code/domain이 둘 다 @unique라 각 조건이
+  // 최대 1행만 매칭함이 스키마로 보장되므로, 두 조건을 OR로 묶어 후보를 1번에 가져온
+  // 뒤 JS에서 우선순위(도메인 매칭 우선)로 고른다 — findFirst 2번과 결과가 항상 같다.
+  const candidates = await prisma.agent.findMany({
+    where: {
+      siteId: DEFAULT_SITE_ID,
+      OR: domain ? [{ domain }, { code: HIGHFIVE_AGENT_CODE }] : [{ code: HIGHFIVE_AGENT_CODE }],
+    },
+  });
   const agent =
-    matched ?? (await prisma.agent.findFirst({ where: { siteId: DEFAULT_SITE_ID, code: HIGHFIVE_AGENT_CODE } }));
+    (domain ? candidates.find((a) => a.domain === domain) : null) ??
+    candidates.find((a) => a.code === HIGHFIVE_AGENT_CODE) ??
+    null;
 
   if (!agent) {
     return NextResponse.json({ error: "not_configured" }, { status: 500, headers });
