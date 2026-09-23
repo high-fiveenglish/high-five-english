@@ -57,7 +57,7 @@ export function EnrollmentCreateForm({
   returnTo,
   sourceRequestId,
   renewedFromId,
-  reservationId,
+  reservationGroupId,
 }: {
   students: StudentOption[];
   teachers: TeacherOption[];
@@ -84,8 +84,9 @@ export function EnrollmentCreateForm({
    * createEnrollment의 저장 로직 자체는 건드리지 않는다. */
   renewedFromId?: number;
   /** "강사 자리 예약"의 "등록전환" 흐름에서만 채워진다 — createEnrollment가 이 값을
-   * 보고 새 건을 바로 "진행중"으로 만들고, 원본 예약을 "등록완료"로 표시한다. */
-  reservationId?: number;
+   * 보고 새 건을 바로 "진행중"으로 만들고, 원본 예약(그룹 전체)을 "등록완료"로
+   * 표시한다. groupId(UUID) 또는 legacy 행의 id를 문자열로 그대로 담는다. */
+  reservationGroupId?: string;
 }) {
   const isEdit = mode === "edit";
   const action = isEdit ? updateEnrollment.bind(null, enrollmentId!) : createEnrollment;
@@ -181,7 +182,9 @@ export function EnrollmentCreateForm({
       {returnTo && !isEdit && <input type="hidden" name="returnTo" value={returnTo} />}
       {sourceRequestId && !isEdit && <input type="hidden" name="sourceRequestId" value={sourceRequestId} />}
       {renewedFromId && !isEdit && <input type="hidden" name="renewedFromId" value={renewedFromId} />}
-      {reservationId && !isEdit && <input type="hidden" name="reservationId" value={reservationId} />}
+      {reservationGroupId && !isEdit && (
+        <input type="hidden" name="reservationGroupId" value={reservationGroupId} />
+      )}
       <Field label="학생">
         {lockStudent ? (
           <>

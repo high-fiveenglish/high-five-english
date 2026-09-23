@@ -4,6 +4,9 @@ import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { parseScheduleDaysLabel } from "../scheduleUtils";
 import { EnrollmentCreateForm, type EnrollmentInitialValues } from "./EnrollmentCreateForm";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { WEEKDAYS } from "@/lib/weekdays";
+
+const WEEKDAY_LABEL: Record<number, string> = Object.fromEntries(WEEKDAYS.map((d) => [d.value, d.label]));
 
 // 마케팅 사이트 수강신청 리드(EnrollmentRequest)의 값 → 이 폼의 값으로 변환하는 표 —
 // api/public/enrollment-requests/route.ts가 받아들이는 값의 집합과 정확히 맞춰야 한다.
@@ -39,7 +42,7 @@ export default async function NewEnrollmentPage({
   const scopeAgentId = actor.role === "AGENT" ? actor.agentId : undefined;
   const { studentId, fromRequest, renewFrom, fromReservation } = await searchParams;
 
-  const [students, teachers, request, renewSource, reservation] = await Promise.all([
+  const [students, teachers, request, renewSource, reservationRows] = await Promise.all([
     prisma.student.findMany({
       where: { siteId: DEFAULT_SITE_ID, ...(scopeAgentId ? { agentId: scopeAgentId } : {}), deletedAt: null },
       orderBy: { name: "asc" },
@@ -51,8 +54,16 @@ export default async function NewEnrollmentPage({
     renewFrom
       ? prisma.enrollment.findUnique({ where: { id: Number(renewFrom) }, include: { student: true } })
       : null,
+    // fromReservation 값은 순수 숫자(legacy: groupId 도입 전 행의 id)이거나 UUID
+    // 문자열(신규: groupId)이다 — 형태만으로 명확히 구분해서 서로 섞이지 않게 한다
+    // (reservations/actions.ts의 cancelReservation과 동일한 판별 방식).
     fromReservation
-      ? prisma.slotReservation.findUnique({ where: { id: Number(fromReservation) }, include: { teacher: true } })
+      ? /^\d+$/.test(fromReservation)
+        ? prisma.slotReservation.findMany({
+            where: { id: Number(fromReservation), groupId: null },
+            include: { teacher: true },
+          })
+        : prisma.slotReservation.findMany({ where: { groupId: fromReservation }, include: { teacher: true } })
       : null,
   ]);
 
@@ -164,34 +175,53 @@ export default async function NewEnrollmentPage({
     );
   }
 
-  // "강사 자리 예약"의 "등록전환"에서 들어온 경우: 예약해둔 강사·요일·시간을 그대로
-  // 기본값으로 채운다 — 예약 단계에는 아직 학생 계정이 없으므로(상담 단계 이름만 있음)
-  // 학생은 잠그지 않고 관리자가 직접 검색·선택(또는 먼저 학생 등록)하게 한다. 저장 시
-  // createEnrollment가 reservationId를 보고 이 예약을 CONVERTED로 바꾼다.
-  if (reservation && reservation.siteId === DEFAULT_SITE_ID && reservation.status === "RESERVED") {
+  // "강사 자리 예약"의 "등록전환"에서 들어온 경우: 그룹(주 N회면 요일 수만큼의 행)의
+  // 강사·요일·시간·수업방법을 전부 그대로 기본값으로 채운다 — 예약 단계에는 아직
+  // 학생 계정이 없으므로(상담 단계 이름만 있음) 학생은 잠그지 않고 관리자가 직접
+  // 검색·선택(또는 먼저 학생 등록)하게 한다. 저장 시 createEnrollment가
+  // reservationGroupId를 보고 이 그룹 전체를 CONVERTED로 바꾼다.
+  const activeReservations = (reservationRows ?? []).filter(
+    (r) => r.siteId === DEFAULT_SITE_ID && r.status === "RESERVED",
+  );
+  if (activeReservations.length > 0) {
+    const first = activeReservations[0];
+    const weekdayValues = activeReservations.map((r) => r.weekday);
+    const times = new Set(activeReservations.map((r) => r.classTime));
+    // 모든 요일이 같은 시각이면 "모두 동일" 모드로(classTime 하나), 다르면 "요일마다
+    // 다르게" 모드로(dayTimes에 전부 채움) — EnrollmentCreateForm의 sameTimeForAllDays
+    // 판별과 동일한 규칙(dayTimes가 비어있으면 "모두 동일"로 연다).
+    const allSameTime = times.size === 1;
+    const dayTimes = allSameTime
+      ? {}
+      : Object.fromEntries(activeReservations.map((r) => [r.weekday, r.classTime]));
+
     const initialValues: EnrollmentInitialValues = {
-      classMethod: "zoom",
+      classMethod: first.classMethod ?? "zoom",
       studentLevel: "",
       textbookName: "",
       curriculum: "",
-      scheduleDayValues: [reservation.weekday],
-      classDurationMin: reservation.durationMin,
+      scheduleDayValues: weekdayValues,
+      classDurationMin: first.durationMin,
       packageMonths: 1,
-      totalSessions: 4,
+      totalSessions: weekdayValues.length * 4,
       startDate: new Date().toISOString().slice(0, 10),
-      classTime: reservation.classTime,
-      dayTimes: {},
-      teacherId: reservation.teacherId,
+      classTime: allSameTime ? first.classTime : "",
+      dayTimes,
+      teacherId: first.teacherId,
       studentEnglishName: "",
       adminNote: "",
     };
+
+    const scheduleLabel = activeReservations
+      .map((r) => `${WEEKDAY_LABEL[r.weekday]} ${r.classTime}`)
+      .join(", ");
 
     return (
       <div>
         <h1 className="mb-6 text-xl font-bold text-slate-900">수강신청 등록 — 예약 건 등록전환</h1>
         <p className="mb-6 -mt-4 text-sm text-slate-500">
-          {reservation.prospectName}님과의 상담으로 예약해둔 {reservation.teacher.realName} 강사님의{" "}
-          {reservation.classTime} 자리입니다. 학생을 검색·선택하고 저장하면 이 예약은 "등록완료"로 바뀝니다.
+          {first.prospectName}님과의 상담으로 예약해둔 {first.teacher.realName} 강사님의 주 {weekdayValues.length}회
+          ({scheduleLabel}) 자리입니다. 학생을 검색·선택하고 저장하면 이 예약은 "등록완료"로 바뀝니다.
         </p>
         <EnrollmentCreateForm
           students={students.map((s) => ({
@@ -205,7 +235,7 @@ export default async function NewEnrollmentPage({
           studentName=""
           defaultEnglishName={null}
           initialValues={initialValues}
-          reservationId={reservation.id}
+          reservationGroupId={first.groupId ?? String(first.id)}
         />
       </div>
     );

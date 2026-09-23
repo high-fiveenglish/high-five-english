@@ -148,8 +148,8 @@ export async function createEnrollment(_prevState: { error?: string } | undefine
   const sourceRequestId = sourceRequestIdRaw ? Number(sourceRequestIdRaw) : null;
   const renewedFromIdRaw = String(formData.get("renewedFromId") ?? "");
   const renewedFromId = renewedFromIdRaw ? Number(renewedFromIdRaw) : null;
-  const reservationIdRaw = String(formData.get("reservationId") ?? "");
-  const reservationId = reservationIdRaw ? Number(reservationIdRaw) : null;
+  const reservationGroupIdRaw = String(formData.get("reservationGroupId") ?? "");
+  const reservationGroupId = reservationGroupIdRaw || null;
   const teacherId = teacherIdRaw ? Number(teacherIdRaw) : null;
 
   if (!studentId || !classMethod || !scheduleDays || !totalSessions || !startDate || !endDate) {
@@ -170,7 +170,7 @@ export async function createEnrollment(_prevState: { error?: string } | undefine
   // 둘 다 강사가 이미 정해진 상태로 들어오기 때문이다. 그 외에는 일반 등록과 똑같이
   // "신청" 상태로 만든다.
   const isRequestConversion = sourceRequestId !== null && teacherId !== null;
-  const isReservationConversion = reservationId !== null && teacherId !== null;
+  const isReservationConversion = reservationGroupId !== null && teacherId !== null;
 
   const enrollment = await prisma.enrollment.create({
     data: {
@@ -217,16 +217,25 @@ export async function createEnrollment(_prevState: { error?: string } | undefine
     });
   }
 
-  if (isReservationConversion) {
-    await prisma.slotReservation.update({
-      where: { id: reservationId },
+  if (isReservationConversion && reservationGroupId) {
+    // reservationGroupId 값의 형태(순수 숫자인지)만으로 legacy 행(groupId 도입 전,
+    // id로만 식별)과 신규 그룹(groupId로 식별)을 구분한다 — reservations/actions.ts의
+    // cancelReservation과 동일한 판별 방식. "주 N회" 그룹은 요일 수만큼의 행 전부가
+    // 같은 이 Enrollment를 가리키게 된다(convertedEnrollmentId의 unique 제약을
+    // 제거해뒀기 때문에 여러 행이 같은 값을 가져도 안전하다).
+    const isLegacyId = /^\d+$/.test(reservationGroupId);
+    const where = isLegacyId
+      ? { id: Number(reservationGroupId), groupId: null }
+      : { groupId: reservationGroupId };
+    await prisma.slotReservation.updateMany({
+      where,
       data: { status: "CONVERTED", convertedEnrollmentId: enrollment.id },
     });
     await logAudit({
       actor,
       action: "UPDATE",
       targetType: "SlotReservation",
-      targetId: reservationId,
+      targetId: reservationGroupId,
       description: `예약 등록전환 — 수강 건 #${enrollment.id}로 전환`,
     });
     revalidatePath("/reservations");

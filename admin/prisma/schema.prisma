@@ -176,18 +176,18 @@ model Agent {
   createdAt DateTime @default(now())
 
   // 마케팅사이트 접속 도메인 — 이 값으로 "지금 어느 협력사 사이트인지" 판별한다.
-  domain String? @unique
+  domain            String? @unique
   // 로고 이미지 URL(협력사 업로드분 또는 관리자가 직접 입력한 링크).
-  logoUrl String?
-  brandTagline String?
+  logoUrl           String?
+  brandTagline      String?
   // 회사(사업자) 정보 — 마케팅사이트 하단 푸터에 그대로 노출된다.
-  bizName    String?
-  bizCeo     String?
-  bizRegNo   String?
-  bizAddress String?
-  bizPhone       String?
-  bizEmail       String?
-  bizMailOrderNo String?
+  bizName           String?
+  bizCeo            String?
+  bizRegNo          String?
+  bizAddress        String?
+  bizPhone          String?
+  bizEmail          String?
+  bizMailOrderNo    String?
   // 무통장입금 계좌 정보.
   bankName          String?
   bankAccountNumber String?
@@ -361,29 +361,29 @@ model Teacher {
   // 프로필 상세 정보 — 레퍼런스 사이트(z02.htm 강사정보수정)의 필드를 대부분 반영.
   // 사진/음성은 마케팅용 강사소개(Instructor)와는 별개로, LMS 내부에서 신원 확인 등
   // 운영 목적으로만 쓰는 참고용 데이터다.
-  teacherGrade      TeacherGrade @default(GENERAL)
-  sex               Sex?
-  age               Int?
-  schoolName        String?
-  major             String?
-  address           String?
+  teacherGrade     TeacherGrade @default(GENERAL)
+  sex              Sex?
+  age              Int?
+  schoolName       String?
+  major            String?
+  address          String?
   // 오전 6시~밤 12시, 30분 단위 근무 가능 시간대 — 자정 기준 분(minute-of-day) 값의
   // 배열(예: 06:00=360, 06:30=390). src/lib/timeSlots.ts 참고. 홈페이지 강사소개의
   // "근무시간" 표시가 이 값을 그대로 사용한다.
-  availableHours Int[]
-  mobilePhone       String?
-  teamsId           String?
-  teamsUrl          String?
-  zoomUrl           String?
-  zoomPw            String?
-  tencentUrl        String?
-  experience        String?      @db.Text
-  selfIntroduction  String?      @db.Text
-  photoUrl          String?      @db.Text
-  voiceUrl          String?      @db.Text
-  videoYoutubeCode  String?
-  tesol             Boolean      @default(false)
-  priority          Int          @default(0)
+  availableHours   Int[]
+  mobilePhone      String?
+  teamsId          String?
+  teamsUrl         String?
+  zoomUrl          String?
+  zoomPw           String?
+  tencentUrl       String?
+  experience       String?      @db.Text
+  selfIntroduction String?      @db.Text
+  photoUrl         String?      @db.Text
+  voiceUrl         String?      @db.Text
+  videoYoutubeCode String?
+  tesol            Boolean      @default(false)
+  priority         Int          @default(0)
 
   rates              TeacherRate[]
   enrollments        Enrollment[]
@@ -431,68 +431,70 @@ enum PaymentStatus {
 }
 
 model Enrollment {
-  id               Int              @id @default(autoincrement())
-  siteId           Int
-  site             Site             @relation(fields: [siteId], references: [id])
-  agentId          Int?
-  agent            Agent?           @relation(fields: [agentId], references: [id])
-  studentId        Int
-  student          Student          @relation(fields: [studentId], references: [id])
-  teacherId        Int?
-  teacher          Teacher?         @relation(fields: [teacherId], references: [id])
-  packageMonths    Int
-  classMethod      String
-  scheduleDays     String
-  classDurationMin Int              @default(25)
-  totalSessions    Int
-  startDate        DateTime
-  endDate          DateTime
-  status           EnrollmentStatus @default(APPLIED)
+  id                 Int              @id @default(autoincrement())
+  siteId             Int
+  site               Site             @relation(fields: [siteId], references: [id])
+  agentId            Int?
+  agent              Agent?           @relation(fields: [agentId], references: [id])
+  studentId          Int
+  student            Student          @relation(fields: [studentId], references: [id])
+  teacherId          Int?
+  teacher            Teacher?         @relation(fields: [teacherId], references: [id])
+  packageMonths      Int
+  classMethod        String
+  scheduleDays       String
+  classDurationMin   Int              @default(25)
+  totalSessions      Int
+  startDate          DateTime
+  endDate            DateTime
+  status             EnrollmentStatus @default(APPLIED)
   // status가 HOLDING인 동안 홀드가 시작된 시점 — 해제 시 이 값으로부터 며칠(주 단위로
   // 올림) 홀드됐는지 계산해 예정 수업(HOLD 상태)들을 그만큼 뒤로 밀고 수강기간도 같이
   // 늘린다(holdApply.ts 참고). HOLDING이 아닐 때는 항상 null이다.
-  holdStartedAt    DateTime?
-  paymentStatus    PaymentStatus?
-  orderNo          String?
-  classType        String           @default("1:1")
-  textbookId       Int?
+  holdStartedAt      DateTime?
+  paymentStatus      PaymentStatus?
+  orderNo            String?
+  classType          String           @default("1:1")
+  textbookId         Int?
   // 교재 테이블이 아직 없어 이름을 그대로 저장한다(textbookId는 미사용 상태로 남겨둠 —
   // 이후 Textbook 모델을 만들면 이 값을 기준으로 이관한다).
-  textbookName     String?
+  textbookName       String?
   // 수업 시각(HH:mm) — scheduleDays는 요일만 담고 있어 시각 정보가 없었다.
-  classTime        String?
+  classTime          String?
   // 요일별로 수업 시간이 다른 경우의 오버라이드 — {"1": "20:00", "3": "20:30"} 형태로
   // WEEKDAYS의 value(0=일~6=토)를 키로 저장한다. 없는 요일은 위 classTime을 그대로 쓴다.
   // 강사(teacherId)는 이 등록 건 전체에서 하나로 고정되어 있어 요일별로 다르게 배정할
   // 수는 없다 — 요일별 강사 배정이 필요해지면 별도 모델링이 필요하다.
-  classTimes       Json?
+  classTimes         Json?
   // 학생 수준 — 1~10 단계 숫자 문자열("1".."10"). 레벨테스트 결과와는 별개로, 이
   // 수강 건을 어떤 난이도로 진행할지 관리자가 직접 지정한다.
-  studentLevel     String?
+  studentLevel       String?
   // 강사가 부를 학생 영어 이름 — 학생 프로필의 englishName을 기본값으로 쓰되, 등록
   // 시점에 이 수강 건만 다르게 표기하고 싶을 때 덮어쓸 수 있도록 별도로 저장한다.
   studentEnglishName String?
   // 커리큘럼 — 교재와 마찬가지로 아직 전용 카탈로그 모델이 없어 자유 텍스트로 저장한다.
-  curriculum       String?
-  adminNote        String?          @db.Text
+  curriculum         String?
+  adminNote          String?          @db.Text
   // 실제 청구 수강료(KRW) — null이면 가격표(PricingDuration/PricingRow, packageMonths ×
   // scheduleDays 빈도 × classDurationMin 기준)에서 계산한 기본 수강료를 그대로 쓴다는
   // 뜻이다. 지인할인·프로모션·포인트 사용 등으로 기본 수강료와 실제 청구액이 다를 때만
   // 값이 채워진다 — "수강내역관리 > 결제 > 수정" 화면에서만 설정한다.
-  actualPriceKRW   Int?
+  actualPriceKRW     Int?
   // "재수강" 등록 화면(/enrollments/new?renewFrom=<원본 id>)에서 저장할 때만 채워진다 —
   // 원본 수강 건을 이어서 새로 만든 건임을 표시한다. 원본 쪽에서 이 값으로 자신을
   // 가리키는 건이 있는지(renewals) 확인해 "재수강" 버튼 대신 "재수강 완료"를 보여준다.
-  renewedFromId    Int?
-  renewedFrom      Enrollment?         @relation("EnrollmentRenewal", fields: [renewedFromId], references: [id])
-  renewals         Enrollment[]        @relation("EnrollmentRenewal")
+  renewedFromId      Int?
+  renewedFrom        Enrollment?      @relation("EnrollmentRenewal", fields: [renewedFromId], references: [id])
+  renewals           Enrollment[]     @relation("EnrollmentRenewal")
 
-  classSessions      ClassSession[]
-  leaveRequests      LeaveRequest[]
-  monthlyEvaluations MonthlyEvaluation[]
-  // 이 수강 건이 어떤 가예약에서 등록전환된 것인지(있다면) — SlotReservation.convertedEnrollmentId의
-  // 반대편. 대부분의 수강 건은 가예약 없이 바로 등록되므로 null이다.
-  convertedFromReservation SlotReservation?
+  classSessions             ClassSession[]
+  leaveRequests             LeaveRequest[]
+  monthlyEvaluations        MonthlyEvaluation[]
+  // 이 수강 건이 어떤 가예약(들)에서 등록전환된 것인지(있다면) — SlotReservation.convertedEnrollmentId의
+  // 반대편. "주 N회" 예약은 요일마다 SlotReservation 행이 따로 있고 그 전부가 같은
+  // Enrollment로 전환되므로 배열이다(예전엔 예약 1건=요일 1개라 1:1이었다). 대부분의
+  // 수강 건은 가예약 없이 바로 등록되므로 빈 배열이다.
+  convertedFromReservations SlotReservation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -518,20 +520,29 @@ enum ReservationStatus {
 }
 
 model SlotReservation {
-  id     Int    @id @default(autoincrement())
+  id     Int  @id @default(autoincrement())
   siteId Int
-  site   Site   @relation(fields: [siteId], references: [id])
+  site   Site @relation(fields: [siteId], references: [id])
 
   teacherId Int
   teacher   Teacher @relation(fields: [teacherId], references: [id])
   // 이 자리를 가져가는 협력사 — null이면 본사(직영) 상담 건.
-  agentId Int?
-  agent   Agent? @relation(fields: [agentId], references: [id])
+  agentId   Int?
+  agent     Agent?  @relation(fields: [agentId], references: [id])
 
   // 0=일 ~ 6=토(WEEKDAY_DISPLAY_ORDER와 동일한 값 체계).
-  weekday      Int
-  classTime    String
-  durationMin  Int    @default(25)
+  weekday     Int
+  classTime   String
+  durationMin Int     @default(25)
+  // 줌/텐센트/팀즈 등 — nullable로 둬서 기존 행(이 필드가 생기기 전에 만들어진 예약)은
+  // null로 남고, 화면에서는 "미지정"으로 취급한다. Enrollment.classMethod와 같은 값
+  // 체계(levelTestOptions.ts의 CLASS_METHOD_OPTIONS)를 그대로 쓴다.
+  classMethod String?
+  // "주 N회" 예약은 요일마다 이 행이 하나씩 생기는데, 그 여러 행을 하나의 예약 건으로
+  // 묶는 식별자(예: crypto.randomUUID()) — 같은 상담자의 월/수/금 예약이 같은 groupId를
+  // 가진다. 기존 행(이 필드가 생기기 전)은 null이고, 그런 행은 "그 행 혼자만 있는
+  // 그룹"으로 취급한다(취소/전환 로직이 groupId가 null이면 id 기준으로 동작).
+  groupId     String?
 
   // 아직 학생 계정이 없는(상담 단계) 예비 수강생 정보라 Student를 참조하지 않고
   // 자유 텍스트로 남긴다.
@@ -542,7 +553,10 @@ model SlotReservation {
   status ReservationStatus @default(RESERVED)
 
   // 등록으로 전환되면 실제 Enrollment를 가리킨다(CONVERTED 상태에서만 값이 있음).
-  convertedEnrollmentId Int?        @unique
+  // 예전엔 예약 1건=요일 1개라 @unique(1:1)였지만, 이제 같은 그룹의 여러 행이 전부
+  // 같은 Enrollment를 가리켜야 해서(주 N회 → 그 요일 수만큼의 행이 한 Enrollment로
+  // 전환) unique 제약을 제거했다 — 여러 SlotReservation → 하나의 Enrollment(N:1).
+  convertedEnrollmentId Int?
   convertedEnrollment   Enrollment? @relation(fields: [convertedEnrollmentId], references: [id])
 
   createdById Int?
@@ -551,6 +565,7 @@ model SlotReservation {
   updatedAt DateTime @updatedAt
 
   @@index([siteId])
+  @@index([groupId])
   @@index([teacherId])
   @@index([agentId])
   @@map("slot_reservations")
@@ -563,7 +578,7 @@ enum SessionStatus {
   MAKEUP_NEEDED
   LEAVE // 학생 휴강 신청으로 결석 처리된 수업 — 회차 미차감, 수강기간 자동 연장
   HOLD // 수강 홀드(Enrollment.status=HOLDING) 기간 동안 멈춘 예정 수업 — holdApply.ts 참고.
-       // 홀드가 풀리면 held된 일수만큼 뒤로 밀려 SCHEDULED로 복귀한다.
+  // 홀드가 풀리면 held된 일수만큼 뒤로 밀려 SCHEDULED로 복귀한다.
 }
 
 model ClassSession {
@@ -718,11 +733,11 @@ model AcademyClosure {
 // ---------------------------------------------------------------------------
 
 model Bulletin {
-  id            Int      @id @default(autoincrement())
+  id            Int    @id @default(autoincrement())
   siteId        Int
-  site          Site     @relation(fields: [siteId], references: [id])
+  site          Site   @relation(fields: [siteId], references: [id])
   title         String
-  content       String   @db.Text
+  content       String @db.Text
   authorAdminId Int?
 
   createdAt DateTime @default(now())
@@ -954,27 +969,27 @@ model ConsultChannel {
 // 않고 스냅샷으로 저장) — "각각 진행" 요구사항대로 협력사 사이트는 자기 agentId
 // 글만, 본사 사이트는 agentId가 null인 글만 보여준다.
 model ReviewPost {
-  id        Int          @id @default(autoincrement())
-  siteId    Int
-  site      Site         @relation(fields: [siteId], references: [id])
-  agentId   Int?
-  agent     Agent?       @relation(fields: [agentId], references: [id])
-  parentId  Int?
-  parent    ReviewPost?  @relation("ReviewReplies", fields: [parentId], references: [id])
-  replies   ReviewPost[] @relation("ReviewReplies")
+  id              Int          @id @default(autoincrement())
+  siteId          Int
+  site            Site         @relation(fields: [siteId], references: [id])
+  agentId         Int?
+  agent           Agent?       @relation(fields: [agentId], references: [id])
+  parentId        Int?
+  parent          ReviewPost?  @relation("ReviewReplies", fields: [parentId], references: [id])
+  replies         ReviewPost[] @relation("ReviewReplies")
   // 학생 글은 studentId로, 관리자 글(댓글 포함 — "관리자도 댓글/작성 가능")은 authorAdminName만
   // 채우고 studentId는 비운다. 관리자에게는 별도 계정 테이블 참조가 필요 없어(로그인 주체가
   // AdminUser라 Student가 아니다) 이름을 문자열로 그대로 저장한다 — logAudit의 actorName과
   // 같은 방식이다.
   studentId       Int?
-  student         Student? @relation(fields: [studentId], references: [id])
+  student         Student?     @relation(fields: [studentId], references: [id])
   authorAdminName String?
   // 댓글(대댓글, parentId가 있는 글)은 제목 없이 바로 달 수 있어야 해서 선택값이다 —
   // 최상위 후기 글만 제목을 요구한다(admin-login 라우트가 이를 검증한다).
-  title     String?
-  content   String       @db.Text
-  views     Int          @default(0)
-  createdAt DateTime     @default(now())
+  title           String?
+  content         String       @db.Text
+  views           Int          @default(0)
+  createdAt       DateTime     @default(now())
 
   @@index([siteId])
   @@index([studentId])
