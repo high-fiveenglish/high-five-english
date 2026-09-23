@@ -53,9 +53,15 @@ export async function GET(request: Request) {
       })),
     }));
 
-  // agency-branding과 동일한 근거로 캐시 허용 — 이 GET은 인증 헤더로 응답이 안
-  // 바뀌고, 협력사별로 도메인 쿼리스트링 자체가 달라 캐시가 서로 섞이지 않는다.
-  return NextResponse.json(payload, { headers: { ...headers, "Cache-Control": "public, max-age=30" } });
+  // 이 GET은 인증 헤더로 응답이 안 바뀌어 캐시 허용 대상이지만, Netlify의 캐시 키는
+  // 기본적으로 쿼리스트링(?domain=)을 구분하지 않는다 — 그대로 두면 협력사 A를 캐싱한
+  // 응답이 협력사 B에게도 그대로 나갈 수 있다(실측으로 재현된 cross-tenant 캐시 오염).
+  // Netlify-Vary에 "query=domain"을 명시해 domain별로 캐시가 분리되도록 한다 — Next.js/
+  // Netlify가 자동으로 붙이는 값(__nextDataReq 등)은 이 응답(순수 JSON API)에는 원래
+  // 의미가 없는 페이지 라우팅용 variation이라 domain 하나만 추가한다.
+  return NextResponse.json(payload, {
+    headers: { ...headers, "Cache-Control": "public, max-age=30", "Netlify-Vary": "query=domain" },
+  });
 }
 
 const VALID_CURRENCIES = ["KRW", "CNY", "VND"] as const;
