@@ -17,11 +17,20 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const domain = normalizeDomain(searchParams.get("domain"));
 
-  const matched = domain
-    ? await prisma.agent.findFirst({ where: { siteId: DEFAULT_SITE_ID, domain } })
-    : null;
+  // domain 매칭에 실패하면 본사로 폴백하는데, 예전엔 그 폴백 조회가 별도 쿼리였다
+  // (domain 매칭 실패 시 2회 왕복). Agent.code/domain이 둘 다 @unique라 각 조건이
+  // 최대 1행만 매칭함이 스키마로 보장되므로, 두 조건을 OR로 묶어 후보를 1번에 가져온
+  // 뒤 JS에서 우선순위(도메인 매칭 우선)로 고른다 — findFirst 2번과 결과가 항상 같다.
+  const candidates = await prisma.agent.findMany({
+    where: {
+      siteId: DEFAULT_SITE_ID,
+      OR: domain ? [{ domain }, { code: HIGHFIVE_AGENT_CODE }] : [{ code: HIGHFIVE_AGENT_CODE }],
+    },
+  });
   const agent =
-    matched ?? (await prisma.agent.findFirst({ where: { siteId: DEFAULT_SITE_ID, code: HIGHFIVE_AGENT_CODE } }));
+    (domain ? candidates.find((a) => a.domain === domain) : null) ??
+    candidates.find((a) => a.code === HIGHFIVE_AGENT_CODE) ??
+    null;
 
   if (!agent) {
     return NextResponse.json({ error: "not_configured" }, { status: 500, headers });
@@ -51,11 +60,11 @@ export async function GET(request: Request) {
         accountHolder: agent.bankAccountHolder,
       },
     },
-    // 이 GET은 Authorization 헤더에 따라 응답이 달라지지 않는 순수 공개 조회이고
-    // (?domain= 쿼리스트링만으로 응답이 정해짐), 협력사별로 URL 자체가 달라지므로
-    // 브라우저/CDN 캐시가 도메인을 쿼리스트링까지 포함해 키로 쓰는 한 다른 협력사
-    // 데이터와 섞일 수 없다. 관리자가 협력사 정보를 수정해도 늦어도 30초 내엔
-    // 반영되도록 TTL을 짧게 잡는다.
-    { headers: { ...headers, "Cache-Control": "public, max-age=30" } },
+    // 이 GET은 Authorization 헤더에 따라 응답이 달라지지 않는 순수 공개 조회다.
+    // 다만 Netlify의 캐시 키는 기본적으로 ?domain= 쿼리스트링을 구분하지 않아서
+    // (실측으로 재현: A 협력사 도메인 캐시가 B 협력사 요청에도 그대로 반환됨),
+    // Netlify-Vary에 "query=domain"을 명시해 협력사별로 캐시가 분리되도록 한다.
+    // 관리자가 협력사 정보를 수정해도 늦어도 30초 내엔 반영되도록 TTL을 짧게 잡는다.
+    { headers: { ...headers, "Cache-Control": "public, max-age=30", "Netlify-Vary": "query=domain" } },
   );
 }
