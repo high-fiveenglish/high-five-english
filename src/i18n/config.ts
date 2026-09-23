@@ -95,18 +95,39 @@ const ALL_NAMESPACES = [
   "teacher",
 ];
 
-const localeModules = import.meta.glob<{ default: Record<string, unknown> }>("../locales/*/*.json");
+// namespace마다 개별 HTTP 요청을 보내던 것(언어당 최대 18개) 대신, 언어별로 미리
+// 묶인 virtual module(vite.config.ts의 localeBundlePlugin이 생성 — 원본 namespace
+// JSON 파일은 전혀 바뀌지 않는다)을 언어당 딱 1번만 가져오고, 이후 namespace
+// 요청은 전부 그 결과에서 잘라서 돌려준다. i18next 쪽에서 보는 시그니처
+// (language, namespace) => 데이터는 그대로라 t()/returnObjects 등 호출부는 무관하다.
+const BUNDLE_IMPORTERS: Record<Lang, () => Promise<{ default: Record<string, Record<string, unknown>> }>> = {
+  ko: () => import("virtual:locale-bundle/ko"),
+  en: () => import("virtual:locale-bundle/en"),
+  zh: () => import("virtual:locale-bundle/zh"),
+  vi: () => import("virtual:locale-bundle/vi"),
+};
+
+// 같은 언어에 대해 bundle을 여러 번 fetch하지 않도록 Promise 자체를 캐시한다 —
+// 아직 로딩 중인 bundle에 대해 여러 namespace가 동시에 요청해도 fetch는 1번만 나간다.
+const bundleCache = new Map<string, Promise<Record<string, Record<string, unknown>>>>();
+
+function loadLanguageBundle(language: string): Promise<Record<string, Record<string, unknown>>> {
+  let cached = bundleCache.get(language);
+  if (!cached) {
+    const importer = BUNDLE_IMPORTERS[language as Lang];
+    cached = importer ? importer().then((mod) => mod.default) : Promise.resolve({});
+    bundleCache.set(language, cached);
+  }
+  return cached;
+}
 
 /** Resolves once the active language's full namespace set has loaded — main.tsx waits on
  * this before mounting <App/>, so no component can render before its translations exist. */
 export const i18nReady = i18n
   .use(
     resourcesToBackend(async (language: string, namespace: string) => {
-      const path = `../locales/${language}/${namespace}.json`;
-      const loader = localeModules[path];
-      if (!loader) return {};
-      const mod = await loader();
-      return mod.default;
+      const bundle = await loadLanguageBundle(language);
+      return bundle[namespace] ?? {};
     }),
   )
   .use(LanguageDetector)
