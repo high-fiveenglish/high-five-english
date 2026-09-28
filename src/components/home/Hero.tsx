@@ -85,8 +85,8 @@ export function Hero({ onOpenLevelTest }: { onOpenLevelTest: () => void }) {
                 <MessageCircle size={20} />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-bold text-brand-950">수업 전에 궁금한 점이 있으신가요?</p>
-                <p className="mt-0.5 text-xs text-slate-500">카카오톡·위챗 아이디로 편하게 1:1 무료 상담해 드립니다.</p>
+                <p className="text-sm font-bold text-brand-950">{t("hero.quick_actions.kakao_title")}</p>
+                <p className="mt-0.5 text-xs text-slate-500">{t("hero.quick_actions.kakao_desc")}</p>
               </div>
               <ChevronRight size={16} className="shrink-0 text-slate-300" />
             </button>
@@ -94,9 +94,9 @@ export function Hero({ onOpenLevelTest }: { onOpenLevelTest: () => void }) {
             <LocalizedLink to="/" state={{ scrollTo: "instructors" }} className={HERO_CARD_CLASS}>
               <GraduationCap size={18} className="shrink-0 text-brand-600" />
               <div className="flex-1">
-                <p className="text-sm font-bold text-brand-950">검증된 원어민·외국인 강사진</p>
+                <p className="text-sm font-bold text-brand-950">{t("hero.quick_actions.instructors_title")}</p>
                 <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                  선발·정기 교육·평가를 거친 강사만 배정합니다. 강사 소개 보러가기
+                  {t("hero.quick_actions.instructors_desc")}
                 </p>
               </div>
               <ChevronRight size={16} className="shrink-0 text-slate-300" />
@@ -105,8 +105,8 @@ export function Hero({ onOpenLevelTest }: { onOpenLevelTest: () => void }) {
             <LocalizedLink to="/" state={{ scrollTo: "pricing" }} className={HERO_CARD_CLASS}>
               <Tag size={18} className="shrink-0 text-brand-600" />
               <div className="flex-1">
-                <p className="text-sm font-bold text-brand-950">합리적인 가격, 타협 없는 수업 품질</p>
-                <p className="mt-1 text-xs leading-relaxed text-slate-500">수업 기간·횟수별 가격표 보러가기</p>
+                <p className="text-sm font-bold text-brand-950">{t("hero.quick_actions.pricing_title")}</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-500">{t("hero.quick_actions.pricing_desc")}</p>
               </div>
               <ChevronRight size={16} className="shrink-0 text-slate-300" />
             </LocalizedLink>

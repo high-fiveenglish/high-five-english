@@ -34,6 +34,14 @@
       "row4_value": "Increase free speaking time",
       "comment": "Teacher's comment: \"You made great progress in free conversation today!\"",
       "badge": "Expert Native & Foreign Teachers"
+    },
+    "quick_actions": {
+      "kakao_title": "Have a question before you start?",
+      "kakao_desc": "Chat with us anytime on KakaoTalk or WeChat for a free 1:1 consultation.",
+      "instructors_title": "Vetted Native & Foreign Teachers",
+      "instructors_desc": "Every teacher is carefully selected, trained, and evaluated. See our teachers.",
+      "pricing_title": "Fair Pricing, Uncompromising Quality",
+      "pricing_desc": "See pricing by course length and lesson frequency."
     }
   },
   "whyUs": {

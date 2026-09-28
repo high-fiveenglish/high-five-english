@@ -34,6 +34,14 @@
       "row4_value": "Tăng thời lượng nói tự do",
       "comment": "Nhận xét của giáo viên: \"Hôm nay con đã tiến bộ rất nhiều trong phần nói tự do!\"",
       "badge": "Đội ngũ giáo viên bản ngữ & nước ngoài chuyên nghiệp"
+    },
+    "quick_actions": {
+      "kakao_title": "Bạn có câu hỏi trước khi bắt đầu không?",
+      "kakao_desc": "Tư vấn miễn phí 1:1 dễ dàng qua ID KakaoTalk hoặc WeChat.",
+      "instructors_title": "Đội ngũ giáo viên bản ngữ & nước ngoài đã được kiểm chứng",
+      "instructors_desc": "Chỉ phân công giáo viên đã qua tuyển chọn, đào tạo định kỳ và đánh giá. Xem giới thiệu giáo viên",
+      "pricing_title": "Giá cả hợp lý, chất lượng không thỏa hiệp",
+      "pricing_desc": "Xem bảng giá theo thời hạn và tần suất buổi học"
     }
   },
   "whyUs": {

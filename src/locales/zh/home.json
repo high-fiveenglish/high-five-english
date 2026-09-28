@@ -34,6 +34,14 @@
       "row4_value": "增加自由发言比重",
       "comment": "教师评语：\"今天在自由对话中进步很大！\"",
       "badge": "专业母语及外籍教师团队"
+    },
+    "quick_actions": {
+      "kakao_title": "上课前有疑问吗？",
+      "kakao_desc": "通过KakaoTalk·微信ID轻松进行1对1免费咨询。",
+      "instructors_title": "经过严格筛选的母语及外籍教师团队",
+      "instructors_desc": "只安排通过选拔·定期培训·评估的教师授课。查看教师介绍",
+      "pricing_title": "合理的价格，不打折的课程品质",
+      "pricing_desc": "查看按课程周期·频率划分的价目表"
     }
   },
   "whyUs": {
