@@ -1,12 +1,22 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Star, ShieldCheck, Users2, Video } from "lucide-react";
+import { Star, ShieldCheck, Users2, Video, MessageCircle, GraduationCap, Tag, ChevronRight } from "lucide-react";
 import { Container } from "../ui/Container";
 import { LocalizedLink } from "../i18n/LocalizedLink";
 import { ImagePlaceholder } from "./ImagePlaceholder";
 import { ImageLightbox } from "./ImageLightbox";
+import { ContactModal } from "../modals/ContactModal";
+
+// 통계 아래 남는 빈 공간을 채우는 카드 3개 — 전부 기존 기능/페이지로만 연결한다(새
+// 모달·새 페이지 없음). 상담은 기존 ContactModal(실제 카카오톡/위챗 아이디는
+// ConsultChannelList가 그대로 조회), 강사·가격표는 기존 nav와 동일한 홈 내부 스크롤
+// 이동(LocalizedLink + scrollTo state, ScrollToHash가 처리)을 그대로 재사용한다.
+const HERO_CARD_CLASS =
+  "flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_24px_rgba(20,44,88,0.06)] transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-[0_12px_28px_rgba(20,44,88,0.1)]";
 
 export function Hero({ onOpenLevelTest }: { onOpenLevelTest: () => void }) {
   const { t } = useTranslation("home");
+  const [contactOpen, setContactOpen] = useState(false);
 
   const feedbackRows = [
     { label: t("hero.demo.row1_label"), value: t("hero.demo.row1_value") },
@@ -68,6 +78,39 @@ export function Hero({ onOpenLevelTest }: { onOpenLevelTest: () => void }) {
               <dd className="mt-1 text-xl font-extrabold text-brand-950">{t("hero.stats.growth_value")}</dd>
             </div>
           </dl>
+
+          <div className="mt-8 flex flex-col gap-3">
+            <button type="button" onClick={() => setContactOpen(true)} className={`${HERO_CARD_CLASS} text-left`}>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FEE500]/60 text-[#3C1E1E]">
+                <MessageCircle size={20} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-brand-950">수업 전에 궁금한 점이 있으신가요?</p>
+                <p className="mt-0.5 text-xs text-slate-500">카카오톡·위챗 아이디로 편하게 1:1 무료 상담해 드립니다.</p>
+              </div>
+              <ChevronRight size={16} className="shrink-0 text-slate-300" />
+            </button>
+
+            <LocalizedLink to="/" state={{ scrollTo: "instructors" }} className={HERO_CARD_CLASS}>
+              <GraduationCap size={18} className="shrink-0 text-brand-600" />
+              <div className="flex-1">
+                <p className="text-sm font-bold text-brand-950">검증된 원어민·외국인 강사진</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                  선발·정기 교육·평가를 거친 강사만 배정합니다. 강사 소개 보러가기
+                </p>
+              </div>
+              <ChevronRight size={16} className="shrink-0 text-slate-300" />
+            </LocalizedLink>
+
+            <LocalizedLink to="/" state={{ scrollTo: "pricing" }} className={HERO_CARD_CLASS}>
+              <Tag size={18} className="shrink-0 text-brand-600" />
+              <div className="flex-1">
+                <p className="text-sm font-bold text-brand-950">합리적인 가격, 타협 없는 수업 품질</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-500">수업 기간·횟수별 가격표 보러가기</p>
+              </div>
+              <ChevronRight size={16} className="shrink-0 text-slate-300" />
+            </LocalizedLink>
+          </div>
         </div>
 
         <div className="relative mx-auto flex w-full max-w-md flex-col gap-5">
@@ -128,6 +171,8 @@ export function Hero({ onOpenLevelTest }: { onOpenLevelTest: () => void }) {
           </div>
         </div>
       </Container>
+
+      <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
     </section>
   );
 }
