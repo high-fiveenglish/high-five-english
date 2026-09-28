@@ -1,7 +1,9 @@
 import { useTranslation } from "react-i18next";
-import { Star, ShieldCheck, Users2 } from "lucide-react";
+import { Star, ShieldCheck, Users2, Video } from "lucide-react";
 import { Container } from "../ui/Container";
 import { LocalizedLink } from "../i18n/LocalizedLink";
+import { ImagePlaceholder } from "./ImagePlaceholder";
+import { ImageLightbox } from "./ImageLightbox";
 
 export function Hero({ onOpenLevelTest }: { onOpenLevelTest: () => void }) {
   const { t } = useTranslation("home");
@@ -68,7 +70,19 @@ export function Hero({ onOpenLevelTest }: { onOpenLevelTest: () => void }) {
           </dl>
         </div>
 
-        <div className="relative mx-auto w-full max-w-md">
+        <div className="relative mx-auto flex w-full max-w-md flex-col gap-5">
+          {/* 실제 1:1 화상수업 영상 자리 — 관리자 업로드 기능이 붙기 전까지 Placeholder
+              상태로 유지, 클릭하면 크게 볼 수 있음 */}
+          <ImageLightbox label="실제 1:1 수업 화면">
+            <ImagePlaceholder
+              label="실제 1:1 수업 화면"
+              aspect="4/3"
+              icon={Video}
+              tone="brand"
+              className="shadow-[0_24px_60px_rgba(20,44,88,0.14)]"
+            />
+          </ImageLightbox>
+
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_24px_60px_rgba(20,44,88,0.14)]">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-brand-950">{t("hero.demo.title")}</p>
@@ -76,6 +90,13 @@ export function Hero({ onOpenLevelTest }: { onOpenLevelTest: () => void }) {
                 2026.08.19
               </span>
             </div>
+
+            {/* 실제 평가서/Feedback 이미지 자리 — 관리자 업로드 기능이 붙기 전까지
+                Placeholder 상태로 유지, 기존 상세 행은 그 아래 보조 설명으로 유지 */}
+            <ImageLightbox label="실제 평가서 화면">
+              <ImagePlaceholder label="실제 평가서 화면" aspect="16/9" tone="accent" className="mt-4" />
+            </ImageLightbox>
+
             <div className="mt-4 space-y-3">
               {feedbackRows.map((row) => (
                 <div

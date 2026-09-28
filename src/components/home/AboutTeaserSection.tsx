@@ -3,6 +3,9 @@ import { ArrowRight, Quote } from "lucide-react";
 import { Container } from "../ui/Container";
 import { LocalizedLink } from "../i18n/LocalizedLink";
 import { useTenant } from "../../context/TenantContext";
+import { ImageLightbox } from "./ImageLightbox";
+import leveltestResultScreenshot from "../../assets/homepage/leveltest-result.png";
+import leveltestResultFullScreenshot from "../../assets/homepage/leveltest-result-full.png";
 
 export function AboutTeaserSection() {
   const { t } = useTranslation("home");
@@ -21,14 +24,27 @@ export function AboutTeaserSection() {
           <p className="mt-4 text-sm leading-relaxed text-slate-500">
             {t("aboutTeaser.quote_sub")}
           </p>
-          <div className="mt-6 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">
-              {ceoName}
-            </div>
-            <div>
-              <p className="text-sm font-bold text-brand-950">{t("aboutTeaser.ceo_display", { name: ceoName })}</p>
-              <p className="text-xs text-slate-400">{t("aboutTeaser.company_tagline")}</p>
-            </div>
+
+          {/* 방문자가 실제로 받게 될 레벨테스트 결과 리포트를 바로 확인할 수 있도록
+              예시 화면을 보여준다. 클릭하면 전체(Teacher Feedback 포함)를 팝업으로 본다. */}
+          <div className="mt-6">
+            <ImageLightbox label="실제 레벨테스트 결과 예시" fullSrc={leveltestResultFullScreenshot}>
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <p className="border-b border-slate-100 bg-white px-4 py-2 text-[11px] font-bold text-brand-600">
+                  실제 레벨테스트 결과 예시 (클릭하면 전체 보기)
+                </p>
+                <img
+                  src={leveltestResultScreenshot}
+                  alt="실제 레벨테스트 결과 예시"
+                  className="max-h-72 w-full object-cover object-top"
+                />
+              </div>
+            </ImageLightbox>
+          </div>
+
+          <div className="mt-4">
+            <p className="text-sm font-bold text-brand-950">{t("aboutTeaser.ceo_display", { name: ceoName })}</p>
+            <p className="text-xs text-slate-400">{t("aboutTeaser.company_tagline")}</p>
           </div>
         </div>
 
