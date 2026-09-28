@@ -20,7 +20,7 @@ export function Hero({ onOpenLevelTest }: { onOpenLevelTest: () => void }) {
       <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-accent-100 opacity-60 blur-3xl" />
       <div className="pointer-events-none absolute -left-32 top-40 h-72 w-72 rounded-full bg-brand-100 opacity-70 blur-3xl" />
 
-      <Container className="relative grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
+      <Container className="relative grid items-start gap-12 py-16 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
         <div>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-600/10 px-3.5 py-1.5 text-xs font-bold text-brand-700">
             <ShieldCheck size={14} /> {t("hero.badge")}
