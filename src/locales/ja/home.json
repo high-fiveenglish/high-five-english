@@ -35,6 +35,10 @@
       "comment": "講師コメント：「今日は自由発話で大きく成長しましたね！」",
       "badge": "専門ネイティブ・外国人講師陣"
     },
+    "image_labels": {
+      "lesson_screen": "実際の1:1授業画面",
+      "evaluation_screen": "実際の評価書画面"
+    },
     "quick_actions": {
       "kakao_title": "授業前に気になることはありますか？",
       "kakao_desc": "カカオトーク・WeChat IDで気軽に1:1無料相談を承っております。",
@@ -48,6 +52,7 @@
     "eyebrow": "WHY HIFIVE",
     "title": "なぜ{{brandName}}なのか？",
     "description": "12年間、数多くの学習者や保護者の方々と出会いながら磨き上げてきた原則が、{{brandName}}の授業一つひとつに込められています。",
+    "video_lesson_label": "実際の講師・学生ビデオ授業画面",
     "reasons": {
       "output": {
         "title": "聞く・話す中心のOutput授業",
@@ -255,6 +260,8 @@
     "eyebrow": "会社紹介",
     "quote": "「広告ではなく、教育の成果と顧客の信頼で成長する。」",
     "quote_sub": "{{brandName}}が12年間守ってきた最も大切な原則です。",
+    "leveltest_preview_label": "実際のレベルテスト結果例",
+    "leveltest_preview_caption": "実際のレベルテスト結果例（クリックして全体を見る）",
     "ceo_display": "{{name}} 代表",
     "company_tagline": "{{brandName}} · オンライン英会話教育12年目",
     "heading": "EFL環境に最適化された、実際に通じる英語教育",

@@ -35,6 +35,10 @@
       "comment": "Teacher's comment: \"You made great progress in free conversation today!\"",
       "badge": "Expert Native & Foreign Teachers"
     },
+    "image_labels": {
+      "lesson_screen": "Actual 1:1 Lesson Screen",
+      "evaluation_screen": "Actual Evaluation Report Screen"
+    },
     "quick_actions": {
       "kakao_title": "Have a question before you start?",
       "kakao_desc": "Chat with us anytime on KakaoTalk or WeChat for a free 1:1 consultation.",
@@ -48,6 +52,7 @@
     "eyebrow": "WHY HIFIVE",
     "title": "Why {{brandName}}?",
     "description": "Principles refined over 12 years of working with countless learners and parents are woven into every {{brandName}} lesson.",
+    "video_lesson_label": "Actual Teacher-Student Video Lesson Screen",
     "reasons": {
       "output": {
         "title": "Output-Focused Listening & Speaking Lessons",
@@ -255,6 +260,8 @@
     "eyebrow": "About Us",
     "quote": "\"We grow through the results of our teaching and our customers' trust — not advertising.\"",
     "quote_sub": "This is the most important principle {{brandName}} has upheld for 12 years.",
+    "leveltest_preview_label": "Actual Level Test Result Example",
+    "leveltest_preview_caption": "Actual Level Test Result Example (Click to View Full)",
     "ceo_display": "{{name}}, CEO",
     "company_tagline": "{{brandName}} · 12 Years in Video English Education",
     "heading": "English Education Optimized for EFL Learners — That Actually Works",

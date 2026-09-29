@@ -34,9 +34,9 @@ export function WhyUsSection() {
             >
               {r.icon === null ? (
                 <>
-                  <ImageLightbox label="실제 강사·학생 화상수업 화면">
+                  <ImageLightbox label={t("whyUs.video_lesson_label")}>
                     <ImagePlaceholder
-                      label="실제 강사·학생 화상수업 화면"
+                      label={t("whyUs.video_lesson_label")}
                       aspect="16/10"
                       icon={MonitorPlay}
                       tone="accent"

@@ -28,14 +28,14 @@ export function AboutTeaserSection() {
           {/* 방문자가 실제로 받게 될 레벨테스트 결과 리포트를 바로 확인할 수 있도록
               예시 화면을 보여준다. 클릭하면 전체(Teacher Feedback 포함)를 팝업으로 본다. */}
           <div className="mt-6">
-            <ImageLightbox label="실제 레벨테스트 결과 예시" fullSrc={leveltestResultFullScreenshot}>
+            <ImageLightbox label={t("aboutTeaser.leveltest_preview_label")} fullSrc={leveltestResultFullScreenshot}>
               <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                 <p className="border-b border-slate-100 bg-white px-4 py-2 text-[11px] font-bold text-brand-600">
-                  실제 레벨테스트 결과 예시 (클릭하면 전체 보기)
+                  {t("aboutTeaser.leveltest_preview_caption")}
                 </p>
                 <img
                   src={leveltestResultScreenshot}
-                  alt="실제 레벨테스트 결과 예시"
+                  alt={t("aboutTeaser.leveltest_preview_label")}
                   className="max-h-72 w-full object-cover object-top"
                 />
               </div>

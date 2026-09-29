@@ -35,6 +35,10 @@
       "comment": "Nhận xét của giáo viên: \"Hôm nay con đã tiến bộ rất nhiều trong phần nói tự do!\"",
       "badge": "Đội ngũ giáo viên bản ngữ & nước ngoài chuyên nghiệp"
     },
+    "image_labels": {
+      "lesson_screen": "Màn hình lớp học 1:1 thực tế",
+      "evaluation_screen": "Màn hình phiếu đánh giá thực tế"
+    },
     "quick_actions": {
       "kakao_title": "Bạn có câu hỏi trước khi bắt đầu không?",
       "kakao_desc": "Tư vấn miễn phí 1:1 dễ dàng qua ID KakaoTalk hoặc WeChat.",
@@ -48,6 +52,7 @@
     "eyebrow": "WHY HIFIVE",
     "title": "Vì sao nên chọn {{brandName}}?",
     "description": "Những nguyên tắc được đúc kết qua 12 năm đồng hành cùng vô số học viên và phụ huynh được thể hiện trong từng buổi học của {{brandName}}.",
+    "video_lesson_label": "Màn hình lớp học video giữa giáo viên và học viên thực tế",
     "reasons": {
       "output": {
         "title": "Lớp học tập trung vào nghe – nói (Output)",
@@ -255,6 +260,8 @@
     "eyebrow": "Giới thiệu",
     "quote": "\"Chúng tôi phát triển nhờ kết quả giáo dục và niềm tin của khách hàng, chứ không phải quảng cáo.\"",
     "quote_sub": "Đây là nguyên tắc quan trọng nhất mà {{brandName}} đã gìn giữ suốt 12 năm.",
+    "leveltest_preview_label": "Ví dụ kết quả kiểm tra trình độ thực tế",
+    "leveltest_preview_caption": "Ví dụ kết quả kiểm tra trình độ thực tế (Nhấn để xem toàn bộ)",
     "ceo_display": "{{name}}, Giám đốc",
     "company_tagline": "{{brandName}} · 12 năm trong lĩnh vực giáo dục tiếng Anh qua video",
     "heading": "Giáo dục tiếng Anh tối ưu cho môi trường EFL, thực sự hiệu quả",

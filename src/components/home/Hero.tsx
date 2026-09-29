@@ -116,9 +116,9 @@ export function Hero({ onOpenLevelTest }: { onOpenLevelTest: () => void }) {
         <div className="relative mx-auto flex w-full max-w-md flex-col gap-5">
           {/* 실제 1:1 화상수업 영상 자리 — 관리자 업로드 기능이 붙기 전까지 Placeholder
               상태로 유지, 클릭하면 크게 볼 수 있음 */}
-          <ImageLightbox label="실제 1:1 수업 화면">
+          <ImageLightbox label={t("hero.image_labels.lesson_screen")}>
             <ImagePlaceholder
-              label="실제 1:1 수업 화면"
+              label={t("hero.image_labels.lesson_screen")}
               aspect="4/3"
               icon={Video}
               tone="brand"
@@ -136,8 +136,8 @@ export function Hero({ onOpenLevelTest }: { onOpenLevelTest: () => void }) {
 
             {/* 실제 평가서/Feedback 이미지 자리 — 관리자 업로드 기능이 붙기 전까지
                 Placeholder 상태로 유지, 기존 상세 행은 그 아래 보조 설명으로 유지 */}
-            <ImageLightbox label="실제 평가서 화면">
-              <ImagePlaceholder label="실제 평가서 화면" aspect="16/9" tone="accent" className="mt-4" />
+            <ImageLightbox label={t("hero.image_labels.evaluation_screen")}>
+              <ImagePlaceholder label={t("hero.image_labels.evaluation_screen")} aspect="16/9" tone="accent" className="mt-4" />
             </ImageLightbox>
 
             <div className="mt-4 space-y-3">

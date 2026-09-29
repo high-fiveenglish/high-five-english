@@ -35,6 +35,10 @@
       "comment": "教师评语：\"今天在自由对话中进步很大！\"",
       "badge": "专业母语及外籍教师团队"
     },
+    "image_labels": {
+      "lesson_screen": "实际1:1课堂画面",
+      "evaluation_screen": "实际评价表画面"
+    },
     "quick_actions": {
       "kakao_title": "上课前有疑问吗？",
       "kakao_desc": "通过KakaoTalk·微信ID轻松进行1对1免费咨询。",
@@ -48,6 +52,7 @@
     "eyebrow": "WHY HIFIVE",
     "title": "为什么选择{{brandName}}？",
     "description": "12年来与无数学员及家长交流打磨出的教学原则，融入{{brandName}}的每一堂课中。",
+    "video_lesson_label": "实际师生视频课堂画面",
     "reasons": {
       "output": {
         "title": "以听说输出为核心的课堂",
@@ -255,6 +260,8 @@
     "eyebrow": "公司介绍",
     "quote": "\"我们靠的不是广告，而是教育成果与客户信赖而成长。\"",
     "quote_sub": "这是{{brandName}} 12年来始终坚守的最重要原则。",
+    "leveltest_preview_label": "实际水平测试结果示例",
+    "leveltest_preview_caption": "实际水平测试结果示例（点击查看完整内容）",
     "ceo_display": "{{name}} 代表",
     "company_tagline": "{{brandName}} · 视频英语教育12年",
     "heading": "专为EFL环境优化、真正行之有效的英语教育",
