@@ -140,7 +140,14 @@ export const i18nReady = i18n
     defaultNS: "common",
     ns: ALL_NAMESPACES,
     detection: {
-      order: ["localStorage", "navigator"],
+      // "path"를 최우선으로 둬서 /:lang이 있는 공개 라우트는 그 URL 언어가 항상
+      // localStorage/navigator보다 우선 적용된다 — 초기 감지 언어가 URL과 어긋나
+      // 있다가 LanguageContext의 changeLanguage 이펙트로 뒤늦게 맞춰지는 동안
+      // {{brandName}} 등 전역 interpolation 값이 잘못된 언어로 잠깐 보이는 것을
+      // 막는다. /:lang이 없는 보호된 라우트(예: /classroom)에서는 path 감지값이
+      // supportedLngs에 없는 값이라 i18next가 자동으로 다음 순서(localStorage →
+      // navigator)로 넘어가므로 기존 동작은 그대로 유지된다.
+      order: ["path", "localStorage", "navigator"],
       lookupLocalStorage: "hifive_lang",
       caches: ["localStorage"],
     },
@@ -148,6 +155,25 @@ export const i18nReady = i18n
     // No Suspense boundaries anywhere in this codebase today — components just
     // re-render (react-i18next listens for the load event) once a namespace arrives.
     react: { useSuspense: false },
+  })
+  .then(() => {
+    // {{brandName}}은 수백 곳의 번역 문구에서 전역 interpolation 값(TenantContext.tsx의
+    // BrandNameSync 참고)으로 채워지는데, 그 값은 지금까지 tenant fetch가 끝난 뒤
+    // useEffect에서만 설정돼 앱이 맨 처음 렌더링되는 순간에는 아직 비어 있었다 —
+    // 그 사이 "{{brandName}}" 토큰이 그대로 보이거나(useEffect는 첫 페인트 이후
+    // 실행), 하필 그 시점에 이미 로드된 namespace의 t()가 emit으로 전달되기 전에
+    // 구독이 늦게 걸려 갱신이 아예 누락되는 경우까지 있었다(특히 아래 "path"
+    // detector로 초기 언어가 처음부터 URL과 맞아 changeLanguage 호출 자체가 생략될
+    // 때). 여기서 이미 로드된 현재 언어의 common:footer.brand_name으로 즉시 한 번
+    // 채워두면, 첫 렌더링부터 그 값이 존재해 위 문제가 애초에 발생하지 않는다.
+    // 실제 tenant(협력사) 값은 이후 BrandNameSync가 그대로 덮어쓴다.
+    i18n.options.interpolation = {
+      ...i18n.options.interpolation,
+      defaultVariables: {
+        ...i18n.options.interpolation?.defaultVariables,
+        brandName: i18n.t("footer.brand_name"),
+      },
+    };
   });
 
 export default i18n;
