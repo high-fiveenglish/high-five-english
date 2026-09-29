@@ -36,9 +36,25 @@ function BodyLine({ line }: { line: string }) {
 function Paragraph({ lines, isFirst }: { lines: string[]; isFirst: boolean }) {
   const [first, ...rest] = lines;
 
-  // 최상단 문단의 첫 줄(📘 제목)은 본문과 구분되는 큰 제목으로 표시한다.
+  // 최상단 문단의 첫 줄(📘 제목)은 본문과 구분되는 큰 제목으로 표시한다. 제목 뒤에
+  // 같은 문단 안에 더 줄이 있으면(예: 이모지 제목 없이 자유 서술로 시작하는 평가서 —
+  // 월평가서처럼 문장 사이에 빈 줄 없이 여러 줄이 통째로 첫 문단이 되는 경우) 그 줄들도
+  // 본문으로 이어서 보여준다 — 예전엔 first만 렌더링하고 rest를 그냥 버려서, 제목 줄
+  // 하나만 남고 나머지 내용이 통째로 사라지는 문제가 있었다.
   if (isFirst) {
-    return <h2 className="text-base font-bold text-slate-900">{first}</h2>;
+    if (rest.length === 0) {
+      return <h2 className="text-base font-bold text-slate-900">{first}</h2>;
+    }
+    return (
+      <div>
+        <h2 className="text-base font-bold text-slate-900">{first}</h2>
+        <div className="mt-3 flex flex-col gap-1">
+          {rest.map((l, i) => (
+            <BodyLine key={i} line={l} />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   // 이모지로 시작하는 첫 줄은 섹션 헤더로 취급한다(❌는 오답 표시이므로 헤더 후보에서 제외).
