@@ -11,6 +11,7 @@ export const CURRENCIES = [
   { code: "KRW", symbol: "₩" },
   { code: "CNY", symbol: "¥" },
   { code: "VND", symbol: "₫" },
+  { code: "JPY", symbol: "¥" },
 ] as const satisfies CurrencyInfo[];
 
 export type CurrencyCode = (typeof CURRENCIES)[number]["code"];

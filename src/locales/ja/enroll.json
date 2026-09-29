@@ -1,0 +1,84 @@
+{
+  "meta": {
+    "title": "受講登録 | {{brandName}}",
+    "description": "授業方式、教育課程、受講期間と回数を選択して受講登録を申し込んでください。"
+  },
+  "hero": {
+    "eyebrow": "受講案内・受講登録",
+    "title": "受講登録申し込み",
+    "description": "下記の情報をご入力いただくと、担当者が確認のうえご案内いたします。実際の決済および最終日程はご相談を通じて確定します。"
+  },
+  "login_required_desc": "受講申し込みはログイン済みの会員のみ可能です。ログイン後、再度お試しください。",
+  "login_cta": "ログイン",
+  "section_platform": {
+    "title": "1. 授業方法",
+    "teams_id_label": "Teams ID",
+    "teams_id_placeholder": "Microsoft Teams IDを入力してください"
+  },
+  "section_track": {
+    "title": "2. 教育課程",
+    "age_group_label": "年齢帯",
+    "field_label": "分野",
+    "field_placeholder": "まず年齢帯を選択してください",
+    "age_groups": {
+      "preschool": "幼児（未就学）",
+      "elementary": "小学生",
+      "secondary": "中高生",
+      "adult": "成人"
+    },
+    "fields": {
+      "phonics": "フォニックス",
+      "basic-conversation": "基礎会話",
+      "reading-smalltalk": "リーディング・スモールトーク",
+      "native-reading": "原書リーディング（AR段階別）",
+      "conversation-debate": "会話・ディベート",
+      "advanced-discussion": "上級討論・エッセイ",
+      "exam": "試験対策",
+      "business": "ビジネス英語",
+      "expression": "表現力強化",
+      "interview": "面接準備"
+    }
+  },
+  "section_plan": {
+    "title": "3. 受講期間・回数・時間",
+    "duration_label": "受講期間",
+    "frequency_label": "授業回数",
+    "lesson_length_label": "授業時間",
+    "lesson_length_option": "{{min}}分",
+    "zoom_50min_notice": "Zoomで50分授業を行う場合、25分授業・5分休憩・25分授業に分かれて進行します。途切れない50分授業をご希望の場合は、VooV MeetingまたはTeamsをおすすめします。"
+  },
+  "section_weekday": {
+    "title": "4. 授業曜日",
+    "value_label": "選択した条件の基本授業曜日",
+    "custom_note": "週末授業や他の曜日の組み合わせをご希望の場合は、下記チャンネルからマネージャーに直接お問い合わせください。",
+    "contact_kakao": "カカオトーク",
+    "contact_wechat": "WeChat"
+  },
+  "section_points": {
+    "title": "5. ポイント割引",
+    "balance_label": "保有ポイント",
+    "balance_value": "{{count}}P",
+    "apply_checkbox": "保有ポイント全額を割引に使用します",
+    "guest_note": "ログイン済みの受講生アカウントでのみポイントの確認・利用ができます。",
+    "earn_note": "ポイントは友だち紹介による登録で紹介者に5,000P、受講レビュー投稿時に1,000Pが付与されます。"
+  },
+  "price_preview": {
+    "estimated_label": "予想受講料",
+    "discount_label": "ポイント割引",
+    "final_label": "予想決済金額",
+    "krw_only_note": "ポイント割引は韓国ウォン（KRW）決済基準で計算されます。",
+    "disclaimer": "※実際の決済金額はプロモーション、兄弟割引などにより担当者相談時に異なる場合があります。"
+  },
+  "section_schedule": {
+    "title": "6. 希望開始日・開始時間",
+    "start_date_label": "希望開始日",
+    "start_time_label": "希望開始時間",
+    "time_zone_note": "韓国時間（KST）基準、午前6時〜深夜12時の間で30分単位で選択可能です。"
+  },
+  "validation_required": "必須項目です。",
+  "submitting": "受付中...",
+  "submit": "受講登録を申し込む",
+  "success_title": "受講登録のお申し込みを受け付けました。",
+  "success_desc": "近日中に担当者よりご連絡いたします。",
+  "confirm": "確認"
+}

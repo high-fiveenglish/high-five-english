@@ -1,0 +1,173 @@
+{
+  "weekdays_short": [
+    "日",
+    "月",
+    "火",
+    "水",
+    "木",
+    "金",
+    "土"
+  ],
+  "enrollment_status": {
+    "active": "受講中",
+    "completed": "受講完了",
+    "expired": "期限切れ",
+    "paused": "一時停止"
+  },
+  "lesson_status": {
+    "scheduled": "予定",
+    "completed": "出席",
+    "absent": "学生欠席",
+    "rescheduled": "学生延期",
+    "teacher_absent": "管理者延期",
+    "academy_closed": "管理者延期",
+    "admin_cancelled": "管理者延期",
+    "on_hold": "ホールド"
+  },
+  "summary_card": {
+    "hold_release_cta": "ホールド解除リクエスト",
+    "hold_release_pending": "処理中...",
+    "enrollment_period": "受講期間",
+    "lesson_count": "授業回数",
+    "lesson_count_value": "合計{{total}}回・残り{{remaining}}回",
+    "lesson_duration": "授業時間",
+    "lesson_duration_value": "{{min}}分",
+    "class_schedule": "授業曜日・時間",
+    "class_schedule_value": "毎週{{days}} {{time}}",
+    "level_test_result": "レベルテスト結果",
+    "current_status": "現在の受講状態",
+    "teacher_label": "担当講師",
+    "meeting_platform_label": "授業プログラム",
+    "install_guide_cta": "インストール案内を見る",
+    "weekly_count": "週{{count}}回",
+    "remaining_count": "残り{{count}}回",
+    "low_remaining_notice": "残りの授業が少なくなっています。次のコースについてご相談が必要な場合は、1:1相談をお申し込みください。"
+  },
+  "schedule_table": {
+    "headers": {
+      "date": "日付",
+      "time": "時間",
+      "lesson_name": "授業名",
+      "teacher": "講師",
+      "attendance": "出欠状況",
+      "evaluation": "評価書",
+      "enter": "入室",
+      "reschedule": "延期"
+    },
+    "view_evaluation": "評価書を見る",
+    "evaluation_in_progress": "評価書作成中",
+    "enter_class": "授業入室",
+    "link_pending": "入室リンク準備中",
+    "reschedule_cta": "授業延期",
+    "reschedule_closed": "延期申請締切",
+    "reschedule_closed_tooltip": "授業開始2時間前までのみ延期申請が可能です",
+    "empty": "選択した日付に予定されている授業はありません。"
+  },
+  "calendar": {
+    "title": "授業スケジュールカレンダー",
+    "prev_month": "前の月",
+    "next_month": "次の月",
+    "month_label": "{{year}}年{{month}}月",
+    "teacher_prefix": "講師",
+    "view_evaluation": "学習評価書を見る",
+    "evaluation_in_progress": "評価書作成中",
+    "holiday_title": "Holiday / No Class",
+    "teacher_unavailable": "講師の都合により休講です。",
+    "no_lesson": "予定されている授業はありません。"
+  },
+  "enter_button": {
+    "class_ended": "授業終了",
+    "link_pending": "入室リンク準備中",
+    "link_pending_tooltip": "担当講師がまだ参加リンクを登録していません",
+    "enter_class": "{{platform}}授業に入室",
+    "enter_before_tooltip": "授業開始{{minutes}}分前から入室できます",
+    "enter_now": "今すぐ{{platform}}授業に入室する"
+  },
+  "textbook_card": {
+    "title": "教材情報"
+  },
+  "reschedule_allowance": {
+    "title": "延期状況",
+    "total": "延期可能回数合計",
+    "used_by_student": "学生使用延期",
+    "used_by_admin": "管理者延期",
+    "count_value": "{{count}}回",
+    "admin_note": "管理者延期は学生の延期可能回数から差し引かれません。"
+  },
+  "reschedule_modal": {
+    "title": "授業延期",
+    "confirm_question": "授業を延期しますか？",
+    "description": "延期すると授業回数は差し引かれず、曜日パターンに合わせた次の可能な日付に自動で割り当てられます。",
+    "cancel": "キャンセル",
+    "confirm": "延期する",
+    "submitting": "処理中...",
+    "success_title": "授業が延期されました。",
+    "new_date_label": "新しい授業日",
+    "confirm_ok": "確認"
+  },
+  "evaluation_modal": {
+    "title": "デイリー評価書",
+    "loading": "評価書を読み込んでいます...",
+    "lesson_content": "今日の授業内容",
+    "progress": "今日の進度",
+    "strengths": "よくできた点",
+    "improvements": "改善点",
+    "pronunciation": "発音",
+    "grammar": "文法",
+    "vocabulary": "語彙",
+    "speaking": "会話",
+    "teacher_comment": "講師総合コメント"
+  },
+  "page": {
+    "eyebrow": "マイページ",
+    "title": "マイクラスルーム",
+    "loading": "読み込み中です...",
+    "refreshing": "更新中...",
+    "not_found": "受講情報が見つかりません。",
+    "schedule_table_title": "受講スケジュール表",
+    "review_board_cta": "受講レビュー掲示板",
+    "enrollment_select_label": "授業選択",
+    "enrollment_option_prefix": "オンライン英会話",
+    "enrollment_option_suffix": "授業",
+    "timeline": {
+      "ended": "終了",
+      "in_progress": "進行中",
+      "upcoming": "予定"
+    },
+    "tab_classroom": "マイクラスルーム",
+    "tab_level_test_apply": "レベルテスト申込",
+    "tab_level_test_result": "レベルテスト結果",
+    "tab_enroll": "受講申込",
+    "tab_history": "受講履歴"
+  },
+  "history_table": {
+    "headers": {
+      "name": "授業名",
+      "period": "期間",
+      "receipt": "領収書",
+      "certificate": "出席証明書"
+    },
+    "empty": "受講履歴がありません。"
+  },
+  "level_test_status": {
+    "접수": "申込完了",
+    "수업확정": "日程確定",
+    "수업완료": "完了",
+    "결석": "欠席",
+    "취소": "キャンセル"
+  },
+  "level_test_apply_tab": {
+    "real_account_required": "レベルテストのお申し込みは、実際の会員アカウントでログインした場合のみご利用いただけます。",
+    "eligible_desc": "新しいレベルテストにお申し込みいただけます。ご希望の日時を選択してお申し込みください。",
+    "cta": "レベルテストに申し込む",
+    "pending_desc": "すでに受付済み、または進行中のレベルテストのお申し込みがあります。結果が出るまで新規にお申し込みいただくことはできません。",
+    "cooldown_desc": "直近のレベルテストは{{lastConductedAt}}に完了しました。レベルテストは完了後6か月経過してから再度お申し込みいただけます。{{eligibleAt}}以降にお申し込み可能です。",
+    "view_results_cta": "レベルテスト結果を見る"
+  },
+  "level_test_result_tab": {
+    "empty": "まだ実施されたレベルテストはありません。",
+    "recommended_level": "おすすめレベル",
+    "recommended_textbook": "おすすめ教材",
+    "not_written": "まだ作成された結果がありません。"
+  }
+}

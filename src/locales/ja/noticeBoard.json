@@ -1,0 +1,19 @@
+{
+  "eyebrow": "カスタマーセンター・お知らせ",
+  "title": "お知らせ",
+  "total": "全{{count}}件",
+  "new_post": "投稿する",
+  "table_headers": {
+    "no": "No.",
+    "title": "タイトル",
+    "name": "投稿者",
+    "date": "日付"
+  },
+  "empty": "登録されたお知らせはありません。",
+  "loading": "読み込み中です...",
+  "detail": {
+    "list": "一覧",
+    "edit": "修正",
+    "delete": "削除"
+  }
+}

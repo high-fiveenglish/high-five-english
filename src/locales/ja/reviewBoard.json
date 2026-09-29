@@ -1,0 +1,35 @@
+{
+  "eyebrow": "マイページ・掲示板",
+  "title": "受講レビュー掲示板",
+  "total": "全{{count}}件",
+  "new_post": "投稿する",
+  "table_headers": {
+    "no": "No.",
+    "title": "タイトル",
+    "name": "お名前",
+    "date": "日付",
+    "hit": "閲覧"
+  },
+  "reply_prefix": "RE",
+  "empty": "登録された投稿がありません。",
+  "real_account_required": "実際の会員アカウントでログインする必要があります。",
+  "loading": "読み込み中です...",
+  "detail": {
+    "list": "一覧",
+    "reply": "返信を書く",
+    "edit": "修正",
+    "delete": "削除",
+    "hit": "閲覧 {{count}}"
+  },
+  "form": {
+    "new_title": "投稿する",
+    "reply_title": "返信を書く",
+    "edit_title": "投稿を修正",
+    "field_title": "タイトル",
+    "field_content": "内容",
+    "content_placeholder": "自由にレビューをお書きください。",
+    "validation_error": "タイトルと内容をすべて入力してください。",
+    "submitting": "保存中...",
+    "submit": "登録"
+  }
+}

@@ -35,6 +35,7 @@ export const SUPPORTED_LANGUAGES = [
   { code: "en", nativeName: "English", flag: "🇺🇸" },
   { code: "zh", nativeName: "中文", flag: "🇨🇳", timeZone: "Asia/Shanghai", currency: "CNY" },
   { code: "vi", nativeName: "Tiếng Việt", flag: "🇻🇳", timeZone: "Asia/Ho_Chi_Minh", currency: "VND" },
+  { code: "ja", nativeName: "日本語", flag: "🇯🇵", timeZone: "Asia/Tokyo", currency: "JPY" },
 ] as const satisfies SupportedLanguageInput[];
 
 export type Lang = (typeof SUPPORTED_LANGUAGES)[number]["code"];
@@ -105,6 +106,7 @@ const BUNDLE_IMPORTERS: Record<Lang, () => Promise<{ default: Record<string, Rec
   en: () => import("virtual:locale-bundle/en"),
   zh: () => import("virtual:locale-bundle/zh"),
   vi: () => import("virtual:locale-bundle/vi"),
+  ja: () => import("virtual:locale-bundle/ja"),
 };
 
 // 같은 언어에 대해 bundle을 여러 번 fetch하지 않도록 Promise 자체를 캐시한다 —

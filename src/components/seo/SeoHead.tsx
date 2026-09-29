@@ -12,6 +12,7 @@ const OG_LOCALES: Record<string, string> = {
   en: "en_US",
   zh: "zh_CN",
   vi: "vi_VN",
+  ja: "ja_JP",
 };
 
 function setMeta(attr: "name" | "property", key: string, content: string) {
