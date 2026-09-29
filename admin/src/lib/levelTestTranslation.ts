@@ -80,3 +80,50 @@ export async function translateLevelTestResult(content: string, targetLanguageNa
     return null;
   }
 }
+
+// LevelTest(resultContent)와 LessonEvaluation(content) 양쪽 저장 액션이 동일하게 쓰는
+// "번역을 다시 생성해야 하는가" 판단 — 원문이 실제로 바뀌었거나, 캐시된 번역의 언어가
+// 지금 필요한 대상 언어와 다를 때만 다시 번역한다(그 외엔 API를 부르지 않고 기존 캐시를
+// 그대로 유지). targetLangCode가 null이면(영어권이거나 거주지역 미입력) 애초에
+// 번역하지 않는다.
+export function shouldTranslate(params: {
+  newContent: string;
+  targetLangCode: string | null;
+  previousContent: string | null;
+  previousTranslatedLangCode: string | null;
+}): boolean {
+  if (!params.newContent || !params.targetLangCode) return false;
+  return params.newContent !== params.previousContent || params.previousTranslatedLangCode !== params.targetLangCode;
+}
+
+// 데일리 평가서(LessonEvaluation.content)는 레벨테스트와 같은 이모지 서식
+// (📘/📝/💬/✅/🌟, "- " 목록, ①②③ 교정 번호, ❌/✅)을 쓰지만 고정된 영어 표제 목록이
+// 없다 — 강사가 이모지 뒤에 자유롭게 제목을 붙인다(admin/src/components/EvaluationContent.tsx
+// 렌더러는 이모지 문자 자체로만 헤더를 인식하므로, 표제 "텍스트"는 번역해도 되고
+// 이모지·기호만 줄 맨 앞에 그대로 남기면 된다). 그래서 PRESERVED_HEADINGS 같은 고정
+// 표제 목록 대신 "이 마커들은 줄 맨 앞에 그대로 둔 채 뒤따르는 텍스트만 번역하라"는
+// 규칙을 쓴다 — Student:/Teacher: 줄을 통째로 보존하는 규칙은 레벨테스트와 동일하다.
+export async function translateLessonEvaluation(content: string, targetLanguageName: string): Promise<string | null> {
+  const anthropic = getClient();
+  if (!anthropic) return null;
+
+  try {
+    const message = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 4096,
+      system:
+        `You translate an English-language daily English-tutoring lesson evaluation into ${targetLanguageName} for the student's family to read.\n\n` +
+        `Rules:\n` +
+        `1. Keep any line starting with "Student:" or "Teacher:" completely unchanged in English, including the label itself — these are the student's actual English sentences and the teacher's corrections, which must stay in English for the student to study.\n` +
+        `2. Some lines start with a fixed marker: an emoji section header (📘 📝 💬 🌟, or ✅/❌ used as a header), a "- " list bullet, a circled number (① ② ③ ④ ⑤ ⑥ ⑦ ⑧ ⑨ ⑩), or a ❌/✅ mark. Keep that marker exactly as-is at the start of the line, and translate only the text that follows it.\n` +
+        `3. Translate everything else (narrative feedback, comments, instructions) into natural, warm ${targetLanguageName}, as if written by a caring teacher — not a literal word-for-word translation.\n` +
+        `4. Preserve the original paragraph structure exactly: same blank-line breaks between paragraphs, same line breaks within a paragraph.\n` +
+        `5. Output only the translated evaluation text, nothing else — no preamble, no explanation.`,
+      messages: [{ role: "user", content }],
+    });
+    const text = message.content.find((b) => b.type === "text");
+    return text && text.type === "text" ? text.text.trim() : null;
+  } catch {
+    return null;
+  }
+}

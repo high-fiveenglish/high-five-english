@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireTeacher } from "@/lib/teacherAuth";
 import { requirePermission, resolveRolePermissions, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
+import { languageForRegion, translateLessonEvaluation, shouldTranslate } from "@/lib/levelTestTranslation";
 
 const MAX_LENGTH = 4000;
 
@@ -33,7 +34,10 @@ export async function saveMonthlyEvaluation(
   }
 
   // 세션 렌더 시점과 마찬가지로 저장 시점에도 이 강사 본인의 수강생인지 다시 확인한다.
-  const enrollment = await prisma.enrollment.findUnique({ where: { id: enrollmentId } });
+  const enrollment = await prisma.enrollment.findUnique({
+    where: { id: enrollmentId },
+    include: { student: { select: { region: true } } },
+  });
   if (!enrollment || enrollment.teacherId !== teacher.id) {
     return { error: "You can only write evaluations for your own students." };
   }
@@ -41,9 +45,31 @@ export async function saveMonthlyEvaluation(
   const existing = await prisma.monthlyEvaluation.findUnique({
     where: { enrollmentId_cycleNumber: { enrollmentId, cycleNumber } },
   });
+
+  // Monthly Evaluation 번역 — Daily Evaluation과 동일한 저장 시점 번역·캐시 패턴
+  // (languageForRegion/shouldTranslate/translateLessonEvaluation 그대로 재사용). content가
+  // 안 바뀌었고 대상 언어도 그대로면 번역 API를 다시 부르지 않는다.
+  const targetLang = languageForRegion(enrollment.student.region);
+  let contentTranslated: string | null = existing?.contentTranslated ?? null;
+  let contentTranslatedLang: string | null = existing?.contentTranslatedLang ?? null;
+  if (
+    shouldTranslate({
+      newContent: content,
+      targetLangCode: targetLang?.code ?? null,
+      previousContent: existing?.content ?? null,
+      previousTranslatedLangCode: contentTranslatedLang,
+    })
+  ) {
+    contentTranslated = await translateLessonEvaluation(content, targetLang!.name);
+    contentTranslatedLang = contentTranslated ? targetLang!.code : null;
+  } else if (!targetLang) {
+    contentTranslated = null;
+    contentTranslatedLang = null;
+  }
+
   await prisma.monthlyEvaluation.upsert({
     where: { enrollmentId_cycleNumber: { enrollmentId, cycleNumber } },
-    update: { content, teacherId: teacher.id },
+    update: { content, teacherId: teacher.id, contentTranslated, contentTranslatedLang },
     create: {
       siteId: DEFAULT_SITE_ID,
       studentId: enrollment.studentId,
@@ -52,6 +78,8 @@ export async function saveMonthlyEvaluation(
       cycleNumber,
       sessionsPerCycle,
       content,
+      contentTranslated,
+      contentTranslatedLang,
     },
   });
   await logAudit({

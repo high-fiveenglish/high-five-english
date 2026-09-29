@@ -9,7 +9,7 @@ import { findTeacherScheduleConflict, LEVEL_TEST_DURATION_MIN } from "@/lib/sche
 import { parseAppDateTime } from "@/lib/appTime";
 import { createLevelTestCore } from "@/lib/levelTestCreate";
 import { TERMINAL_PROGRESS_STATUSES } from "@/lib/levelTestOptions";
-import { languageForRegion, translateLevelTestResult } from "@/lib/levelTestTranslation";
+import { languageForRegion, translateLevelTestResult, shouldTranslate } from "@/lib/levelTestTranslation";
 
 // 평가 점수 select는 "" | "1".."5"만 보내온다. 미선택(빈 문자열)은 아직 평가하지 않은
 // 영역이므로 null(레이더 차트에서 통째로 숨김 처리의 기준)로 저장한다.
@@ -100,12 +100,17 @@ export async function updateLevelTest(
   const targetLang = languageForRegion(levelTest.student?.region ?? null);
   let resultContentTranslated: string | null = levelTest.resultContentTranslated;
   let resultContentTranslatedLang: string | null = levelTest.resultContentTranslatedLang;
-  if (resultContent && targetLang) {
-    if (resultContent !== levelTest.resultContent || resultContentTranslatedLang !== targetLang.code) {
-      resultContentTranslated = await translateLevelTestResult(resultContent, targetLang.name);
-      resultContentTranslatedLang = resultContentTranslated ? targetLang.code : null;
-    }
-  } else {
+  if (
+    shouldTranslate({
+      newContent: resultContent,
+      targetLangCode: targetLang?.code ?? null,
+      previousContent: levelTest.resultContent,
+      previousTranslatedLangCode: resultContentTranslatedLang,
+    })
+  ) {
+    resultContentTranslated = await translateLevelTestResult(resultContent, targetLang!.name);
+    resultContentTranslatedLang = resultContentTranslated ? targetLang!.code : null;
+  } else if (!resultContent || !targetLang) {
     resultContentTranslated = null;
     resultContentTranslatedLang = null;
   }

@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { requireStudent } from "@/lib/studentAuth";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { formatAppDate, formatAppTime } from "@/lib/appTime";
-import { EvaluationContent } from "@/components/EvaluationContent";
+import { labelForLangCode } from "@/lib/levelTestTranslation";
+import { LessonEvaluationReportToggle } from "@/components/LessonEvaluationReportToggle";
 
 const fmtDate = formatAppDate;
 const fmtTime = formatAppTime;
@@ -44,7 +45,11 @@ export default async function StudentEvaluationDetailPage({
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <EvaluationContent content={evaluation.content} />
+        <LessonEvaluationReportToggle
+          englishContent={evaluation.content}
+          translatedContent={evaluation.contentTranslated}
+          translatedLangLabel={labelForLangCode(evaluation.contentTranslatedLang)}
+        />
       </div>
     </div>
   );

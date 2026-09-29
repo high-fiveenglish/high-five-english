@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireTeacher } from "@/lib/teacherAuth";
 import { requirePermission, resolveRolePermissions, logAudit } from "@/lib/rbac";
 import { TERMINAL_PROGRESS_STATUSES } from "@/lib/levelTestOptions";
-import { languageForRegion, translateLevelTestResult } from "@/lib/levelTestTranslation";
+import { languageForRegion, translateLevelTestResult, shouldTranslate } from "@/lib/levelTestTranslation";
 
 const MAX_LENGTH = 4000;
 
@@ -75,12 +75,17 @@ export async function saveLevelTestResult(
   const targetLang = languageForRegion(levelTest.student?.region ?? null);
   let resultContentTranslated: string | null = levelTest.resultContentTranslated;
   let resultContentTranslatedLang: string | null = levelTest.resultContentTranslatedLang;
-  if (resultContent && targetLang) {
-    if (resultContent !== levelTest.resultContent || resultContentTranslatedLang !== targetLang.code) {
-      resultContentTranslated = await translateLevelTestResult(resultContent, targetLang.name);
-      resultContentTranslatedLang = resultContentTranslated ? targetLang.code : null;
-    }
-  } else {
+  if (
+    shouldTranslate({
+      newContent: resultContent,
+      targetLangCode: targetLang?.code ?? null,
+      previousContent: levelTest.resultContent,
+      previousTranslatedLangCode: resultContentTranslatedLang,
+    })
+  ) {
+    resultContentTranslated = await translateLevelTestResult(resultContent, targetLang!.name);
+    resultContentTranslatedLang = resultContentTranslated ? targetLang!.code : null;
+  } else if (!resultContent || !targetLang) {
     resultContentTranslated = null;
     resultContentTranslatedLang = null;
   }

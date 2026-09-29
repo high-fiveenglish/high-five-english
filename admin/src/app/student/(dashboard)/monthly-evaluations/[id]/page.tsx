@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireStudent } from "@/lib/studentAuth";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
+import { labelForLangCode } from "@/lib/levelTestTranslation";
+import { LessonEvaluationReportToggle } from "@/components/LessonEvaluationReportToggle";
 
 export default async function StudentMonthlyEvaluationDetailPage({
   params,
@@ -34,7 +36,11 @@ export default async function StudentMonthlyEvaluationDetailPage({
 
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
         <p className="mb-2 text-sm font-bold text-slate-900">평가 내용</p>
-        <p className="whitespace-pre-wrap text-sm text-slate-700">{evaluation.content}</p>
+        <LessonEvaluationReportToggle
+          englishContent={evaluation.content}
+          translatedContent={evaluation.contentTranslated}
+          translatedLangLabel={labelForLangCode(evaluation.contentTranslatedLang)}
+        />
       </div>
     </div>
   );

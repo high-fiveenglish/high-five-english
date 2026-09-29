@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireTeacher } from "@/lib/teacherAuth";
 import { requirePermission, resolveRolePermissions, logAudit } from "@/lib/rbac";
+import { languageForRegion, translateLessonEvaluation, shouldTranslate } from "@/lib/levelTestTranslation";
 
 const MAX_LENGTH = 2000;
 
@@ -29,7 +30,10 @@ export async function saveEvaluation(
   // 세션 렌더 시점뿐 아니라 저장 시점에도 다시 소유권을 확인한다 — 폼 자체는 누구나
   // 열어볼 수 있는 게 아니지만(페이지에서 이미 막음), 서버 액션은 별도 POST 엔드포인트라
   // 클라이언트를 신뢰하지 않고 여기서도 검증해야 한다.
-  const session = await prisma.classSession.findUnique({ where: { id: sessionId } });
+  const session = await prisma.classSession.findUnique({
+    where: { id: sessionId },
+    include: { student: { select: { region: true } } },
+  });
   if (!session || session.teacherId !== teacher.id) {
     return { error: "You can only write evaluations for your own classes." };
   }
@@ -44,10 +48,31 @@ export async function saveEvaluation(
   }
 
   const existing = await prisma.lessonEvaluation.findUnique({ where: { classSessionId: sessionId } });
+
+  // Daily Evaluation 번역 — 관리자 쪽 saveEvaluationAdmin과 동일한 저장 시점 번역·캐시
+  // 패턴. content가 안 바뀌었고 대상 언어도 그대로면 번역 API를 다시 부르지 않는다.
+  const targetLang = languageForRegion(session.student.region);
+  let contentTranslated: string | null = existing?.contentTranslated ?? null;
+  let contentTranslatedLang: string | null = existing?.contentTranslatedLang ?? null;
+  if (
+    shouldTranslate({
+      newContent: content,
+      targetLangCode: targetLang?.code ?? null,
+      previousContent: existing?.content ?? null,
+      previousTranslatedLangCode: contentTranslatedLang,
+    })
+  ) {
+    contentTranslated = await translateLessonEvaluation(content, targetLang!.name);
+    contentTranslatedLang = contentTranslated ? targetLang!.code : null;
+  } else if (!targetLang) {
+    contentTranslated = null;
+    contentTranslatedLang = null;
+  }
+
   await prisma.lessonEvaluation.upsert({
     where: { classSessionId: sessionId },
-    update: { content },
-    create: { classSessionId: sessionId, content },
+    update: { content, contentTranslated, contentTranslatedLang },
+    create: { classSessionId: sessionId, content, contentTranslated, contentTranslatedLang },
   });
   // 교재는 이 수업 한 건이 아니라 수강 건 전체에 걸린 값이라 Enrollment에 저장한다 —
   // 평가서에서 바꾸면 그 수강 건의 다음 수업들에도 그대로 이어진다. 진도는 그날 수업
