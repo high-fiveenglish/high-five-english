@@ -4,6 +4,7 @@ import { requireTeacher } from "@/lib/teacherAuth";
 import { formatAppDateTime } from "@/lib/appTime";
 import { SESSION_STATUS_LABEL_EN, studentDisplayName } from "@/lib/teacherPortalLabels";
 import { EvaluationForm } from "./EvaluationForm";
+import { ClassRecordingPanel } from "./ClassRecordingPanel";
 
 const fmtDateTime = formatAppDateTime;
 
@@ -17,7 +18,7 @@ export default async function SessionEvaluationPage({
 
   const session = await prisma.classSession.findUnique({
     where: { id: Number(id) },
-    include: { student: true, evaluation: true, enrollment: true },
+    include: { student: true, evaluation: true, enrollment: true, audioRecording: true },
   });
 
   if (!session || session.teacherId !== teacher.id) notFound();
@@ -40,12 +41,19 @@ export default async function SessionEvaluationPage({
           You can write an evaluation once the class time has arrived.
         </p>
       ) : (
-        <EvaluationForm
-          sessionId={session.id}
-          defaultContent={session.evaluation?.content ?? ""}
-          defaultTextbook={session.enrollment.textbookName ?? ""}
-          defaultProgress={session.progressNote ?? ""}
-        />
+        <div className="flex flex-col gap-6">
+          <EvaluationForm
+            sessionId={session.id}
+            defaultContent={session.evaluation?.content ?? ""}
+            defaultTextbook={session.enrollment.textbookName ?? ""}
+            defaultProgress={session.progressNote ?? ""}
+          />
+          <ClassRecordingPanel
+            sessionId={session.id}
+            recording={session.audioRecording}
+            hasExistingEvaluation={!!session.evaluation}
+          />
+        </div>
       )}
     </div>
   );
