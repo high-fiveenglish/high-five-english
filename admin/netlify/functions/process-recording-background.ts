@@ -10,6 +10,8 @@ import { prisma } from "../../src/lib/prisma";
 import { fetchTranscript } from "../../src/lib/assemblyai";
 import { computeTalkTime, guessTeacherSpeakerLabel } from "../../src/lib/talkTime";
 import { generateAIEvaluationDraft } from "../../src/lib/aiEvaluation";
+import { ageBandFromBirthDate } from "../../src/lib/evaluationSkillRules";
+import { formatAppDate } from "../../src/lib/appTime";
 
 export default async (req: Request) => {
   let body: { audioRecordingId?: number };
@@ -27,7 +29,10 @@ export default async (req: Request) => {
     where: { id: audioRecordingId },
     include: {
       classSession: {
-        include: { student: { select: { birthDate: true } }, enrollment: { select: { textbookName: true, classMethod: true } } },
+        include: {
+          student: { select: { birthDate: true, region: true } },
+          enrollment: { select: { textbookName: true, classMethod: true } },
+        },
       },
     },
   });
@@ -76,11 +81,15 @@ export default async (req: Request) => {
     const result = await generateAIEvaluationDraft({
       transcript: transcript.text ?? "",
       talkTime,
-      student: {
-        birthDate: recording.classSession.student.birthDate,
+      lessonContext: {
+        // ClassSession.scheduledAt(실제 수업 날짜)에서 애플리케이션이 뽑아 전달한다 —
+        // Claude가 날짜를 추측하지 않는다(appTime.ts의 Asia/Seoul 고정 정책 그대로 재사용).
+        lessonDate: formatAppDate(recording.classSession.scheduledAt),
+        lessonDurationMinutes: recording.classSession.durationMin,
+        studentAgeBand: ageBandFromBirthDate(recording.classSession.student.birthDate),
+        studentRegion: recording.classSession.student.region,
         textbookName: recording.classSession.enrollment.textbookName,
         classMethod: recording.classSession.enrollment.classMethod,
-        durationMin: recording.classSession.durationMin,
       },
     });
     if (!result) {

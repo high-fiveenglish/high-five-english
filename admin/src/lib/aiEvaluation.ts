@@ -1,18 +1,20 @@
 // Audio Automatic Evaluation의 Claude adapter. 평가 기준 자체는 전부
 // evaluationSkillRules.ts(online-english-feedback skill의 production snapshot)가
-// Single Source of Truth다 — 이 파일은 그 규칙 + transcript + student context +
-// application이 계산한 Talk Time을 Anthropic API 호출로 조립하고, 응답을 검증해
-// Output 1(학생 피드백)/Output 2(강사 QC)로 분리하는 adapter일 뿐이다. 평가 기준을
-// 여기서 다시 정의하지 않는다.
+// Single Source of Truth다 — 이 파일은 그 규칙 + transcript + 명시적 LESSON CONTEXT
+// (날짜/학생 맥락) + application이 계산한 Talk Time을 Anthropic API 호출로 조립하고,
+// 응답을 검증해 Output 1(학생 피드백)/Output 2(강사 QC)로 분리하는 adapter일 뿐이다.
+// 평가 기준을 여기서 다시 정의하지 않는다.
 import Anthropic from "@anthropic-ai/sdk";
 import {
   GROUNDING_RULES,
+  HISTORICAL_CONTEXT_POLICY,
   ATTITUDE_NOTE_RULE,
   STUDENT_FEEDBACK_RULES,
   TEACHER_QC_RULES,
-  ageBandFromBirthDate,
   ageToneInstruction,
   talkTimeOverrideBlock,
+  checkNoUngroundedHistoricalClaims,
+  type AgeBand,
 } from "./evaluationSkillRules";
 import type { TalkTimeResult } from "./talkTime";
 
@@ -23,12 +25,20 @@ function getClient(): Anthropic | null {
   return client;
 }
 
-export interface StudentContext {
-  /** null이면 evaluationSkillRules.ts의 fallback(성인/직접 호칭)을 적용한다 — AI가 transcript로 나이를 추측하지 않는다. */
-  birthDate: Date | null;
+export interface LessonContext {
+  /** ClassSession.scheduledAt에서 애플리케이션이 뽑은 실제 수업 날짜("YYYY-MM-DD").
+   * Claude가 추측하지 않는다 — 2026-10-01 실제 E2E 테스트에서 날짜를 아예 안 줬더니
+   * 임의 날짜("25 January 2025")를 지어낸 사례가 있어 반드시 명시적으로 전달한다. */
+  lessonDate: string;
+  lessonDurationMinutes: number;
+  /** null이면 evaluationSkillRules.ts의 fallback(성인/직접 호칭)을 적용 — AI가
+   * transcript로 나이를 추측하지 않는다(코드가 Student.birthDate로 미리 계산해 전달). */
+  studentAgeBand: AgeBand;
+  /** 참고용 문화적 맥락(예: "KOREA") — Output 1은 언어와 무관하게 항상 영어로 쓴다
+   * (기존 bilingual 파이프라인이 발행 시점에 번역). null이면 지역 맥락 없이 진행. */
+  studentRegion: string | null;
   textbookName: string | null;
   classMethod: string | null;
-  durationMin: number;
 }
 
 export interface AIEvaluationResult {
@@ -41,10 +51,7 @@ export interface AIEvaluationResult {
 const RESULT_TOOL_NAME = "submit_evaluation_result";
 
 /** API transport 레이어일 뿐 평가 기준이 아니다 — 필드 2개(studentFeedback/teacherQc)는
- * evaluationSkillRules.ts가 요구하는 "완성된 포맷의 평문 텍스트" 그대로를 담는다.
- * EvaluationContent.tsx가 인식하는 이모지/①②③/❌✅ 관례를 skill 자체가 이미 쓰고
- * 있으므로, 별도의 구조 변환(formatter) 없이 studentFeedback을 거의 그대로
- * LessonEvaluation.content로 쓸 수 있다. */
+ * evaluationSkillRules.ts가 요구하는 "완성된 포맷의 평문 텍스트" 그대로를 담는다. */
 export function validateAIEvaluationResult(input: unknown): AIEvaluationResult | null {
   if (!input || typeof input !== "object") return null;
   const v = input as Record<string, unknown>;
@@ -53,30 +60,43 @@ export function validateAIEvaluationResult(input: unknown): AIEvaluationResult |
   return { studentFeedback: v.studentFeedback.trim(), teacherQc: v.teacherQc.trim() };
 }
 
-/** transcript + 계산된 Talk Time + student context로부터 Output1/Output2를 동시에
- * 생성한다. API 키 미설정/호출 실패/응답 검증 실패 시 null — 평가서 작성 자체(강사의
- * 수동 작성)를 막아서는 안 되므로 호출부가 null을 폴백으로 처리해야 한다. */
+function buildLessonContextBlock(ctx: LessonContext): string {
+  return `
+LESSON CONTEXT (this is all the context you have — see HISTORICAL CONTEXT POLICY below):
+lessonDate: ${ctx.lessonDate}
+lessonDurationMinutes: ${ctx.lessonDurationMinutes}
+studentAgeBand: ${ctx.studentAgeBand}
+studentRegion: ${ctx.studentRegion ?? "unknown"}
+textbook: ${ctx.textbookName ?? "unknown"}
+classType: ${ctx.classMethod ?? "unknown"}
+
+historicalContextAvailable: false
+historicalContext: null
+`.trim();
+}
+
+/** transcript + 계산된 Talk Time + 명시적 lesson/student context로부터 Output1/Output2를
+ * 동시에 생성한다. API 키 미설정/호출 실패/응답 검증 실패/historical-claim 환각 탐지
+ * 시 null — 평가서 작성 자체(강사의 수동 작성)를 막아서는 안 되므로 호출부가 null을
+ * 폴백으로 처리해야 한다. 실패 사유는 throw된 Error의 message로 호출부(background
+ * function)의 기존 catch가 그대로 errorMessage에 기록한다. */
 export async function generateAIEvaluationDraft(params: {
   transcript: string;
   talkTime: TalkTimeResult;
-  student: StudentContext;
+  lessonContext: LessonContext;
 }): Promise<AIEvaluationResult | null> {
   const anthropic = getClient();
   if (!anthropic) return null;
-
-  const ageBand = ageBandFromBirthDate(params.student.birthDate);
-  const contextLines = [
-    ageToneInstruction(ageBand),
-    params.student.textbookName ? `Textbook: ${params.student.textbookName}` : null,
-    params.student.classMethod ? `Class type: ${params.student.classMethod}` : null,
-    `Class duration: ${params.student.durationMin} minutes`,
-  ].filter((l): l is string => !!l);
 
   const system = [
     "You generate two reports from an online English tutoring class transcript:",
     "Output 1 (student/parent feedback) and Output 2 (teacher QC evaluation).",
     "",
     GROUNDING_RULES,
+    "",
+    HISTORICAL_CONTEXT_POLICY,
+    "",
+    ageToneInstruction(params.lessonContext.studentAgeBand),
     "",
     STUDENT_FEEDBACK_RULES,
     "",
@@ -86,9 +106,7 @@ export async function generateAIEvaluationDraft(params: {
   ].join("\n");
 
   const userMessage = [
-    `Transcript (speaker-labeled):\n${params.transcript}`,
-    "",
-    contextLines.join("\n"),
+    buildLessonContextBlock(params.lessonContext),
     "",
     talkTimeOverrideBlock({
       teacherSeconds: params.talkTime.teacherSpeakingSeconds,
@@ -96,36 +114,48 @@ export async function generateAIEvaluationDraft(params: {
       studentSeconds: params.talkTime.studentSpeakingSeconds,
       studentPercentage: params.talkTime.studentTalkPercentage,
     }),
+    "",
+    `TRANSCRIPT (speaker-labeled):\n${params.transcript}`,
   ].join("\n");
 
-  try {
-    const message = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 4096,
-      system,
-      messages: [{ role: "user", content: userMessage }],
-      tools: [
-        {
-          name: RESULT_TOOL_NAME,
-          description: "Submit the two completed reports.",
-          input_schema: {
-            type: "object",
-            properties: {
-              studentFeedback: { type: "string", description: "Output 1, complete and ready to store as-is." },
-              teacherQc: { type: "string", description: "Output 2, complete and ready to store as-is." },
-            },
-            required: ["studentFeedback", "teacherQc"],
+  const message = await anthropic.messages.create({
+    model: "claude-haiku-4-5",
+    max_tokens: 4096,
+    system,
+    messages: [{ role: "user", content: userMessage }],
+    tools: [
+      {
+        name: RESULT_TOOL_NAME,
+        description: "Submit the two completed reports.",
+        input_schema: {
+          type: "object",
+          properties: {
+            studentFeedback: { type: "string", description: "Output 1, complete and ready to store as-is." },
+            teacherQc: { type: "string", description: "Output 2, complete and ready to store as-is." },
           },
+          required: ["studentFeedback", "teacherQc"],
         },
-      ],
-      tool_choice: { type: "tool", name: RESULT_TOOL_NAME },
-    });
+      },
+    ],
+    tool_choice: { type: "tool", name: RESULT_TOOL_NAME },
+  });
 
-    const toolUse = message.content.find((b) => b.type === "tool_use" && b.name === RESULT_TOOL_NAME);
-    if (!toolUse || toolUse.type !== "tool_use") return null;
+  const toolUse = message.content.find((b) => b.type === "tool_use" && b.name === RESULT_TOOL_NAME);
+  if (!toolUse || toolUse.type !== "tool_use") return null;
 
-    return validateAIEvaluationResult(toolUse.input);
-  } catch {
-    return null;
+  const result = validateAIEvaluationResult(toolUse.input);
+  if (!result) return null;
+
+  // Post-generation application-level 검증 — HISTORICAL_CONTEXT_POLICY를 prompt에
+  // 넣는 것만으로는 100% 보장되지 않으므로, 저장 전에 한 번 더 걸러낸다(LLM 재호출
+  // 없이, 순수 패턴 검사만).
+  const feedbackCheck = checkNoUngroundedHistoricalClaims(result.studentFeedback, params.lessonContext.lessonDate);
+  const qcCheck = checkNoUngroundedHistoricalClaims(result.teacherQc, params.lessonContext.lessonDate);
+  if (!feedbackCheck.ok || !qcCheck.ok) {
+    throw new Error(
+      `AI draft rejected — ungrounded historical claim detected: ${[...feedbackCheck.issues, ...qcCheck.issues].join("; ")}`,
+    );
   }
+
+  return result;
 }

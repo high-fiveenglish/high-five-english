@@ -34,6 +34,41 @@ absent, say so explicitly rather than inventing it. Only create a correction ent
 an error the student actually said, verbatim.
 `.trim();
 
+// 2026-10-01 실제 Claude API E2E 테스트에서 발견된 구체적 환각을 막기 위해 추가한
+// 규칙("...a meaningful step forward from his earlier February sessions." — 테스트
+// transcript 어디에도 없는 과거 수업 이력을 생성함). GROUNDING_RULES는 "이번
+// transcript 안의 사실"만 다뤘지, "이번 transcript 밖의(이전 수업 등) 사실을 만들어
+// 내지 말라"는 명시적 금지가 없었다 — "학생 진도 리포트"라는 장르 자체가 학습
+// 데이터상 "지난번보다 나아졌다" 류 문구가 흔해서, 명시적으로 막지 않으면 모델이
+// 그럴듯하게 지어낸다. 단순 금칙어 목록이 아니라 "이번 수업 내부 비교는 허용, 수업
+// 밖 비교는 금지"라는 원칙으로 설명한다(10번 항목 — 과도하게 막지 않기 위함).
+export const HISTORICAL_CONTEXT_POLICY = `
+HISTORICAL CONTEXT POLICY:
+You are given exactly two kinds of information: (1) today's transcript and (2) the
+LESSON CONTEXT block (date, duration, age band, region, measured talk time). You are
+NOT given any information about any other lesson — not this student's history, not
+their past performance, not whether they've had lessons before. Historical context is
+explicitly marked "NOT PROVIDED" in this MVP.
+
+Therefore:
+A. Do not state or imply anything about a previous lesson, an earlier session, a prior
+   class, "last month," or any lesson other than the one in today's transcript.
+B. Do not make comparisons like "improved from before," "continued progress," "a step
+   forward from earlier sessions," or similar — you have no baseline to compare against.
+C. Do not guess or invent the lesson date. Use the lessonDate given in LESSON CONTEXT
+   exactly as given, in the [Date] placeholders in Output 1 and Output 2. Never write a
+   different date, and never write "today's date" as if you know what today is.
+D. Do not guess the student's past achievements or past weaknesses.
+E. This restriction applies ONLY to claims that reach outside today's transcript. It
+   does NOT apply to describing change WITHIN this same lesson — e.g. "the student
+   first said X, and after the tutor's correction said Y" is fine, since both X and Y
+   are from today's transcript. The distinction is: current-lesson-internal evidence is
+   always fine; any claim that implies knowledge of a DIFFERENT lesson is not, because
+   that information was never given to you.
+F. If you have no basis to describe growth or change, simply describe what happened in
+   today's lesson as a standalone observation — do not manufacture a trend.
+`.trim();
+
 // 수업 중 산만함/불성실 메모(선택) — Skill 원문: 아동/청소년에게만, "지적"이 아니라
 // "참고용 안내"로 짧게 프레이밍, 패턴이 아닌 사소한 일회성은 포함하지 않음.
 export const ATTITUDE_NOTE_RULE = `
@@ -130,6 +165,55 @@ section rather than silently trusting or silently ignoring it.
 `.trim();
 }
 
+// 위 HISTORICAL_CONTEXT_POLICY를 prompt에 넣는 것만으로는 100% 안전하다고 보장할 수
+// 없다(LLM이 지시를 놓칠 수 있음) — 저장 전 application 레벨에서 한 번 더 걸러낸다
+// (12번 항목: "LLM을 한 번 더 호출하지 않는 가장 단순하고 안정적인 검증"). 단순
+// 금칙어 목록이 아니라 "수업 밖 비교"를 가리키는 구체적 패턴만 매칭한다 — "먼저
+// X라고 했다가 Y로 고쳤다" 같은 같은 수업 내부 비교(허용 대상, 10번 항목)는 이
+// 패턴들과 어휘가 다르므로 오탐하지 않는다.
+const HISTORICAL_CLAIM_PATTERNS: RegExp[] = [
+  /\b(previous|earlier|prior)\s+(lesson|session|class)\b/i,
+  /\blast\s+month\b/i,
+  /\bsince\s+(last|the\s+last|previous)\s+(lesson|session|class)\b/i,
+  /compared\s+(to|with)\s+(before|previous|earlier)/i,
+  /\b(improved|improvement|progress)\s+from\s+(previous|earlier|prior|before)/i,
+  /continued\s+progress\s+from\s+(previous|prior|earlier)/i,
+  /\b(his|her|their)\s+(earlier|previous|prior)\s+\w*\s*sessions?\b/i,
+];
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+export interface GroundingCheckResult {
+  ok: boolean;
+  issues: string[];
+}
+
+/** HISTORICAL_CONTEXT_POLICY 위반 여부를 생성된 텍스트에서 탐지한다 — lessonDate는
+ * "YYYY-MM-DD" ISO 문자열. 날짜 불일치(실제 수업 날짜와 다른 달 이름 언급)와 역사적
+ * 비교 문구 패턴 둘 다 확인한다. */
+export function checkNoUngroundedHistoricalClaims(text: string, lessonDateISO: string): GroundingCheckResult {
+  const issues: string[] = [];
+
+  for (const pattern of HISTORICAL_CLAIM_PATTERNS) {
+    const m = text.match(pattern);
+    if (m) issues.push(`historical-claim pattern matched: "${m[0]}"`);
+  }
+
+  const lessonMonthIndex = new Date(`${lessonDateISO}T00:00:00Z`).getUTCMonth();
+  const lessonMonthName = MONTH_NAMES[lessonMonthIndex];
+  for (const month of MONTH_NAMES) {
+    if (month === lessonMonthName) continue;
+    if (new RegExp(`\\b${month}\\b`).test(text)) {
+      issues.push(`unexpected month "${month}" mentioned (lessonDate's month is ${lessonMonthName})`);
+    }
+  }
+
+  return { ok: issues.length === 0, issues };
+}
+
 // Output 1 — 학생/학부모용. Skill의 섹션 구조·문체 규칙 그대로(날짜/언어 선택 관련
 // 지시는 production 쪽에서 이미 결정되므로 제외). Canonical 언어는 영어(아래 참고).
 export const STUDENT_FEEDBACK_RULES = `
@@ -148,7 +232,7 @@ only as section markers (📘 📝 💬 ✅ 🌟), one per section line.
 
 Structure, in this exact order:
 
-📘 [Date] Today's Class Feedback — [Topic]
+📘 [lessonDate from LESSON CONTEXT, formatted naturally, e.g. "October 1, 2026"] Today's Class Feedback — [Topic]
 [3-5 sentences, scaled to class length: open with a specific detail from this class
 (not a generic scene-setter), cover the lesson's main topic/goal and what the student
 actually practiced, so the reader gets a sense of the whole class.]
@@ -195,7 +279,7 @@ coaching. No emojis, no markdown.
 
 Structure, in this exact order:
 
-Tutor Evaluation — [Date] — [Tutor name if known, else "Tutor"]
+Tutor Evaluation — [same lessonDate as Output 1, exactly] — [Tutor name if known, else "Tutor"]
 
 1. Talk Time Ratio: Teacher [X]% / Student [Y]% (use the SYSTEM-MEASURED value given
    to you — do not estimate)
