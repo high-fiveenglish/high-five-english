@@ -3,6 +3,7 @@ import { timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { parseTranscriptWebhookPayload } from "@/lib/assemblyai";
 import { ALREADY_PROGRESSED_STATUSES } from "@/lib/recordingWorkflow";
+import { triggerRecordingProcessing } from "@/lib/recordingTrigger";
 
 // AssemblyAI가 전사 완료/실패 시 호출하는 webhook. teacherAuth.ts의 HMAC 세션 서명과
 // 달리 여기선 AssemblyAI가 보내는 고정 커스텀 헤더(X-Webhook-Secret)를 서버가 미리
@@ -12,9 +13,9 @@ import { ALREADY_PROGRESSED_STATUSES } from "@/lib/recordingWorkflow";
 //없기 때문이다.
 //
 // 빠른 응답 + 최소 상태 갱신만 여기서 한다(Talk Time 계산, Claude 평가 생성 같은
-// 무거운 작업은 아래에서 Netlify Background Function을 fire-and-forget으로 호출해
-// 넘긴다 — 이 라우트 자체의 실행 시간 안에 await하면 안 된다. teacherScheduleSheet.ts의
-// fire-and-forget 호출 패턴과 동일).
+// 무거운 작업은 아래에서 Netlify Background Function을 호출해 넘긴다 — 그 처리 자체를
+// 이 라우트의 실행 시간 안에서 기다리지 않는다. 호출 실패 시 복구 경로는
+// recordingRecovery.ts 참고).
 function timingSafeEqualString(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
   const bufB = Buffer.from(b);
@@ -86,20 +87,12 @@ export async function POST(request: Request) {
   }
 
   // 무거운 처리(transcript 조회, Talk Time 계산, Claude 평가 생성)는 별도 Background
-  // Function에 넘긴다 — 이 webhook 핸들러 자체의 응답 시간 안에서 await하지 않는다.
-  const siteUrl = process.env.URL ?? process.env.DEPLOY_URL;
-  if (siteUrl) {
-    fetch(`${siteUrl}/.netlify/functions/process-recording-background`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ audioRecordingId: recording.id }),
-    }).catch(() => {
-      /* fire-and-forget — 실패해도 webhook 응답 자체는 이미 끝났다. 재처리는
-         Netlify Scheduled Function이 NEEDS_REVIEW로 넘어가지 못한 TRANSCRIBED
-         레코드를 주기적으로 다시 집어 재시도하는 안전망으로 커버한다(이번 Phase
-         범위 밖 — 별도 작업). */
-    });
-  }
+  // Function에 넘긴다. Background Function은 즉시 202를 돌려주므로 요청이 실제로
+  // 전송·수락될 때까지만 await한다(서버리스 런타임이 응답 후 미전송 fetch를 끊는 것을
+  // 막기 위함). 호출이 실패해도 레코드는 TRANSCRIBED에 남고,
+  // recover-transcribed-recordings(Netlify Scheduled Function)가 주기적으로 재트리거한다
+  // — 재트리거돼도 background 쪽 원자적 ANALYZING 선점 때문에 Claude는 한 번만 호출된다.
+  const triggered = await triggerRecordingProcessing(recording.id);
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, ...(triggered ? {} : { note: "processing_trigger_deferred_to_recovery" }) });
 }
