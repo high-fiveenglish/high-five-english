@@ -1,0 +1,50 @@
+name: Admin CI
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - "admin/**"
+      - ".github/workflows/admin-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-admin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.x
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+
+      - name: Install dependencies
+        working-directory: admin
+        run: npm ci
+
+      - name: TypeScript
+        working-directory: admin
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: admin
+        run: npm run build
+
+      - name: Fixture tests
+        working-directory: admin
+        run: |
+          set -euo pipefail
+          for f in             scripts/test-talkTime.ts             scripts/test-assemblyaiParsing.ts             scripts/test-recordingWorkflow.ts             scripts/test-recordingProcessing.ts             scripts/test-teacherQcVisibility.ts             scripts/test-aiEvaluationDraft.ts             scripts/test-evaluationFormatPreservation.ts             scripts/test-evaluationTranslation.ts
+          do
+            echo "===== $f ====="
+            npx tsx "$f"
+          done
