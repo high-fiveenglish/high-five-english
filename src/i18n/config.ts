@@ -11,6 +11,7 @@ import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import resourcesToBackend from "i18next-resources-to-backend";
 import type { CurrencyCode } from "../data/currencies";
+import { brandSourceRef } from "./brandDefaults";
 
 export interface SupportedLanguageInput {
   code: string;
@@ -157,23 +158,40 @@ export const i18nReady = i18n
     react: { useSuspense: false },
   })
   .then(() => {
-    // {{brandName}}은 수백 곳의 번역 문구에서 전역 interpolation 값(TenantContext.tsx의
-    // BrandNameSync 참고)으로 채워지는데, 그 값은 지금까지 tenant fetch가 끝난 뒤
-    // useEffect에서만 설정돼 앱이 맨 처음 렌더링되는 순간에는 아직 비어 있었다 —
-    // 그 사이 "{{brandName}}" 토큰이 그대로 보이거나(useEffect는 첫 페인트 이후
-    // 실행), 하필 그 시점에 이미 로드된 namespace의 t()가 emit으로 전달되기 전에
-    // 구독이 늦게 걸려 갱신이 아예 누락되는 경우까지 있었다(특히 아래 "path"
-    // detector로 초기 언어가 처음부터 URL과 맞아 changeLanguage 호출 자체가 생략될
-    // 때). 여기서 이미 로드된 현재 언어의 common:footer.brand_name으로 즉시 한 번
-    // 채워두면, 첫 렌더링부터 그 값이 존재해 위 문제가 애초에 발생하지 않는다.
-    // 실제 tenant(협력사) 값은 이후 BrandNameSync가 그대로 덮어쓴다.
-    i18n.options.interpolation = {
-      ...i18n.options.interpolation,
-      defaultVariables: {
-        ...i18n.options.interpolation?.defaultVariables,
-        brandName: i18n.t("footer.brand_name"),
-      },
-    };
+    // {{brandName}}은 수백 곳의 번역 문구에서 전역 interpolation 값으로 채워지는데,
+    // 그 값은 지금까지 tenant fetch가 끝난 뒤 useEffect에서만 설정돼 앱이 맨 처음
+    // 렌더링되는 순간에는 아직 비어 있었다 — 그 사이 "{{brandName}}" 토큰이 그대로
+    // 보이는 문제가 있었다(useEffect는 첫 페인트 이후 실행). 여기서 이미 로드된
+    // 현재 언어로 즉시 한 번 채워두면, 첫 렌더링부터 그 값이 존재해 문제가 애초에
+    // 발생하지 않는다. 실제 tenant(협력사) 값은 이후 TenantContext.tsx의
+    // BrandNameSync가 brandSourceRef를 갱신하면 적용된다(아래 applyBrandDefaultVariables 참고).
+    applyBrandDefaultVariables(i18n.language);
   });
+
+/** brandSourceRef(언어와 무관한 입력)로부터 현재 언어의 {{brandName}} 등 전역
+ * interpolation.defaultVariables를 계산해 설정한다. lng를 명시적으로 받는 이유는
+ * "languageChanged" 리스너(아래)가 새 언어를 인자로 넘겨주기 때문 — i18n.language가
+ * 아직 그 값으로 갱신되기 전에 호출될 수 있어, i18n.language를 암묵적으로 읽으면
+ * 안 된다. */
+export function applyBrandDefaultVariables(lng: string): void {
+  const src = brandSourceRef.current;
+  const brandName = src.isHeadquarters ? i18n.getFixedT(lng, "common")("footer.brand_name") : src.tenantName;
+  i18n.options.interpolation = {
+    ...i18n.options.interpolation,
+    defaultVariables: { brandName, ceoName: src.ceoName, brandEmail: src.brandEmail, brandPhone: src.brandPhone },
+  };
+}
+
+// 모듈이 로드되는 시점(어떤 React 컴포넌트도 아직 마운트되지 않은 시점)에 등록한다.
+// i18next는 "languageChanged" 리스너를 등록 순서대로 호출하므로, 이렇게 가장 먼저
+// 등록해 두면 react-i18next 내부 구독자(각 컴포넌트의 useTranslation 재렌더링
+// 트리거)보다 항상 먼저 실행된다 — 그래서 라이브 언어 전환(선택기로 /ko → /ja 등)
+// 시에도 각 컴포넌트가 "새 언어로 처음" 재렌더링되는 바로 그 순간부터 이미
+// defaultVariables가 맞는 값이다. 과거에는 이 계산을 TenantContext.tsx의 useEffect
+// 안에서만 하고 끝에 languageChanged를 수동으로 다시 emit해 재렌더링을 유도했는데,
+// 그 두 번째 emit이 일부 컴포넌트(예: Hero)의 재렌더링을 끌어내지 못해 brandName이
+// 이전 언어 값으로 고착되는 버그가 있었다(react-i18next의 useSyncExternalStore
+// 구독이 "같은 값으로의 반복 emit"을 반영하지 못하는 경우가 있었던 것으로 보임).
+i18n.on("languageChanged", applyBrandDefaultVariables);
 
 export default i18n;
