@@ -231,6 +231,32 @@ const GOOD_QC = qcLines();
   );
   assert(readsWithI[1].possibleReadAloud, "3. text after an explicit read request is still flagged even if it contains 'I'");
 
+  // ── explicit text/role designation and the five reading cases of the real recording (synthetic text, same structure) ──
+  const flagsOf = (lines: [("T" | "S"), string][]) =>
+    toRoleUtterances(
+      lines.map(([who, text], i) => ({ speaker: who === "T" ? "A" : "B", start: i * 5000, end: i * 5000 + 4000, text })),
+      "A",
+    ).map((r) => r.possibleReadAloud);
+  const scriptedI = "I was surprised that the numbers were so big, said my colleague, and I think many people will be surprised too when they read the report";
+  assert(flagsOf([["T", "Role B."], ["S", scriptedI]])[1], "3. a short teacher turn naming the role card + a scripted text with I/my -> reading");
+  assert(flagsOf([["T", "Okay, the dialogue on page 12."], ["S", scriptedI]])[1], "3. a short teacher turn naming the page/dialogue -> reading");
+  assert(!flagsOf([["T", "What is the dialogue on page 12 about?"], ["S", "It is about two friends who talk about a new school"]])[1], "3. an open question that mentions the text does not make the answer reading");
+  assert(!flagsOf([["T", "Okay, start reading."], ["S", scriptedI], ["T", "Okay."], ["S", "Um, I think it is, like, really common in my school too"]])[3], "3. a reply with disfluencies after a bare 'okay' is not a continuation");
+  assert(flagsOf([["T", "Okay, start reading."], ["S", scriptedI], ["T", "Okay."], ["S", scriptedI]])[3], "3. a scripted continuation after a bare 'okay' is still reading");
+
+  const real1 = flagsOf([["T", "So our lesson is about health. Role A. Please read."], ["S", "Diane, you think walking and cycling more is the best way to save energy? Tell the teacher at least three reasons."]]);
+  assert(real1[1], "3. real-recording case 1: Role A prompt after 'Please read' -> reading");
+  const real2 = flagsOf([["T", "Okay, let's see. What about role B? Can you read roll B?"], ["S", "Diane, you think using fans instead of air conditioners is the best way to save energy? Tell the teacher at least three reasons why."]]);
+  assert(real2[1], "3. real-recording case 2: Role B prompt after 'Can you read roll B?' -> reading");
+  const real3 = flagsOf([["T", "Now let's read. How bad are these? Can you read all this?"], ["S", "No. Sleep, stress, eyesight problems, Dehydration."]]);
+  assert(real3[1], "3. real-recording case 3: a word list after 'Can you read all this?' -> reading");
+  const real4 = flagsOf([["T", "Okay, now we're just gonna read the first paragraph. What are they saying about headaches? Okay, start reading."], ["S", "Diane, if you get regular headaches, you're not alone. A new report says half of us suffer from headaches. Researchers looked at many different studies on headaches from 1961 to 2020."]]);
+  assert(real4[1], "3. real-recording case 4: the passage after 'start reading' -> reading");
+  const real5 = flagsOf([["T", "I don't know if you ever experience stress at your age sometimes?"], ["S", "Since everyone is working hard, sometimes I actually have academic pressure, but I didn't actually had a headache when I had those pressures, I had headache only when I studied too much"]]);
+  assert(!real5[1], "3. real-recording case 5: the fluent spontaneous answer with the real grammar error is NOT reading");
+  // The recording's title line ("what is the title of lesson 48?" -> the student reads the headline) no longer counts as a
+  // read request by itself; only an explicit "please read the title" does (tests above).
+
   const rules = buildProjectRules({ lessonDurationMinutes: 25, speakerCount: 2 });
   assert(rules.includes("TEXT-ONLY EVIDENCE") && /Never comment on pronunciation, accent, intonation, fluency, pacing/.test(rules), "3. rules forbid pronunciation/fluency/pacing comments from a text transcript");
   assert(/speech-to-text artifacts, not student mistakes/.test(rules) && /never use them as a ❌ item/i.test(rules), "3. rules tell Claude that odd spellings/garbled words are speech-to-text artifacts, not ❌ items");

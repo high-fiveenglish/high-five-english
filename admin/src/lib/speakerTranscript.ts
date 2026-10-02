@@ -64,12 +64,19 @@ const DISFLUENCY = /\b(?:um+|uh+|er+|hmm+|like|you know|i mean)\b/i;
 const PROSE_LIKE_MIN_WORDS = 30;
 const READ_ALOUD_MIN_WORDS = 4;
 
+// A short teacher turn that only names the text to be read ("Role B.", "page 12", "the dialogue") is an instruction to read it.
+// A long turn that merely mentions the text, or any open question about it, is not.
+const NAMES_TEXT_MAX_WORDS = 12;
+function namesTextToRead(teacherText: string): boolean {
+  return TEXT_REFERENCE.test(teacherText) && !OPEN_QUESTION.test(teacherText) && wordCount(teacherText) <= NAMES_TEXT_MAX_WORDS;
+}
+
 function continuesReading(teacherText: string): boolean {
   return !teacherText.includes("?") && (CONTINUE_CUE.test(teacherText) || wordCount(teacherText) <= CONTINUE_MAX_WORDS);
 }
 
 /** Flags student turns that probably read written material, using the teacher turn before them as evidence:
- * (1) the turn(s) right after an explicit read instruction, until the next teacher turn;
+ * (1) the turn(s) right after an explicit read instruction (or a short turn naming the text/role to read), until the next teacher turn;
  * (2) the continuation of a flagged read segment across a short, non-question teacher interjection;
  * (3) long prose-like turns with no speech disfluencies, unless the teacher had just asked or prompted the student
  * (a pointer to the textbook/passage that is not an open question counts as evidence for reading, not as a prompt).
@@ -84,14 +91,16 @@ function detectReadAloud(base: Omit<RoleUtterance, "possibleReadAloud">[]): bool
   base.forEach((u, i) => {
     if (u.role === "Teacher") {
       teacherText = u.text;
-      readRequested = READ_REQUEST.test(u.text);
+      readRequested = READ_REQUEST.test(u.text) || namesTextToRead(u.text);
       continuing = lastStudentFlagged && continuesReading(u.text);
       return;
     }
     const words = wordCount(u.text);
     const pointsAtText = teacherText !== null && TEXT_REFERENCE.test(teacherText) && !OPEN_QUESTION.test(teacherText);
     const prompted = teacherText !== null && PROMPT.test(teacherText) && !pointsAtText;
-    if ((readRequested || continuing) && words >= READ_ALOUD_MIN_WORDS) flags[i] = true;
+    // A continuation is a bare "okay"/"next": a reply with disfluencies after it is the student talking, not reading on.
+    if (readRequested && words >= READ_ALOUD_MIN_WORDS) flags[i] = true;
+    else if (continuing && words >= READ_ALOUD_MIN_WORDS && !DISFLUENCY.test(u.text)) flags[i] = true;
     else if (words >= PROSE_LIKE_MIN_WORDS && !DISFLUENCY.test(u.text) && !prompted) flags[i] = true;
     lastStudentFlagged = flags[i];
   });
