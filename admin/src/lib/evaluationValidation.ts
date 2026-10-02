@@ -117,10 +117,14 @@ export function checkQuotesAndReading(studentFeedback: string, teacherQc: string
   const checkText = (label: string, text: string) => {
     // Sentences inside a "Why this happened:" grammar explanation are illustrations of a rule, not attributed speech.
     let inExplanation = false;
+    let inPolish = false;
     for (const line of text.split("\n")) {
       const trimmed = line.trim();
       if (/^Why this happened/i.test(trimmed)) inExplanation = true;
       if (/^[①②③④⑤⑥⑦⑧⑨⑩🌟]/.test(trimmed)) inExplanation = false;
+      // Output 1's "✅ A Few Things to Polish" section: every item there is presented as a student error.
+      if (/^✅\s*(?!["“])/.test(trimmed) && /A Few Things to Polish/i.test(trimmed)) inPolish = true;
+      if (trimmed.startsWith("🌟")) inPolish = false;
       if (trimmed.startsWith("✅")) continue; // the corrected sentence is the one place for non-transcript text
 
       if (trimmed.startsWith("❌")) {
@@ -151,7 +155,7 @@ export function checkQuotesAndReading(studentFeedback: string, teacherQc: string
             issues.push(`${label}: a quotation is not in the transcript: "${short(frag)}" — if you cannot copy it exactly, describe it without quotation marks`);
             continue;
           }
-          if (CORRECTION_WORDS.test(line)) {
+          if (CORRECTION_WORDS.test(line) || inPolish) {
             const students = spoken.filter((r) => r.role === "Student");
             if (students.length > 0 && students.every((r) => r.possibleReadAloud)) {
               issues.push(`${label}: a correction/missed-correction note targets text the student was reading aloud: "${short(frag)}"`);
@@ -314,11 +318,28 @@ function finish(issues: string[]): ValidationResult {
   return { ok: issues.length === 0, issues: [...new Set(issues)].slice(0, 14) };
 }
 
+const TRANSCRIPT_TOOL_MENTION = /\b(?:speech[- ]to[- ]text|transcri(?:pt|ption|bed|ber)|STT|ASR|text artifact)\b/i;
+const NO_ERROR_ITEM = /\bno (?:correction|error|mistake)s? (?:was |is |were |are )?(?:needed|necessary|required)\b|\bnot (?:really )?an error\b|\bno error here\b/i;
+
+/** Parent-facing report hygiene found on a real recording: a polish item that itself says "No correction was needed here",
+ * and an item about a word that "is likely a speech-to-text artifact". Neither belongs in a report to the family. */
+export function checkStudentReportHygiene(studentFeedback: string): string[] {
+  const issues: string[] = [];
+  if (TRANSCRIPT_TOOL_MENTION.test(studentFeedback)) {
+    issues.push("Output 1 mentions the transcript or speech-to-text — the family report must not discuss how the recording was transcribed; leave out any item that depends on a transcription artifact");
+  }
+  if (NO_ERROR_ITEM.test(studentFeedback)) {
+    issues.push("Output 1 has a polish item that says no correction is needed — every ✅ polish item must be a real student error; remove the item instead");
+  }
+  return issues;
+}
+
 /** Output 1 alone — each report is generated and validated separately, so only the failing one is regenerated. */
 export function validateStudentFeedback(studentFeedback: string, ctx: ValidationContext): ValidationResult {
   const historical = checkNoUngroundedHistoricalClaims(studentFeedback, ctx.lessonDateISO, transcriptText(ctx.roles)).issues.map((i) => `Output 1: ${i}`);
   return finish([
     ...checkStudentStructure(studentFeedback),
+    ...checkStudentReportHygiene(studentFeedback),
     ...checkQuotesAndReading(studentFeedback, "", ctx.roles),
     ...checkSkillStructureLimits(studentFeedback, ctx.lessonDurationMinutes),
     ...checkTimeGrounding(studentFeedback, "", ctx),

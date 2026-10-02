@@ -182,11 +182,31 @@ It never replaces the skill's teaching-content rules.)
 - Lines marked "(possible reading aloud)", and any text the student reads from a textbook, article, script, role-play
   card, sample dialogue, vocabulary example or a sentence the teacher supplied, are NOT spontaneous speech. Never list
   such a sentence as a student error (❌), never present it as the student's own attempt, and never count it as a
-  missed correction by the tutor. You may comment on reading fluency or on a mispronounced word.
+  missed correction by the tutor.
 - If a marker looks wrong because the student is clearly speaking freely, use your judgment — but never present text
   from the reading material as the student's own sentence.
 
-6. DUPLICATE PROTECTION
+6. TEXT-ONLY EVIDENCE (you cannot hear the recording)
+- You only have a speech-to-text transcript. Never comment on pronunciation, accent, intonation, fluency, pacing, voice
+  or clarity of speech, unless the TUTOR corrected a pronunciation in the transcript — then cite that tutor line.
+- Odd spellings, proper nouns, names, numbers, brand names, garbled or nonsensical fragments and half-words are
+  speech-to-text artifacts, not student mistakes. Never use them as a ❌ item, never call them a mispronunciation, and
+  never build a point on them. Choose a ❌ sentence only when it is clearly intelligible and contains a real grammar,
+  word-choice or usage error made while the student was speaking freely.
+- A name at the start of a student line (the student addressing someone, or reading a prompt that contains a name) is
+  not a grammar error. Never explain it, never write "the student's name", and never base a ❌ item's explanation on a name.
+- A student line can finish a sentence the tutor started, and speaker labels can split one sentence across two speakers.
+  If a student line begins mid-sentence, read the line before it first; never call such a line a fragment or an error.
+- When you quote a ❌ sentence, copy the whole sentence the student said; never cut it where it looks unfinished if the
+  student's line goes on.
+- Say that the student understood, self-corrected, matched or applied something only when a student line in the
+  transcript shows it. Do not state how many items an activity had unless you counted them in the transcript.
+- A tutor's sentence is never evidence of what the student can do. If an Example line is the tutor's, do not describe it
+  as the student's use of the word.
+- When you cite a tutor question or action in Output 2, use the timestamp of the line where the TUTOR said it, not the
+  timestamp of the student's answer.
+
+7. DUPLICATE PROTECTION
 - Output 1 appears exactly once: one 📘 title line and each of the sections 📝, 💬, ✅, 🌟 exactly once. Output 2 has
   exactly one title and items 1 through 10 exactly once, in order. When the 🌟 section is finished, stop. Never begin
   a second report, a "final version" or a repeat of any section.

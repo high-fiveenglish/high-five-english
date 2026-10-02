@@ -17,6 +17,7 @@ import {
   checkNoDuplicateStructure,
   checkQuotesAndReading,
   checkSkillStructureLimits,
+  checkStudentReportHygiene,
   checkTalkTimeFigures,
   checkTimeGrounding,
   validateEvaluationOutput,
@@ -152,9 +153,58 @@ const GOOD_QC = qcLines();
   const talky = toRoleUtterances([{ speaker: "A", start: 0, end: 1000, text: "Tell me." }, { speaker: "B", start: 2000, end: 9000, text: `um ${prose} like you know` }], "A");
   assert(!talky[1].possibleReadAloud, "3. the same length with speech disfluencies is not flagged");
 
+  // Regression from a real recording: a fluent 30+ word first-person answer (no filler words) was flagged as reading aloud,
+  // which hid the lesson's only real grammar error from the feedback. Synthetic text with the same shape.
+  const fluentOwn =
+    "Sometimes I actually feel a lot of pressure from my school and my academy because everyone around me is working very hard, but I did not actually had a headache when I felt those pressures at all";
+  const own = toRoleUtterances([{ speaker: "A", start: 0, end: 1000, text: "Do you feel stress sometimes?" }, { speaker: "B", start: 2000, end: 9000, text: fluentOwn }], "A");
+  assert(!own[1].possibleReadAloud, "3. a fluent first-person spontaneous answer is not flagged as reading aloud");
+  const title = toRoleUtterances(
+    [
+      { speaker: "A", start: 0, end: 3000, text: "Okay, what is the title of lesson 48?" },
+      { speaker: "B", start: 4000, end: 7000, text: "Half the world's population get headache." },
+    ],
+    "A",
+  );
+  assert(title[1].possibleReadAloud, "3. a title the student reads after 'what is the title of lesson ...?' is flagged (its wording is the book's, not the student's)");
+  const readsWithI = toRoleUtterances(
+    [
+      { speaker: "A", start: 0, end: 3000, text: "Okay, start reading." },
+      { speaker: "B", start: 4000, end: 9000, text: "I was surprised that the numbers were so big, said the lead researcher in the report." },
+    ],
+    "A",
+  );
+  assert(readsWithI[1].possibleReadAloud, "3. text after an explicit read request is still flagged even if it contains 'I'");
+
+  const rules = buildProjectRules({ lessonDurationMinutes: 25, speakerCount: 2 });
+  assert(rules.includes("TEXT-ONLY EVIDENCE") && /Never comment on pronunciation, accent, intonation, fluency, pacing/.test(rules), "3. rules forbid pronunciation/fluency/pacing comments from a text transcript");
+  assert(/speech-to-text artifacts, not student mistakes/.test(rules) && /never use them as a ❌ item/i.test(rules), "3. rules tell Claude that odd spellings/garbled words are speech-to-text artifacts, not ❌ items");
+  assert(/finish a sentence the tutor started/.test(rules), "3. rules cover a student line that finishes the tutor's sentence");
+  assert(/A name at the start of a student line/.test(rules) && /never write "the student's name"/.test(rules), "3. rules forbid explaining a name at the start of a student line");
+  assert(/timestamp of the line where the TUTOR said it/.test(rules), "3. rules require the tutor's own timestamp when citing a tutor action");
+  assert(!/You may comment on reading fluency/.test(rules), "3. the old invitation to comment on reading fluency/mispronunciation is gone");
+
   const wrong = feedback({ ...BLOCK, polish: `✅ A Few Things to Polish\nOne small item.\n\n① Verb choice: get → have\n❌ ${READING_LINE}\n✅ If you have regular headaches, you're not alone.\nWhy this happened:\nHealth conditions usually take "have".` });
   assert(has(checkQuotesAndReading(wrong, GOOD_QC, ROLES), /reading aloud/), "3. a ❌ correction taken from the read-aloud passage is rejected");
   assert(!has(checkQuotesAndReading(GOOD_FEEDBACK, GOOD_QC, ROLES), /reading aloud/), "3. a ❌ correction from spontaneous speech is accepted");
+
+  // Regression from a real recording: the read-aloud passage was quoted in a polish item's heading (not on a ❌ line).
+  const headingQuote = feedback({
+    ...BLOCK,
+    polish: `✅ A Few Things to Polish\nOne small item.\n\n① Article use: "${READING_LINE}"\nWhy this happened:\nA short reason.`,
+  });
+  assert(has(checkQuotesAndReading(headingQuote, GOOD_QC, ROLES), /reading aloud/), "3. a read-aloud sentence quoted in a polish item's heading is rejected");
+  assert(checkStudentReportHygiene(GOOD_FEEDBACK).length === 0, "3b. a normal report passes the hygiene check");
+  const sttItem = feedback({
+    ...BLOCK,
+    polish: `✅ A Few Things to Polish\n① Word choice: pixie (likely a speech-to-text artifact)\nWhy this happened:\nA short reason.`,
+  });
+  assert(checkStudentReportHygiene(sttItem).length === 1, "3b. a polish item about a speech-to-text artifact is rejected");
+  const noError = feedback({
+    ...BLOCK,
+    polish: `✅ A Few Things to Polish\n③ Pronoun reference: No correction was needed here — this was a strength.`,
+  });
+  assert(checkStudentReportHygiene(noError).length === 1, "3b. a polish item that says no correction is needed is rejected");
   const qcWrong = qcLines({ item5: `A missed correction: the student said "${READING_LINE}" and the tutor should be correcting it.` });
   assert(has(checkQuotesAndReading(GOOD_FEEDBACK, qcWrong, ROLES), /reading aloud/), "3. a 'missed correction' note about the read-aloud passage is rejected");
   assert(buildProjectRules({ lessonDurationMinutes: 25, speakerCount: 2 }).includes("READING / SCRIPT PROTECTION"), "3. the project rules tell Claude not to treat reading as errors");

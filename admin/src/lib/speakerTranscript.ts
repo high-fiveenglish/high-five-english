@@ -46,13 +46,17 @@ export function describeSpeakerMapping(utterances: Utterance[], teacherLabel: st
 // A teacher request to read something aloud ("please read", "can you read Role B", "we're gonna read the
 // first paragraph"). Deliberately does not match thanks/praise such as "thank you for reading".
 const READ_REQUEST =
-  /\b(?:please read|can you read|could you read|you can read|you read|let'?s read|(?:gonna|going to|will|want you to) read|go ahead and read|start reading|read (?:the|this|that|it|all|out|aloud|role|first|second|next|paragraph|sentence|line|here))\b/i;
+  /\b(?:please read|can you read|could you read|you can read|you read|let'?s read|what(?:'s| is) the title|(?:gonna|going to|will|want you to) read|go ahead and read|start reading|read (?:the|this|that|it|all|out|aloud|role|first|second|next|paragraph|sentence|line|here))\b/i;
 const DISFLUENCY = /\b(?:um+|uh+|er+|hmm+|like|you know|i mean)\b/i;
+// First-person talk about oneself ("I actually have...", "my school") is spontaneous speech, not a passage. Found on a
+// real recording: a 30-word fluent answer about academic pressure was flagged as reading aloud only because it had no
+// filler words, which hid the one real grammar error in the lesson from the feedback.
+const FIRST_PERSON = /\b(?:i|i'm|i've|i'd|i'll|me|my|mine|myself)\b/i;
 const PROSE_LIKE_MIN_WORDS = 30;
 const READ_ALOUD_MIN_WORDS = 4;
 
 /** Flags student turns that probably read written material: (1) the turn(s) right after a teacher read request,
- * until the next teacher turn; (2) long prose-like turns with no speech disfluencies. Conservative on purpose —
+ * until the next teacher turn; (2) long prose-like turns with no speech disfluencies and no first-person talk about oneself. Conservative on purpose —
  * a wrong flag only hides one sentence from being used as an "error". */
 function detectReadAloud(base: Omit<RoleUtterance, "possibleReadAloud">[]): boolean[] {
   const flags = new Array<boolean>(base.length).fill(false);
@@ -64,7 +68,7 @@ function detectReadAloud(base: Omit<RoleUtterance, "possibleReadAloud">[]): bool
     }
     const words = wordCount(u.text);
     if (readRequested && words >= READ_ALOUD_MIN_WORDS) flags[i] = true;
-    else if (words >= PROSE_LIKE_MIN_WORDS && !DISFLUENCY.test(u.text)) flags[i] = true;
+    else if (words >= PROSE_LIKE_MIN_WORDS && !DISFLUENCY.test(u.text) && !FIRST_PERSON.test(u.text)) flags[i] = true;
   });
   return flags;
 }
