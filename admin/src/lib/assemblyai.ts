@@ -11,6 +11,30 @@ function getApiKey(): string | null {
   return process.env.ASSEMBLYAI_API_KEY ?? null;
 }
 
+/** 운영 음성 인식 모델 — 비용 정책상 Universal-2로 고정한다. AssemblyAI의 기본값
+ * (["universal-3-5-pro", "universal-2"])을 그대로 두면 상위 모델로 과금될 수 있다.
+ * 환경변수로 바꿀 수 없게 한 것은 의도적이다: 환경변수 하나로 고비용 모델로 조용히
+ * 바뀌는 사고를 구조적으로 막는다. 모델을 바꾸려면 이 상수를 코드 리뷰를 거쳐 수정한다.
+ * 모델 선택은 이 파일 한 곳에서만 관리한다 — 호출부에서 모델명을 직접 쓰지 않는다. */
+export const ASSEMBLYAI_SPEECH_MODELS: readonly string[] = Object.freeze(["universal-2"]);
+
+/** POST /v2/transcript 요청 본문. speaker_labels는 항상 true — Talk Time Ratio 계산(talkTime.ts)에 필수. */
+export function buildTranscriptRequestBody(audioUrl: string, options: SubmitTranscriptOptions = {}): Record<string, unknown> {
+  return {
+    audio_url: audioUrl,
+    speech_models: [...ASSEMBLYAI_SPEECH_MODELS],
+    speaker_labels: true,
+    ...(options.webhookUrl
+      ? {
+          webhook_url: options.webhookUrl,
+          ...(options.webhookSecret
+            ? { webhook_auth_header_name: "X-Webhook-Secret", webhook_auth_header_value: options.webhookSecret }
+            : {}),
+        }
+      : {}),
+  };
+}
+
 export interface SubmitTranscriptOptions {
   /** AssemblyAI가 처리 완료 시 POST할 webhook URL. 생략하면 polling으로 결과를 받아야 한다. */
   webhookUrl?: string;
@@ -23,8 +47,7 @@ export interface SubmitTranscriptResult {
   status: string;
 }
 
-/** 녹음 파일의 공개 다운로드 가능 URL(audioUrl)을 AssemblyAI에 제출해 전사를 요청한다.
- * speaker_labels는 항상 true — Talk Time Ratio 계산(talkTime.ts)에 필수. */
+/** 녹음 파일의 공개 다운로드 가능 URL(audioUrl)을 AssemblyAI에 제출해 전사를 요청한다. */
 export async function submitTranscript(
   audioUrl: string,
   options: SubmitTranscriptOptions = {},
@@ -35,18 +58,7 @@ export async function submitTranscript(
   const res = await fetch(`${ASSEMBLYAI_BASE}/transcript`, {
     method: "POST",
     headers: { Authorization: apiKey, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      audio_url: audioUrl,
-      speaker_labels: true,
-      ...(options.webhookUrl
-        ? {
-            webhook_url: options.webhookUrl,
-            ...(options.webhookSecret
-              ? { webhook_auth_header_name: "X-Webhook-Secret", webhook_auth_header_value: options.webhookSecret }
-              : {}),
-          }
-        : {}),
-    }),
+    body: JSON.stringify(buildTranscriptRequestBody(audioUrl, options)),
   });
   if (!res.ok) return null;
   const data = (await res.json()) as { id: string; status: string };
