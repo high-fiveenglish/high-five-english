@@ -1,5 +1,3 @@
-Loaded Prisma config from prisma.config.ts.
-
 -- CreateTable
 CREATE TABLE "audio_recordings" (
     "id" SERIAL NOT NULL,
