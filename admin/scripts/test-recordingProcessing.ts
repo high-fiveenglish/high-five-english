@@ -66,12 +66,15 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
     },
     async fetchTranscript(transcriptId) {
       calls.fetchTranscript++;
-      fetchCount++;
+      // 공유 변수를 나중에(두 tick 이후) 다시 읽으면 동시 호출 양쪽 모두 서로를
+      // "나중 호출"로 보게 되는 테스트 자체의 레이스가 생긴다 — 진입 시점에 자신의
+      // 순번을 스냅샷해서, 실제로 먼저 들어온 호출만 성공하게 한다.
+      const myFetchIndex = ++fetchCount;
       // 두 번 양보해 동시에 시작한 호출들이 모두 "선점 전" 지점까지 도달하게 한다.
       await tick();
       await tick();
       const row = [...db.values()].find((r) => r.providerTranscriptId === transcriptId);
-      if (row && options.fetchThrowsFor?.has(row.id) && fetchCount > 1) {
+      if (row && options.fetchThrowsFor?.has(row.id) && myFetchIndex > 1) {
         throw new Error("simulated AssemblyAI failure on duplicate invocation");
       }
       return {
