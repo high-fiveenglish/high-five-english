@@ -1,5 +1,6 @@
 [build]
-  command = "npm run build"
+  # Turbopack's build cache records secret env values; Netlify's secrets scan runs after this command and would flag them.
+  command = "npm run build && node -e \"require('fs').rmSync('.next/cache',{recursive:true,force:true})\""
   functions = "netlify/functions"
 
 [[plugins]]
