@@ -33,11 +33,18 @@ const MAX_TOKENS = 8192;
 const TEMPERATURE = 0.2;
 // 재시도는 이전 보고서를 부분 수정하게 하므로 위반이 시도마다 줄어든다(실제 음성에서 3→1→1건). 4회까지 허용한다.
 const MAX_ATTEMPTS = 4;
+// 운영 안전장치(평가 품질 로직이 아님): Netlify Background Function은 최대 15분이다. SDK 기본값(요청당
+// 10분 타임아웃, 2회 재시도)이면 응답이 멈췄을 때 15분을 넘겨 ANALYZING에 남을 수 있다. 요청당
+// 타임아웃을 90초로, SDK 내부 재시도를 1회로 줄이고, 마감 시간이 지나면 새 시도를 시작하지 않는다
+// (이미 시작한 시도는 최대 180초 안에 끝난다 → 9분 + 3분 < 15분).
+const REQUEST_TIMEOUT_MS = 90_000;
+const SDK_MAX_RETRIES = 1;
+const ATTEMPT_DEADLINE_MS = 9 * 60 * 1000;
 
 let client: Anthropic | null = null;
 function getClient(): Anthropic | null {
   if (!process.env.ANTHROPIC_API_KEY) return null;
-  if (!client) client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  if (!client) client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: REQUEST_TIMEOUT_MS, maxRetries: SDK_MAX_RETRIES });
   return client;
 }
 
@@ -224,7 +231,11 @@ export async function generateAIEvaluationDraft(params: GenerateAIEvaluationPara
     const spec = OUTPUTS[kind];
     let issues: string[] = [];
     let previousReport: string | null = null;
+    const startedAt = Date.now();
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      if (attempt > 1 && Date.now() - startedAt > ATTEMPT_DEADLINE_MS) {
+        throw new Error(`${spec.label} not accepted within the time budget after ${attempt - 1} attempts — ${issues.join("; ")}`);
+      }
       const userMessage = [
         baseUserMessage,
         "",

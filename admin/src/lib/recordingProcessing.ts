@@ -7,6 +7,7 @@ import type { TalkTimeResult, Utterance } from "./talkTime";
 import type { AssemblyAITranscriptResult } from "./assemblyai";
 import type { AIEvaluationResult, LessonContext } from "./aiEvaluation";
 import { isAuthorizedProcessingRequest, RECORDING_PROCESSING_SECRET_HEADER } from "./recordingProcessingAuth";
+import { truncateErrorMessage } from "./recordingWorkflow";
 
 export interface RecordingForProcessing {
   id: number;
@@ -41,6 +42,7 @@ export interface ProcessRecordingDeps {
 export type ProcessRecordingOutcome =
   | "not_found"
   | "transcript_unavailable"
+  | "transcript_fetch_failed"
   | "already_claimed"
   | "draft_generation_failed"
   | "ok"
@@ -54,8 +56,21 @@ export async function processRecording(audioRecordingId: number, deps: ProcessRe
   // 실패로 바꿀 수 있다.
   let ownedStatus: "TRANSCRIBED" | "ANALYZING" = "TRANSCRIBED";
   try {
-    const transcript = await deps.fetchTranscript(recording.providerTranscriptId);
-    if (!transcript || transcript.status !== "completed" || !transcript.utterances || transcript.utterances.length === 0) {
+    // transcript를 못 가져온 것(네트워크 오류·타임아웃·AssemblyAI 4xx/5xx·아직 processing)은 일시적
+    // 문제일 수 있다 — 아직 비용이 드는 일(Claude)을 하지 않았으므로 레코드를 TRANSCRIBED에 그대로
+    // 둔다. recover-transcribed-recordings가 주기적으로 다시 시도하고, 24시간이 지나도 안 되면
+    // ANALYSIS_FAILED로 끝낸다(무한 재시도 없음). 영구적인 실패로 바로 확정하는 것은 AssemblyAI가
+    // "끝났다/실패했다"고 분명히 답한 경우뿐이다.
+    let transcript: AssemblyAITranscriptResult | null;
+    try {
+      transcript = await deps.fetchTranscript(recording.providerTranscriptId);
+    } catch {
+      return "transcript_fetch_failed";
+    }
+    if (!transcript || transcript.status === "processing" || transcript.status === "queued") {
+      return "transcript_fetch_failed";
+    }
+    if (transcript.status !== "completed" || !transcript.utterances || transcript.utterances.length === 0) {
       await deps.markFailed(recording.id, ownedStatus, "AssemblyAI transcript not completed or missing utterances");
       return "transcript_unavailable";
     }
@@ -96,7 +111,7 @@ export async function processRecording(audioRecordingId: number, deps: ProcessRe
     await deps.saveDraft(recording.id, result);
     return "ok";
   } catch (err) {
-    await deps.markFailed(recording.id, ownedStatus, err instanceof Error ? err.message : String(err));
+    await deps.markFailed(recording.id, ownedStatus, truncateErrorMessage(err instanceof Error ? err.message : String(err)));
     return "error";
   }
 }
@@ -122,7 +137,7 @@ export async function handleProcessRecordingRequest(
     return new Response("invalid_json", { status: 400 });
   }
   const audioRecordingId = body?.audioRecordingId;
-  if (typeof audioRecordingId !== "number") {
+  if (typeof audioRecordingId !== "number" || !Number.isSafeInteger(audioRecordingId) || audioRecordingId <= 0) {
     return new Response("missing_audioRecordingId", { status: 400 });
   }
 

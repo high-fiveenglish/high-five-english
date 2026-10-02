@@ -46,5 +46,43 @@ for (const file of publicApiFiles) {
   assert(!content.includes("teacherQcDraft"), `public API(webhook 제외)에 teacherQcDraft 없음: ${path.relative(root, file)}`);
 }
 
+// ── 서버/API 수준 접근 범위: AudioRecording(전사문·초안·QC)은 강사 본인 수업 화면과 서버-서버 경로에서만 쓰인다 ──
+const appDir = path.join(root, "src", "app");
+const appFiles = walk(appDir);
+const rel = (f: string) => path.relative(root, f).split(path.sep).join("/");
+for (const file of appFiles) {
+  const content = fs.readFileSync(file, "utf8");
+  if (!/audioRecording|AudioRecording/.test(content)) continue;
+  const r = rel(file);
+  const allowed = r.startsWith("src/app/teacher/(dashboard)/sessions/[id]/") || r === "src/app/api/public/assemblyai-webhook/route.ts";
+  assert(allowed, `audioRecording은 강사 본인 세션 화면/서버 액션과 webhook에서만 사용: ${r}`);
+}
+for (const file of studentFiles.concat(publicApiFiles)) {
+  const content = fs.readFileSync(file, "utf8");
+  assert(!/aiDraft|audioRecording|AudioRecording/.test(content), `student/public 경로에 aiDraft·audioRecording 없음: ${rel(file)}`);
+}
+
+const sessionDir = path.join(root, "src", "app", "teacher", "(dashboard)", "sessions", "[id]");
+const sessionPage = fs.readFileSync(path.join(sessionDir, "page.tsx"), "utf8");
+assert(sessionPage.includes("session.teacherId !== teacher.id"), "강사 세션 페이지: 본인 수업이 아니면 notFound(IDOR 방지)");
+assert(!/audioRecording:\s*true/.test(sessionPage), "강사 세션 페이지: 전체 행(audioRecording: true)을 클라이언트로 넘기지 않음");
+assert(/audioRecording:\s*\{\s*select:/.test(sessionPage), "강사 세션 페이지: 필요한 필드만 select");
+const selectStart = sessionPage.indexOf("audioRecording: {");
+const selectBlock = sessionPage.slice(selectStart, sessionPage.indexOf("});", selectStart));
+for (const forbidden of ["transcript", "providerTranscriptId", "driveFileId", "errorMessage"]) {
+  assert(!selectBlock.includes(forbidden), `강사 세션 페이지: ${forbidden}를 클라이언트로 내보내지 않음`);
+}
+assert(sessionPage.includes("safeRecordingFailureMessage"), "강사 세션 페이지: 내부 errorMessage 대신 고정 안내 문구만 전달");
+
+const actions = fs.readFileSync(path.join(sessionDir, "recordingActions.ts"), "utf8");
+assert(actions.includes("requireTeacher()") && actions.includes("requirePermission(actor"), "publishAIDraft: 서버에서 강사 인증 + 권한 확인");
+assert(actions.includes("session.teacherId !== teacher.id"), "publishAIDraft: 본인 수업만 publish(서버 측 소유권 검증)");
+assert(!/lessonEvaluation\.upsert/.test(actions), "publishAIDraft: 확인 없는 upsert 덮어쓰기 경로 없음(조건부 쓰기만 사용)");
+assert(actions.includes("commitAIDraftPublish"), "publishAIDraft: 트랜잭션 + 조건부 쓰기 규칙(recordingPublish.ts) 사용");
+
+const webhookRoute = fs.readFileSync(path.join(publicApiDir, "assemblyai-webhook", "route.ts"), "utf8");
+assert(webhookRoute.includes("handleAssemblyAIWebhook"), "webhook 라우트: 인증·idempotency를 테스트된 recordingWebhook.ts에 위임");
+assert(!/console\.(log|error|warn)/.test(webhookRoute), "webhook 라우트: 로그 출력 없음(비밀값·payload 노출 방지)");
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

@@ -24,6 +24,22 @@ export default async () => {
       });
     },
     triggerProcessing: triggerRecordingProcessing,
+    async findStuckAnalyzing(olderThan) {
+      const rows = await prisma.audioRecording.findMany({
+        where: { processingStatus: "ANALYZING", updatedAt: { lt: olderThan } },
+        select: { id: true },
+        orderBy: { updatedAt: "asc" },
+        take: 20,
+      });
+      return rows.map((r) => r.id);
+    },
+    async markAnalysisAbandoned(id, olderThan, errorMessage) {
+      const res = await prisma.audioRecording.updateMany({
+        where: { id, processingStatus: "ANALYZING", updatedAt: { lt: olderThan } },
+        data: { processingStatus: "ANALYSIS_FAILED", errorMessage },
+      });
+      return res.count === 1;
+    },
   });
   console.log("recover-transcribed-recordings", JSON.stringify(report));
   return new Response(JSON.stringify(report), { status: 200 });

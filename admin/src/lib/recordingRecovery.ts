@@ -10,6 +10,12 @@
 // ANALYZING 선점(updateMany where processingStatus = "TRANSCRIBED")을 거치므로,
 // 원래 호출이 늦게 도착하거나 복구가 여러 번 겹쳐도 Claude는 한 번만 호출된다.
 // DB/네트워크 접근은 deps로 주입받는다(admin/scripts/test-recordingProcessing.ts).
+//
+// ANALYZING에 멈춘 레코드(background function이 선점한 뒤 15분 제한 초과·런타임 종료로
+// 끝나지 못한 경우)는 자동으로 다시 돌리지 않고 ANALYSIS_FAILED로 끝낸다 — 선점한 호출이
+// 아직 Claude를 부르고 있을 수 있어 재실행하면 Claude가 중복 호출되고, 무한 재시도도
+// 피하기 위함이다. 이렇게 해야 강사 화면이 "AI draft 생성 중"에서 영원히 멈추지 않는다.
+import { ANALYZING_STUCK_AFTER_MS } from "./recordingWorkflow";
 
 /** webhook이 방금 TRANSCRIBED로 바꾼 레코드는 정상 경로의 background 호출이 아직 진행
  * 중일 수 있으므로 건드리지 않는다. */
@@ -33,16 +39,23 @@ export interface RecoveryDeps {
   markRecoveryExhausted(id: number, errorMessage: string): Promise<void>;
   /** background function을 다시 호출. 요청이 수락됐으면 true. */
   triggerProcessing(id: number): Promise<boolean>;
+  /** processingStatus = "ANALYZING" 이고 updatedAt < olderThan(= ANALYZING을 선점한 시각보다 오래됨) 인 레코드 id. */
+  findStuckAnalyzing(olderThan: Date): Promise<number[]>;
+  /** 여전히 ANALYZING이고 updatedAt < olderThan일 때만 ANALYSIS_FAILED로 바꾼다(조건부 단일
+   * UPDATE) — 그 사이 정상 완료된 레코드(NEEDS_REVIEW)를 덮어쓰지 않는다. 바꿨으면 true. */
+  markAnalysisAbandoned(id: number, olderThan: Date, errorMessage: string): Promise<boolean>;
 }
 
 export interface RecoveryReport {
   retriggered: number[];
   triggerFailed: number[];
   exhausted: number[];
+  /** ANALYZING에서 멈춰 ANALYSIS_FAILED로 끝낸 레코드. */
+  analysisAbandoned: number[];
 }
 
 export async function recoverStuckTranscribedRecordings(deps: RecoveryDeps, now: Date = new Date()): Promise<RecoveryReport> {
-  const report: RecoveryReport = { retriggered: [], triggerFailed: [], exhausted: [] };
+  const report: RecoveryReport = { retriggered: [], triggerFailed: [], exhausted: [], analysisAbandoned: [] };
   const stuck = await deps.findStuckTranscribed(new Date(now.getTime() - TRANSCRIBED_RECOVERY_GRACE_MS));
   for (const rec of stuck) {
     if (now.getTime() - rec.updatedAt.getTime() >= TRANSCRIBED_RECOVERY_MAX_AGE_MS) {
@@ -57,6 +70,12 @@ export async function recoverStuckTranscribedRecordings(deps: RecoveryDeps, now:
       ok = false;
     }
     (ok ? report.retriggered : report.triggerFailed).push(rec.id);
+  }
+
+  const analyzingCutoff = new Date(now.getTime() - ANALYZING_STUCK_AFTER_MS);
+  for (const id of await deps.findStuckAnalyzing(analyzingCutoff)) {
+    const changed = await deps.markAnalysisAbandoned(id, analyzingCutoff, "Analysis did not finish (function timed out or was interrupted); not retried automatically");
+    if (changed) report.analysisAbandoned.push(id);
   }
   return report;
 }

@@ -5,6 +5,7 @@ import { formatAppDateTime } from "@/lib/appTime";
 import { SESSION_STATUS_LABEL_EN, studentDisplayName } from "@/lib/teacherPortalLabels";
 import { EvaluationForm } from "./EvaluationForm";
 import { ClassRecordingPanel } from "./ClassRecordingPanel";
+import { safeRecordingFailureMessage } from "@/lib/recordingWorkflow";
 
 const fmtDateTime = formatAppDateTime;
 
@@ -18,7 +19,25 @@ export default async function SessionEvaluationPage({
 
   const session = await prisma.classSession.findUnique({
     where: { id: Number(id) },
-    include: { student: true, evaluation: true, enrollment: true, audioRecording: true },
+    include: {
+      student: true,
+      evaluation: true,
+      enrollment: true,
+      // 클라이언트 컴포넌트(ClassRecordingPanel)로 넘어가는 값은 RSC payload로 브라우저에 그대로
+      // 전달된다 — 전체 행(transcript 전문, providerTranscriptId, driveFileId, 내부 errorMessage)이
+      // 아니라 화면에 필요한 필드만 select한다.
+      audioRecording: {
+        select: {
+          processingStatus: true,
+          fileName: true,
+          duration: true,
+          teacherTalkPercentage: true,
+          studentTalkPercentage: true,
+          aiDraft: true,
+          teacherQcDraft: true,
+        },
+      },
+    },
   });
 
   if (!session || session.teacherId !== teacher.id) notFound();
@@ -50,7 +69,11 @@ export default async function SessionEvaluationPage({
           />
           <ClassRecordingPanel
             sessionId={session.id}
-            recording={session.audioRecording}
+            recording={
+              session.audioRecording
+                ? { ...session.audioRecording, errorMessage: safeRecordingFailureMessage(session.audioRecording.processingStatus) }
+                : null
+            }
             hasExistingEvaluation={!!session.evaluation}
           />
         </div>

@@ -64,8 +64,10 @@ const prismaDeps: ProcessRecordingDeps = {
     });
   },
   async saveDraft(id, result) {
-    await prisma.audioRecording.update({
-      where: { id },
+    // 여전히 ANALYZING일 때만 저장한다 — 복구가 이미 ANALYSIS_FAILED로 끝낸 레코드를 되살리거나
+    // 다른 상태를 덮어쓰지 않는다. 바뀐 행이 없으면 저장하지 않고 조용히 끝낸다.
+    await prisma.audioRecording.updateMany({
+      where: { id, processingStatus: "ANALYZING" },
       data: {
         processingStatus: "NEEDS_REVIEW",
         aiDraft: result.studentFeedback,

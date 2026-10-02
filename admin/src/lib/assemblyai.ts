@@ -6,6 +6,8 @@
 // 구분할 수 있게 한다(에러로 던지지 않음 — levelTestTranslation.ts의 getClient()와
 // 동일한 관례).
 const ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2";
+// 응답이 멈춘 요청이 background function 시간(최대 15분)을 통째로 잡아먹지 않게 한다.
+const REQUEST_TIMEOUT_MS = 30_000;
 
 function getApiKey(): string | null {
   return process.env.ASSEMBLYAI_API_KEY ?? null;
@@ -59,6 +61,7 @@ export async function submitTranscript(
     method: "POST",
     headers: { Authorization: apiKey, "Content-Type": "application/json" },
     body: JSON.stringify(buildTranscriptRequestBody(audioUrl, options)),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!res.ok) return null;
   const data = (await res.json()) as { id: string; status: string };
@@ -87,6 +90,7 @@ export async function fetchTranscript(transcriptId: string): Promise<AssemblyAIT
 
   const res = await fetch(`${ASSEMBLYAI_BASE}/transcript/${transcriptId}`, {
     headers: { Authorization: apiKey },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!res.ok) return null;
   return (await res.json()) as AssemblyAITranscriptResult;

@@ -5,6 +5,7 @@
 // 잠금과 같은 원자성을 갖는다.
 import { handleProcessRecordingRequest, processRecording, type ProcessRecordingDeps } from "../src/lib/recordingProcessing";
 import { isAuthorizedProcessingRequest, RECORDING_PROCESSING_SECRET_HEADER } from "../src/lib/recordingProcessingAuth";
+import { ANALYZING_STUCK_AFTER_MS, MAX_ERROR_MESSAGE_LENGTH } from "../src/lib/recordingWorkflow";
 import {
   recoverStuckTranscribedRecordings,
   TRANSCRIBED_RECOVERY_GRACE_MS,
@@ -44,6 +45,11 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
   const db = new Map<number, FakeRow>(rows.map((r) => [r.id, { ...r }]));
   const calls = { findRecording: 0, fetchTranscript: 0, claimForAnalysis: 0, claimSucceeded: 0, markFailed: 0, saveDraft: 0, generateDraft: 0 };
   let fetchCount = 0;
+  // 테스트가 외부 API 실패 유형을 바꿔 가며 시뮬레이션하는 스위치.
+  const behavior: { fetch: "ok" | "null" | "throw" | "noUtterances" | "processing" | "error"; generateThrows: string | null } = {
+    fetch: "ok",
+    generateThrows: null,
+  };
 
   const deps: ProcessRecordingDeps = {
     async findRecording(id) {
@@ -73,6 +79,11 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
       // 두 번 양보해 동시에 시작한 호출들이 모두 "선점 전" 지점까지 도달하게 한다.
       await tick();
       await tick();
+      if (behavior.fetch === "null") return null;
+      if (behavior.fetch === "throw") throw new Error("simulated AssemblyAI timeout");
+      if (behavior.fetch === "processing") return { id: transcriptId, status: "processing", text: null, utterances: null, audio_duration: null };
+      if (behavior.fetch === "error") return { id: transcriptId, status: "error", text: null, utterances: null, audio_duration: null };
+      if (behavior.fetch === "noUtterances") return { id: transcriptId, status: "completed", text: "", utterances: [], audio_duration: 0 };
       const row = [...db.values()].find((r) => r.providerTranscriptId === transcriptId);
       if (row && options.fetchThrowsFor?.has(row.id) && myFetchIndex > 1) {
         throw new Error("simulated AssemblyAI failure on duplicate invocation");
@@ -114,6 +125,7 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
     async generateDraft() {
       calls.generateDraft++;
       await tick();
+      if (behavior.generateThrows) throw new Error(behavior.generateThrows);
       return { studentFeedback: `feedback #${calls.generateDraft}`, teacherQc: `qc #${calls.generateDraft}` };
     },
   };
@@ -144,6 +156,16 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
         row.errorMessage = errorMessage;
       },
       triggerProcessing: trigger,
+      async findStuckAnalyzing(olderThan) {
+        return [...db.values()].filter((r) => r.processingStatus === "ANALYZING" && r.updatedAt < olderThan).map((r) => r.id);
+      },
+      async markAnalysisAbandoned(id, olderThan, errorMessage) {
+        const row = db.get(id);
+        if (!row || row.processingStatus !== "ANALYZING" || !(row.updatedAt < olderThan)) return false;
+        row.processingStatus = "ANALYSIS_FAILED";
+        row.errorMessage = errorMessage;
+        return true;
+      },
     };
   }
 
@@ -157,7 +179,7 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
     return res.ok;
   }
 
-  return { db, calls, deps, totalDepCalls, request, recoveryDeps, authorizedTrigger };
+  return { db, calls, deps, behavior, totalDepCalls, request, recoveryDeps, authorizedTrigger };
 }
 
 function transcribedRow(id: number, ageMs: number): FakeRow {
@@ -286,13 +308,94 @@ async function main() {
     const env = createFakeEnv([transcribedRow(1, 0)], { fetchThrowsFor: new Set([1]) });
     const [a, b] = await Promise.all([processRecording(1, env.deps), processRecording(1, env.deps)]);
     const outcomes = [a, b].sort().join(",");
-    assert(outcomes === "error,ok", `duplicate(failing twin): 하나 ok, 하나 error (got ${outcomes})`);
+    assert(outcomes === "ok,transcript_fetch_failed", `duplicate(failing twin): 하나 ok, 하나 transcript_fetch_failed (got ${outcomes})`);
     assert(env.db.get(1)!.processingStatus === "NEEDS_REVIEW", "duplicate(failing twin): 성공한 쪽 결과(NEEDS_REVIEW) 유지");
     assert(env.db.get(1)!.errorMessage === null, "duplicate(failing twin): errorMessage 덮어쓰지 않음");
+  }
+
+  // ── 4. ANALYZING에서 멈춘 레코드(함수 timeout 등)는 영구히 멈추지 않는다 ─────────
+  {
+    const analyzing = (id: number, ageMs: number): FakeRow => ({ ...transcribedRow(id, ageMs), processingStatus: "ANALYZING" });
+    const env = createFakeEnv([
+      analyzing(1, ANALYZING_STUCK_AFTER_MS + 60_000), // 선점 후 한참 지나도 끝나지 않음
+      analyzing(2, 5 * 60 * 1000), // 정상적으로 진행 중일 수 있음
+      { ...transcribedRow(3, ANALYZING_STUCK_AFTER_MS * 2), processingStatus: "NEEDS_REVIEW" },
+      { ...transcribedRow(4, ANALYZING_STUCK_AFTER_MS * 2), processingStatus: "ANALYSIS_FAILED", errorMessage: "earlier failure" },
+    ]);
+    const report = await recoverStuckTranscribedRecordings(env.recoveryDeps(env.authorizedTrigger), NOW);
+    assert(JSON.stringify(report.analysisAbandoned) === "[1]", `analyzing: 오래 멈춘 ANALYZING만 정리 (got ${JSON.stringify(report.analysisAbandoned)})`);
+    assert(env.db.get(1)!.processingStatus === "ANALYSIS_FAILED" && !!env.db.get(1)!.errorMessage, "analyzing: 멈춘 레코드는 ANALYSIS_FAILED + 사유");
+    assert(env.db.get(2)!.processingStatus === "ANALYZING", "analyzing: 진행 중일 수 있는 레코드는 건드리지 않음");
+    assert(env.db.get(3)!.processingStatus === "NEEDS_REVIEW", "analyzing: 완료된 레코드는 건드리지 않음");
+    assert(env.db.get(4)!.errorMessage === "earlier failure", "analyzing: 이미 실패한 레코드의 사유를 덮어쓰지 않음");
+    assert(env.calls.generateDraft === 0 && env.calls.claimForAnalysis === 0, "analyzing: 정리 과정에서 Claude를 호출하지 않음(자동 재실행 없음)");
+    const again = await recoverStuckTranscribedRecordings(env.recoveryDeps(env.authorizedTrigger), NOW);
+    assert(again.analysisAbandoned.length === 0, "analyzing: 재실행해도 추가 변경 없음(idempotent)");
+    // ANALYSIS_FAILED 레코드는 background가 다시 호출돼도 재처리되지 않는다(무한 재시도 없음).
+    const late = await processRecording(1, env.deps);
+    assert(late === "already_claimed", `analyzing: 실패 레코드를 background가 다시 돌리지 않음 (got ${late})`);
+    assert(env.calls.generateDraft === 0, "analyzing: 실패 레코드에 Claude 호출 없음");
+  }
+  {
+    // 선점한 호출이 정상 완료하는 순간과 정리가 겹쳐도 NEEDS_REVIEW가 ANALYSIS_FAILED로 덮이지 않는다.
+    const env = createFakeEnv([{ ...transcribedRow(1, ANALYZING_STUCK_AFTER_MS + 1000), processingStatus: "ANALYZING" }]);
+    const deps = env.recoveryDeps(env.authorizedTrigger);
+    const cutoff = new Date(NOW.getTime() - ANALYZING_STUCK_AFTER_MS);
+    const staleIds = await deps.findStuckAnalyzing(cutoff);
+    env.db.get(1)!.processingStatus = "NEEDS_REVIEW"; // 그 사이 원래 호출이 저장을 마침
+    const changed = await deps.markAnalysisAbandoned(staleIds[0], cutoff, "x");
+    assert(!changed && env.db.get(1)!.processingStatus === "NEEDS_REVIEW", "analyzing(race): 그 사이 완료된 레코드는 덮어쓰지 않음");
+  }
+
+  // ── 5. 외부 API 실패: 선점 전(비용 발생 전) 실패는 TRANSCRIBED에서 복구, 선점 후 실패는 ANALYSIS_FAILED ──
+  for (const mode of ["null", "throw", "processing"] as const) {
+    const env = createFakeEnv([transcribedRow(1, 30 * 60 * 1000)]);
+    env.behavior.fetch = mode;
+    const out = await processRecording(1, env.deps);
+    assert(out === "transcript_fetch_failed", `fetch(${mode}): transcript_fetch_failed (got ${out})`);
+    assert(env.db.get(1)!.processingStatus === "TRANSCRIBED" && env.db.get(1)!.errorMessage === null, `fetch(${mode}): TRANSCRIBED 유지(영구 실패로 확정하지 않음)`);
+    assert(env.calls.markFailed === 0 && env.calls.generateDraft === 0, `fetch(${mode}): Claude 호출·실패 확정 없음`);
+    env.behavior.fetch = "ok";
+    const report = await recoverStuckTranscribedRecordings(env.recoveryDeps(env.authorizedTrigger), NOW);
+    assert(JSON.stringify(report.retriggered) === "[1]" && env.db.get(1)!.processingStatus === "NEEDS_REVIEW", `fetch(${mode}): AssemblyAI 복구 후 다음 복구에서 정상 처리`);
+  }
+  {
+    // 일시 장애가 계속돼도 무한 재시도하지 않는다 — 24시간 후 ANALYSIS_FAILED.
+    const env = createFakeEnv([transcribedRow(1, TRANSCRIBED_RECOVERY_MAX_AGE_MS + 1000)]);
+    env.behavior.fetch = "null";
+    const report = await recoverStuckTranscribedRecordings(env.recoveryDeps(env.authorizedTrigger), NOW);
+    assert(JSON.stringify(report.exhausted) === "[1]" && env.db.get(1)!.processingStatus === "ANALYSIS_FAILED", "fetch: 24시간 넘게 복구 못 하면 ANALYSIS_FAILED(무한 재시도 없음)");
+  }
+  for (const mode of ["noUtterances", "error"] as const) {
+    // AssemblyAI가 분명히 "빈 결과/실패"라고 답한 경우(발화 없음 = invalid speaker data 포함)는 재시도해도 소용없으므로 바로 실패 확정.
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.fetch = mode;
+    const out = await processRecording(1, env.deps);
+    assert(out === "transcript_unavailable" && env.db.get(1)!.processingStatus === "ANALYSIS_FAILED", `transcript(${mode}): 즉시 ANALYSIS_FAILED (got ${out})`);
+    assert(env.calls.generateDraft === 0, `transcript(${mode}): Claude 호출 없음`);
+  }
+  {
+    // 선점 후 Claude/검증 실패 → ANALYSIS_FAILED, 사유는 길이 제한, 자동 재시도 없음.
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.generateThrows = "Output 1 (student feedback) rejected after 4 attempts — " + "quoted student speech ".repeat(100);
+    const out = await processRecording(1, env.deps);
+    assert(out === "error" && env.db.get(1)!.processingStatus === "ANALYSIS_FAILED", "claude failure: ANALYSIS_FAILED");
+    assert((env.db.get(1)!.errorMessage ?? "").length <= MAX_ERROR_MESSAGE_LENGTH, "claude failure: errorMessage 길이 제한");
+    assert(env.calls.generateDraft === 1, "claude failure: 자동 재호출 없음");
+    const again = await processRecording(1, env.deps);
+    assert(again === "already_claimed" && env.calls.generateDraft === 1, "claude failure: 같은 레코드를 다시 처리하지 않음(Claude 추가 호출 없음)");
+  }
+
+  // ── 6. background 입력 검증: 잘못된 id는 DB 조회 전에 거절 ─────────────────────
+  for (const bad of [-1, 0, 1.5, "1", null, Number.MAX_SAFE_INTEGER + 10, undefined]) {
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    const res = await handleProcessRecordingRequest(env.request({ [RECORDING_PROCESSING_SECRET_HEADER]: SECRET }, { audioRecordingId: bad }), SECRET, env.deps);
+    assert(res.status === 400 && env.totalDepCalls() === 0, `invalid id(${String(bad)}): 400, deps 호출 0회`);
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);
   if (fail > 0) process.exit(1);
 }
+
 
 main();
