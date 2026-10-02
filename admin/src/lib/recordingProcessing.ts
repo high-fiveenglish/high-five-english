@@ -3,7 +3,7 @@
 // admin/scripts/test-recordingProcessing.ts는 같은 로직을 in-memory fake deps로
 // 검증한다(인증 거절, TRANSCRIBED 복구, 중복 호출 시 ANALYZING 선점 1회).
 import { computeTalkTime, guessTeacherSpeakerLabel } from "./talkTime";
-import type { TalkTimeResult } from "./talkTime";
+import type { TalkTimeResult, Utterance } from "./talkTime";
 import type { AssemblyAITranscriptResult } from "./assemblyai";
 import type { AIEvaluationResult, LessonContext } from "./aiEvaluation";
 import { isAuthorizedProcessingRequest, RECORDING_PROCESSING_SECRET_HEADER } from "./recordingProcessingAuth";
@@ -29,8 +29,10 @@ export interface ProcessRecordingDeps {
    * 다른 호출이 선점/완료한 레코드(ANALYZING/NEEDS_REVIEW)를 덮어쓰지 않게 한다. */
   markFailed(id: number, fromStatus: "TRANSCRIBED" | "ANALYZING", errorMessage: string): Promise<void>;
   saveDraft(id: number, result: AIEvaluationResult): Promise<void>;
+  /** Claude에는 plain text가 아니라 원본 utterances(화자·타임스탬프 포함)를 넘긴다. */
   generateDraft(params: {
-    transcript: string;
+    utterances: Utterance[];
+    teacherSpeakerLabel: string | null;
     talkTime: TalkTimeResult;
     lessonContext: LessonContext;
   }): Promise<AIEvaluationResult | null>;
@@ -53,7 +55,7 @@ export async function processRecording(audioRecordingId: number, deps: ProcessRe
   let ownedStatus: "TRANSCRIBED" | "ANALYZING" = "TRANSCRIBED";
   try {
     const transcript = await deps.fetchTranscript(recording.providerTranscriptId);
-    if (!transcript || transcript.status !== "completed" || !transcript.utterances) {
+    if (!transcript || transcript.status !== "completed" || !transcript.utterances || transcript.utterances.length === 0) {
       await deps.markFailed(recording.id, ownedStatus, "AssemblyAI transcript not completed or missing utterances");
       return "transcript_unavailable";
     }
@@ -81,7 +83,8 @@ export async function processRecording(audioRecordingId: number, deps: ProcessRe
     ownedStatus = "ANALYZING";
 
     const result = await deps.generateDraft({
-      transcript: transcript.text ?? "",
+      utterances: transcript.utterances,
+      teacherSpeakerLabel: teacherLabel,
       talkTime,
       lessonContext: recording.lessonContext,
     });

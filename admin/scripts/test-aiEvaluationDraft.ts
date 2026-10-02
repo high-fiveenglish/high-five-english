@@ -1,18 +1,17 @@
-// aiEvaluation.ts + evaluationSkillRules.ts의 순수 함수 테스트 — Anthropic API를
+// aiEvaluation.ts + projectEvaluationRules.ts의 순수 함수 테스트 — Anthropic API를
 // 전혀 호출하지 않는다. 검증 대상: transport validation(validateAIEvaluationResult),
-// age band 계산, Talk Time override 블록이 측정값을 그대로 담는지, prompt 조립에
-// grounding/skill 규칙이 실제로 포함되는지(문자열 검증).
+// age band 계산, Talk Time override 블록이 측정값을 그대로 담는지, prompt 재료에
+// Skill 원문과 프로젝트 규칙이 실제로 포함되는지(문자열 검증).
 import { validateAIEvaluationResult } from "../src/lib/aiEvaluation";
 import {
   ageBandFromBirthDate,
   ageToneInstruction,
   talkTimeOverrideBlock,
   checkNoUngroundedHistoricalClaims,
-  GROUNDING_RULES,
+  buildProjectRules,
   HISTORICAL_CONTEXT_POLICY,
-  STUDENT_FEEDBACK_RULES,
-  TEACHER_QC_RULES,
-} from "../src/lib/evaluationSkillRules";
+} from "../src/lib/projectEvaluationRules";
+import { ONLINE_ENGLISH_FEEDBACK_SKILL } from "../src/lib/skill/onlineEnglishFeedbackSkill";
 
 let pass = 0;
 let fail = 0;
@@ -67,12 +66,20 @@ assert(block.includes("200s (33%)"), "student 측정값이 블록에 그대로 �
 assert(/do not estimate/i.test(block), "재계산/추정 금지 지시 포함");
 assert(/UNVERIFIED HEURISTIC/.test(block), "화자 매핑이 미검증 휴리스틱임을 명시");
 
-// --- prompt 조립 재료에 Skill 규칙이 실제로 포함되는지(문자열 레벨) ---
-assert(GROUNDING_RULES.toLowerCase().includes("never invent"), "grounding 규칙에 '날조 금지' 포함");
-assert(STUDENT_FEEDBACK_RULES.includes("📘") && STUDENT_FEEDBACK_RULES.includes("🌟"), "Output1 규칙에 skill 섹션 이모지 포함");
-assert(STUDENT_FEEDBACK_RULES.includes("Why this happened"), "Output1 규칙에 교정 설명(왜 틀렸는지) 요구 포함");
-assert(TEACHER_QC_RULES.includes("Talk Time Ratio") && TEACHER_QC_RULES.includes("Teaching Quality"), "Output2 규칙에 QC 10개 항목 핵심 포함");
-assert(!TEACHER_QC_RULES.includes("📘"), "Output2 규칙에는 이모지(학생용 서식) 섞이지 않음");
+// --- prompt 조립 재료에 Skill 원문 규칙이 실제로 포함되는지(문자열 레벨) ---
+// 예전에는 Skill을 요약한 별도 상수(GROUNDING_RULES 등)를 검사했지만, 이제 Skill 원문 전체가 그대로 prompt에 들어간다.
+assert(ONLINE_ENGLISH_FEEDBACK_SKILL.includes("Never fabricate vocabulary, corrections, or quotes"), "Skill 원문에 '날조 금지' 포함");
+assert(ONLINE_ENGLISH_FEEDBACK_SKILL.includes("📘") && ONLINE_ENGLISH_FEEDBACK_SKILL.includes("🌟"), "Skill 원문에 Output1 섹션 이모지 포함");
+assert(ONLINE_ENGLISH_FEEDBACK_SKILL.includes("왜 틀렸을까요?"), "Skill 원문에 교정 설명(왜 틀렸는지) 요구 포함");
+assert(
+  ONLINE_ENGLISH_FEEDBACK_SKILL.includes("Talk Time Ratio") && ONLINE_ENGLISH_FEEDBACK_SKILL.includes("Teaching Quality"),
+  "Skill 원문에 Output2의 10개 항목 핵심 포함",
+);
+assert(ONLINE_ENGLISH_FEEDBACK_SKILL.includes("25-minute class") && ONLINE_ENGLISH_FEEDBACK_SKILL.includes("50-minute class"), "Skill 원문에 25분/50분 구조가 각각 있음");
+const projectRules = buildProjectRules({ lessonDurationMinutes: 25, speakerCount: 2 });
+assert(projectRules.includes("PROJECT AI EVALUATION RULES"), "프로젝트 규칙 블록이 Skill과 구분되어 있음");
+assert(projectRules.includes("Write Output 1 in ENGLISH"), "영어 canonical override가 코드에 명시됨");
+assert(!projectRules.includes("3-5 sentences") && !projectRules.includes("2-4 items"), "Skill 구조와 충돌하던 범용 문장/항목 수 규칙은 제거됨");
 
 // --- HISTORICAL_CONTEXT_POLICY — prompt에 실제로 포함되는지 ---
 assert(HISTORICAL_CONTEXT_POLICY.includes("NOT PROVIDED"), "historical context가 제공되지 않음을 명시");

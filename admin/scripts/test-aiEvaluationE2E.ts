@@ -9,8 +9,8 @@
 // computed here, since this test exercises the Claude layer only.
 import fs from "node:fs";
 import { generateAIEvaluationDraft } from "../src/lib/aiEvaluation";
-import { checkNoUngroundedHistoricalClaims } from "../src/lib/evaluationSkillRules";
-import type { TalkTimeResult } from "../src/lib/talkTime";
+import { checkNoUngroundedHistoricalClaims } from "../src/lib/projectEvaluationRules";
+import type { TalkTimeResult, Utterance } from "../src/lib/talkTime";
 
 const envText = fs.readFileSync("D:/하이파이브 사이트 제작/admin/.env", "utf8");
 const match = envText.match(/^ANTHROPIC_API_KEY="?([^"\n]+)"?/m);
@@ -46,6 +46,14 @@ T: Great summary! For homework, try writing three sentences about a family gathe
 S: Okay, see you teacher! Thank you!
 `.trim();
 
+// 합성 대화를 AssemblyAI utterances 형태(화자 A=강사, B=학생, ms 타임스탬프)로 바꿔 production과 같은 입력 구조로 넘긴다.
+const UTTERANCES: Utterance[] = TRANSCRIPT.split("\n").map((line, i) => ({
+  speaker: line.startsWith("T:") ? "A" : "B",
+  start: i * 20000,
+  end: i * 20000 + 15000,
+  text: line.replace(/^[TS]:\s*/, ""),
+}));
+
 // AI가 transcript만 보고 나이/날짜를 추측하지 않는다 — 둘 다 애플리케이션이 명시적으로
 // 계산/조회해 LESSON CONTEXT로 전달한다(ageBand는 실제 production에서 ageBandFromBirthDate로
 // 계산되지만, 이 테스트는 Claude adapter 레이어만 보므로 이미 계산된 값을 직접 준다).
@@ -67,7 +75,8 @@ async function main() {
   let result;
   try {
     result = await generateAIEvaluationDraft({
-      transcript: TRANSCRIPT,
+      utterances: UTTERANCES,
+      teacherSpeakerLabel: "A",
       talkTime: TALK_TIME,
       lessonContext: {
         lessonDate: LESSON_DATE,
@@ -108,8 +117,8 @@ async function main() {
   console.log("E2. Talk Time values NOT altered elsewhere oddly (spot check 780/570):", result.teacherQc.includes("780") || result.teacherQc.includes("57.8"));
 
   console.log("\n=== GROUNDING / HISTORICAL-CLAIM CHECK (explicit, double-confirms the adapter's internal guard) ===");
-  const feedbackCheck = checkNoUngroundedHistoricalClaims(result.studentFeedback, LESSON_DATE);
-  const qcCheck = checkNoUngroundedHistoricalClaims(result.teacherQc, LESSON_DATE);
+  const feedbackCheck = checkNoUngroundedHistoricalClaims(result.studentFeedback, LESSON_DATE, TRANSCRIPT);
+  const qcCheck = checkNoUngroundedHistoricalClaims(result.teacherQc, LESSON_DATE, TRANSCRIPT);
   console.log("Output 1 grounding check:", feedbackCheck.ok ? "PASS" : `FAIL — ${feedbackCheck.issues.join("; ")}`);
   console.log("Output 2 grounding check:", qcCheck.ok ? "PASS" : `FAIL — ${qcCheck.issues.join("; ")}`);
   console.log("Output 1 date mentions lessonDate's month (October):", /October/i.test(result.studentFeedback));

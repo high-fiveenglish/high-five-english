@@ -4,7 +4,8 @@
 //
 // 역할: AssemblyAI transcript 조회 → Talk Time Ratio 계산(애플리케이션 코드) →
 // student context 조회(나이/교재/수업유형) → Claude로 Output1(학생 피드백)/
-// Output2(강사 QC) 동시 생성(evaluationSkillRules.ts가 평가 기준의 출처) →
+// Output2(강사 QC) 동시 생성(online-english-feedback Skill 원문이 평가 기준의 출처,
+// 애플리케이션 규칙은 projectEvaluationRules.ts) →
 // AudioRecording.aiDraft / teacherQcDraft에 각각 저장.
 //
 // 인증: X-Recording-Processing-Secret 헤더가 RECORDING_PROCESSING_SECRET과 일치하는
@@ -14,7 +15,7 @@
 import { prisma } from "../../src/lib/prisma";
 import { fetchTranscript } from "../../src/lib/assemblyai";
 import { generateAIEvaluationDraft } from "../../src/lib/aiEvaluation";
-import { ageBandFromBirthDate } from "../../src/lib/evaluationSkillRules";
+import { ageBandFromBirthDate } from "../../src/lib/projectEvaluationRules";
 import { formatAppDate } from "../../src/lib/appTime";
 import { getRecordingProcessingSecret } from "../../src/lib/recordingProcessingAuth";
 import { handleProcessRecordingRequest, type ProcessRecordingDeps } from "../../src/lib/recordingProcessing";
