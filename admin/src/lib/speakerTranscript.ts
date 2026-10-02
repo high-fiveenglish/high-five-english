@@ -58,8 +58,11 @@ const OPEN_QUESTION = /\b(?:what|why|how|who|where|when|which|do you think|did y
 // hid the one real grammar error in the lesson from the feedback.
 const PROMPT = /\?|\b(?:you|your|tell me)\b/i;
 // Lets a read segment carry on across a short teacher interjection ("okay", "good", "next", "keep going") that is not a question.
+// Only a cue that means "read on" continues a segment: "continue", "keep going", "go on", "carry on", "next", or a bare
+// "okay". A short reaction that merely evaluates the reading ("Good.", "That's right.", "Very good.", "Correct.") does not:
+// what the student says after it is usually their own answer.
 const CONTINUE_CUE = /\b(?:continue|keep going|go on|carry on|next)\b/i;
-const CONTINUE_MAX_WORDS = 3;
+const BARE_OKAY = /^\s*(?:ok|okay)[\s.,!]*$/i;
 const DISFLUENCY = /\b(?:um+|uh+|er+|hmm+|like|you know|i mean)\b/i;
 const PROSE_LIKE_MIN_WORDS = 30;
 const READ_ALOUD_MIN_WORDS = 4;
@@ -72,7 +75,7 @@ function namesTextToRead(teacherText: string): boolean {
 }
 
 function continuesReading(teacherText: string): boolean {
-  return !teacherText.includes("?") && (CONTINUE_CUE.test(teacherText) || wordCount(teacherText) <= CONTINUE_MAX_WORDS);
+  return !teacherText.includes("?") && (CONTINUE_CUE.test(teacherText) || BARE_OKAY.test(teacherText));
 }
 
 /** Flags student turns that probably read written material, using the teacher turn before them as evidence:
@@ -88,11 +91,15 @@ function detectReadAloud(base: Omit<RoleUtterance, "possibleReadAloud">[]): bool
   let readRequested = false;
   let continuing = false;
   let lastStudentFlagged = false;
+  let reactedToReading = false;
   base.forEach((u, i) => {
     if (u.role === "Teacher") {
       teacherText = u.text;
       readRequested = READ_REQUEST.test(u.text) || namesTextToRead(u.text);
       continuing = lastStudentFlagged && continuesReading(u.text);
+      // The teacher answered a reading with something other than "read on" ("Good.", "That's right."): what the student
+      // says next is a reply, so even a long fluent turn is not treated as more reading by the weak prose fallback.
+      reactedToReading = lastStudentFlagged && !continuing && !readRequested;
       return;
     }
     const words = wordCount(u.text);
@@ -101,7 +108,7 @@ function detectReadAloud(base: Omit<RoleUtterance, "possibleReadAloud">[]): bool
     // A continuation is a bare "okay"/"next": a reply with disfluencies after it is the student talking, not reading on.
     if (readRequested && words >= READ_ALOUD_MIN_WORDS) flags[i] = true;
     else if (continuing && words >= READ_ALOUD_MIN_WORDS && !DISFLUENCY.test(u.text)) flags[i] = true;
-    else if (words >= PROSE_LIKE_MIN_WORDS && !DISFLUENCY.test(u.text) && !prompted) flags[i] = true;
+    else if (words >= PROSE_LIKE_MIN_WORDS && !DISFLUENCY.test(u.text) && !prompted && !reactedToReading) flags[i] = true;
     lastStudentFlagged = flags[i];
   });
   return flags;

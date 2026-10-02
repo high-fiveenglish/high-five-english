@@ -244,6 +244,20 @@ const GOOD_QC = qcLines();
   assert(!flagsOf([["T", "Okay, start reading."], ["S", scriptedI], ["T", "Okay."], ["S", "Um, I think it is, like, really common in my school too"]])[3], "3. a reply with disfluencies after a bare 'okay' is not a continuation");
   assert(flagsOf([["T", "Okay, start reading."], ["S", scriptedI], ["T", "Okay."], ["S", scriptedI]])[3], "3. a scripted continuation after a bare 'okay' is still reading");
 
+  // ── continuation cues vs short evaluative reactions ─────────────────────────────────────────────────────────────
+  const fluentOwnAnswer =
+    "Since everyone is working hard, sometimes I actually have academic pressure, but I didn't actually had a headache when I had those pressures, I had headache only when I studied too much";
+  const afterRead = (teacher: string, student: string) => flagsOf([["T", "Okay, start reading."], ["S", scriptedI], ["T", teacher], ["S", student]])[3];
+  for (const reaction of ["Good.", "That's right.", "Very good.", "Correct.", "Great job.", "Nice.", "Exactly.", "Well done."]) {
+    assert(!afterRead(reaction, fluentOwnAnswer), `3. read segment -> Teacher "${reaction}" -> fluent spontaneous answer is NOT reading`);
+  }
+  for (const cue of ["Okay.", "Next.", "Continue.", "Keep going.", "Go on.", "Carry on."]) {
+    assert(afterRead(cue, scriptedI), `3. read segment -> Teacher "${cue}" -> scripted continuation is reading`);
+  }
+  assert(!afterRead("Next, tell me how you feel about it?", fluentOwnAnswer), "3. a cue inside a question is not a continuation");
+  assert(!afterRead("Good, so what do you think about that?", fluentOwnAnswer), "3. an evaluative reaction followed by a question ends the segment");
+  assert(afterRead("Okay. Next.", scriptedI), "3. 'Okay. Next.' keeps the segment going");
+
   const real1 = flagsOf([["T", "So our lesson is about health. Role A. Please read."], ["S", "Diane, you think walking and cycling more is the best way to save energy? Tell the teacher at least three reasons."]]);
   assert(real1[1], "3. real-recording case 1: Role A prompt after 'Please read' -> reading");
   const real2 = flagsOf([["T", "Okay, let's see. What about role B? Can you read roll B?"], ["S", "Diane, you think using fans instead of air conditioners is the best way to save energy? Tell the teacher at least three reasons why."]]);
