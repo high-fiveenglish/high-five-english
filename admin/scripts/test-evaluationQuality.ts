@@ -295,55 +295,80 @@ const GOOD_QC = qcLines();
   assert(!checkNoUngroundedHistoricalClaims("Asked in September?", "2026-10-02").ok, "11. strict mode (no transcript given) is unchanged");
 }
 
-// ── fake Anthropic seam ───────────────────────────────────────────────────────
-type Planned = { studentFeedback: string; teacherQc: string } | "truncated" | "empty";
-function fakeCreate(plan: Planned[]) {
+// ── fake Anthropic seam (one call per report; the forced tool name says which report is requested) ──
+type Planned = string | "truncated" | "empty";
+type Kind = "student" | "teacher";
+const TOOL: Record<Kind, string> = { student: "submit_student_feedback", teacher: "submit_teacher_qc" };
+function fakeCreate(plan: { student: Planned[]; teacher: Planned[] }) {
   const calls: Anthropic.MessageCreateParamsNonStreaming[] = [];
+  const used = { student: 0, teacher: 0 };
+  const kindOf = (b: Anthropic.MessageCreateParamsNonStreaming): Kind => ((b.tools?.[0] as { name: string }).name === TOOL.teacher ? "teacher" : "student");
   const fn: CreateMessageFn = async (body) => {
     calls.push(body);
-    const r = plan[Math.min(calls.length - 1, plan.length - 1)];
-    if (r === "truncated") return { content: [{ type: "tool_use", name: "submit_evaluation_result", input: { studentFeedback: "x", teacherQc: "y" } }], stop_reason: "max_tokens" };
+    const kind = kindOf(body);
+    const list = plan[kind];
+    const r = list[Math.min(used[kind]++, list.length - 1)];
+    if (r === "truncated") return { content: [{ type: "tool_use", name: TOOL[kind], input: { report: "x" } }], stop_reason: "max_tokens" };
     if (r === "empty") return { content: [{ type: "text" }], stop_reason: "end_turn" };
-    return { content: [{ type: "tool_use", name: "submit_evaluation_result", input: r }], stop_reason: "tool_use" };
+    return { content: [{ type: "tool_use", name: TOOL[kind], input: { report: r } }], stop_reason: "tool_use" };
   };
-  return { fn, calls };
+  return { fn, calls, of: (k: Kind) => calls.filter((c) => kindOf(c) === k) };
 }
 const userText = (c: Anthropic.MessageCreateParamsNonStreaming) => String(c.messages[0].content);
 const LESSON = { lessonDate: "2026-10-02", lessonDurationMinutes: 25, studentAgeBand: "teen" as const, studentRegion: "KOREA", textbookName: null, classMethod: null };
-const GOOD = { studentFeedback: GOOD_FEEDBACK, teacherQc: GOOD_QC };
-const DUP = { studentFeedback: `${GOOD_FEEDBACK}\n\n📘 October 2, 2026\n\n`, teacherQc: GOOD_QC };
+const DUP_S = `${GOOD_FEEDBACK}\n\n📘 October 2, 2026\n\n`;
+const DUP_Q = `${GOOD_QC}\n\n${GOOD_QC}`;
 const params = (createMessage: CreateMessageFn) => ({ utterances: UTTS, teacherSpeakerLabel: TEACHER, talkTime: TALK, lessonContext: LESSON, createMessage });
 
 async function main() {
-  // ── 12. validation failure -> one regeneration ──────────────────────────────
+  // ── 12. validation failure -> regeneration of ONLY the failing report ───────
   {
-    const f = fakeCreate([DUP, GOOD]);
+    const f = fakeCreate({ student: [DUP_S, GOOD_FEEDBACK], teacher: [GOOD_QC] });
     const r = await generateAIEvaluationDraft(params(f.fn));
-    assert(r?.attempts === 2 && r.studentFeedback === GOOD_FEEDBACK, "12. the second attempt is saved after the first fails validation");
-    assert(f.calls.length === 2, "12. exactly one regeneration");
-    assert(/VALIDATION FAILED/.test(userText(f.calls[1])) && /"📘" title markers/.test(userText(f.calls[1])), "12. the retry tells Claude exactly which validation failed");
-    assert(!/VALIDATION FAILED/.test(userText(f.calls[0])), "12. the first request has no failure notice");
-    const ok = fakeCreate([GOOD]);
-    const r1 = await generateAIEvaluationDraft(params(ok.fn));
-    assert(r1?.attempts === 1 && ok.calls.length === 1, "12. a passing first attempt makes one call");
-    const trunc = fakeCreate(["truncated", GOOD]);
-    const r2 = await generateAIEvaluationDraft(params(trunc.fn));
-    assert(r2?.attempts === 2 && /cut off at the token limit/.test(userText(trunc.calls[1])), "12. stop_reason max_tokens is a failure that triggers a regeneration with a reason");
-    const bad = fakeCreate(["empty", GOOD]);
-    assert((await generateAIEvaluationDraft(params(bad.fn)))?.attempts === 2, "12. a response without both fields is retried");
+    assert(r?.studentFeedback === GOOD_FEEDBACK && r.teacherQc === GOOD_QC, "12. the passing second attempt of the student report is saved together with the QC");
+    assert(r?.attempts?.studentFeedback === 2 && r.attempts.teacherQc === 1, "12. attempts are tracked per report");
+    assert(f.of("student").length === 2 && f.of("teacher").length === 1, "12. only the failing report is regenerated");
+    assert(/VALIDATION FAILED/.test(userText(f.of("student")[1])) && /"📘" title markers/.test(userText(f.of("student")[1])), "12. the retry tells Claude exactly which validation failed");
+    assert(!/VALIDATION FAILED/.test(userText(f.of("student")[0])) && !/VALIDATION FAILED/.test(userText(f.of("teacher")[0])), "12. first requests carry no failure notice");
+    const retry = userText(f.of("student")[1]);
+    assert(retry.includes("=== BEGIN PREVIOUS REPORT ===") && retry.includes(DUP_S.slice(0, 60)) && /Change only what is needed/.test(retry), "12. the retry sends the failed report back and asks for a minimal fix instead of a rewrite");
+
+    const qcFail = fakeCreate({ student: [GOOD_FEEDBACK], teacher: [DUP_Q, GOOD_QC] });
+    const r2 = await generateAIEvaluationDraft(params(qcFail.fn));
+    assert(r2?.attempts?.teacherQc === 2 && r2.attempts.studentFeedback === 1 && qcFail.of("student").length === 1, "12. a failing QC is regenerated without touching the student report");
+
+    const ok = fakeCreate({ student: [GOOD_FEEDBACK], teacher: [GOOD_QC] });
+    assert((await generateAIEvaluationDraft(params(ok.fn)))?.attempts?.studentFeedback === 1 && ok.calls.length === 2, "12. two passing reports cost exactly two calls");
+
+    const trunc = fakeCreate({ student: ["truncated", GOOD_FEEDBACK], teacher: [GOOD_QC] });
+    const r3 = await generateAIEvaluationDraft(params(trunc.fn));
+    assert(r3?.attempts?.studentFeedback === 2 && /cut off at the token limit/.test(userText(trunc.of("student")[1])), "12. stop_reason max_tokens is a failure that triggers a regeneration with a reason");
+    assert(/from scratch/.test(userText(trunc.of("student")[1])) && !userText(trunc.of("student")[1]).includes("BEGIN PREVIOUS REPORT"), "12. when there is no usable previous report the retry asks for a fresh report");
+    const empty = fakeCreate({ student: ["empty", GOOD_FEEDBACK], teacher: [GOOD_QC] });
+    assert((await generateAIEvaluationDraft(params(empty.fn)))?.attempts?.studentFeedback === 2, "12. a response without the report text is retried");
+    const fourth = fakeCreate({ student: [DUP_S, DUP_S, DUP_S, GOOD_FEEDBACK], teacher: [GOOD_QC] });
+    assert((await generateAIEvaluationDraft(params(fourth.fn)))?.attempts?.studentFeedback === 4, "12. up to a fourth attempt is allowed");
   }
 
   // ── 13. regeneration failure -> ANALYSIS_FAILED ─────────────────────────────
   {
-    const f = fakeCreate([DUP, DUP]);
+    const f = fakeCreate({ student: [DUP_S], teacher: [GOOD_QC] });
     let message = "";
     try {
       await generateAIEvaluationDraft(params(f.fn));
     } catch (e) {
       message = e instanceof Error ? e.message : String(e);
     }
-    assert(/after 2 attempts/.test(message) && /"📘" title markers/.test(message), "13. two failed attempts throw an error that lists the validation issues");
-    assert(f.calls.length === 2, "13. never more than 2 attempts");
+    assert(/Output 1 \(student feedback\) rejected after 4 attempts/.test(message) && /"📘" title markers/.test(message), "13. four failed attempts throw an error that lists the validation issues");
+    assert(f.of("student").length === 4, "13. never more than 4 attempts per report");
+    const both = fakeCreate({ student: [DUP_S], teacher: [DUP_Q] });
+    let both_msg = "";
+    try {
+      await generateAIEvaluationDraft(params(both.fn));
+    } catch (e) {
+      both_msg = e instanceof Error ? e.message : String(e);
+    }
+    assert(/Output 1 \(student feedback\) rejected/.test(both_msg) && /Output 2 \(teacher QC\) rejected/.test(both_msg), "13. when both reports fail, both reasons are reported");
 
     const marked: { from: string; msg: string }[] = [];
     let saved = 0;
@@ -363,10 +388,10 @@ async function main() {
       async saveDraft() {
         saved++;
       },
-      generateDraft: (p) => generateAIEvaluationDraft({ ...p, createMessage: fakeCreate([DUP, DUP]).fn }),
+      generateDraft: (p) => generateAIEvaluationDraft({ ...p, createMessage: fakeCreate({ student: [DUP_S], teacher: [GOOD_QC] }).fn }),
     };
     const outcome = await processRecording(1, deps);
-    assert(outcome === "error" && marked.length === 1 && marked[0].from === "ANALYZING" && /after 2 attempts/.test(marked[0].msg) && saved === 0, "13. the recording ends as ANALYSIS_FAILED (markFailed from ANALYZING) and no draft is saved");
+    assert(outcome === "error" && marked.length === 1 && marked[0].from === "ANALYZING" && /rejected after 4 attempts/.test(marked[0].msg) && saved === 0, "13. the recording ends as ANALYSIS_FAILED (markFailed from ANALYZING) and no draft is saved");
 
     const captured: unknown[] = [];
     const deps2: ProcessRecordingDeps = { ...deps, generateDraft: async (p) => (captured.push(p), { studentFeedback: GOOD_FEEDBACK, teacherQc: GOOD_QC }) };
@@ -382,18 +407,25 @@ async function main() {
 
   // ── request composition ─────────────────────────────────────────────────────
   {
-    const f = fakeCreate([GOOD]);
+    const f = fakeCreate({ student: [GOOD_FEEDBACK], teacher: [GOOD_QC] });
     await generateAIEvaluationDraft(params(f.fn));
-    const body = f.calls[0];
-    const system = String(body.system);
+    const [s, t] = [f.of("student")[0], f.of("teacher")[0]];
+    const system = String(s.system);
     assert(system.split(ONLINE_ENGLISH_FEEDBACK_SKILL).length === 2, "15. the skill text is in the system prompt exactly once, unmodified");
+    assert(system === String(t.system), "15. both reports are generated from the same system prompt");
     assert(system.indexOf("PROJECT AI EVALUATION RULES") > system.indexOf("=== END SKILL ==="), "15. project rules come after the skill and are separated from it");
     assert(system.includes("HISTORICAL CONTEXT POLICY") && system.includes("LEARNER TYPE") && system.includes("TEEN"), "15. historical policy and the explicit learner type are included");
-    const u = userText(body);
+    assert(system.includes("Output 2 contains NO quotation marks"), "15. the rule that keeps invented quotations out of the QC is in the prompt");
+    const u = userText(s);
     assert(u.includes("[08:22] Teacher: Okay, now we're just gonna read") && u.includes("Student (possible reading aloud)"), "15. the user message carries the labeled, timestamped transcript");
     assert(u.includes(`Teacher: ${TALK.teacherSpeakingSeconds}s (${T}%)`) && u.includes("recordingLength (last timestamp): 25:10"), "15. measured talk time and the recording length are given as facts");
     assert(u.includes("SPEAKER MAPPING") && u.includes("unverified heuristic"), "15. the mapping is declared an unverified heuristic");
-    assert(body.max_tokens === 8192 && body.tool_choice !== undefined, "15. max_tokens leaves headroom and the result tool is forced");
+    assert(u.includes("Write ONLY Output 1") && userText(t).includes("Write ONLY Output 2"), "15. each request asks for exactly one report");
+    assert(u.indexOf("FINAL CHECKLIST") > u.indexOf("[10:20] Student:") && u.includes("At most 3 lines under 📝, 4 items under 💬 and 3 corrections under ✅"), "15. the student checklist sits after the transcript and carries the skill's 25-minute limits");
+    assert(u.includes('Never write "you" or "your"'), "15. a teen report's checklist forbids addressing the student as you");
+    assert(userText(t).includes("NO quotation marks at all") && userText(t).includes(`Teacher ${T}% / Student ${S}%`), "15. the QC checklist forbids quotations and states the measured talk time");
+    assert(s.model === "claude-haiku-4-5" && s.max_tokens === 8192 && s.temperature === 0.2, "15. Haiku 4.5 with a low temperature and headroom for the output");
+    assert((s.tool_choice as { name: string }).name === TOOL.student && (t.tool_choice as { name: string }).name === TOOL.teacher, "15. each report is returned through its own forced tool");
     const saved = process.env.ANTHROPIC_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     assert((await generateAIEvaluationDraft({ utterances: UTTS, teacherSpeakerLabel: TEACHER, talkTime: TALK, lessonContext: LESSON })) === null, "15. no API key and no injected client -> null");

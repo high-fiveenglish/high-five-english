@@ -2,7 +2,7 @@
 // 전혀 호출하지 않는다. 검증 대상: transport validation(validateAIEvaluationResult),
 // age band 계산, Talk Time override 블록이 측정값을 그대로 담는지, prompt 재료에
 // Skill 원문과 프로젝트 규칙이 실제로 포함되는지(문자열 검증).
-import { validateAIEvaluationResult } from "../src/lib/aiEvaluation";
+import { parseReport } from "../src/lib/aiEvaluation";
 import {
   ageBandFromBirthDate,
   ageToneInstruction,
@@ -33,16 +33,12 @@ function assert(cond: boolean, label: string) {
   }
 }
 
-// --- validateAIEvaluationResult (transport layer) ---
-assertEqual(
-  validateAIEvaluationResult({ studentFeedback: "📘 feedback", teacherQc: "Tutor Evaluation" }),
-  { studentFeedback: "📘 feedback", teacherQc: "Tutor Evaluation" },
-  "정상 입력 -> 통과",
-);
-assertEqual(validateAIEvaluationResult(null), null, "null -> null");
-assertEqual(validateAIEvaluationResult({ studentFeedback: "x" }), null, "teacherQc 누락 -> null");
-assertEqual(validateAIEvaluationResult({ studentFeedback: "", teacherQc: "x" }), null, "빈 studentFeedback -> null");
-assertEqual(validateAIEvaluationResult({ studentFeedback: 123, teacherQc: "x" }), null, "studentFeedback이 문자열 아님 -> null");
+// --- parseReport (transport layer: 보고서마다 따로 호출하므로 tool 입력은 { report } 하나) ---
+assertEqual(parseReport({ report: "  📘 feedback  " }), "📘 feedback", "정상 입력 -> 앞뒤 공백 제거 후 통과");
+assertEqual(parseReport(null), null, "null -> null");
+assertEqual(parseReport({}), null, "report 누락 -> null");
+assertEqual(parseReport({ report: "   " }), null, "빈 report -> null");
+assertEqual(parseReport({ report: 123 }), null, "report가 문자열 아님 -> null");
 
 // --- ageBandFromBirthDate (Skill 원문이 숫자를 못박지 않아 production이 정한 기본값) ---
 const FIXED_NOW = new Date("2026-10-01T00:00:00Z");

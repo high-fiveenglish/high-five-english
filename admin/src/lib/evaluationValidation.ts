@@ -40,7 +40,7 @@ const OUTPUT1_SECTIONS: { name: string; re: RegExp }[] = [
   { name: `"${OUTPUT1_LABELS.standout}"`, re: /Really Nailed Today/g },
 ];
 
-export function checkNoDuplicateStructure(studentFeedback: string, teacherQc: string): string[] {
+export function checkStudentStructure(studentFeedback: string): string[] {
   const issues: string[] = [];
 
   const titleMarkers = count(studentFeedback, /📘/g);
@@ -53,6 +53,12 @@ export function checkNoDuplicateStructure(studentFeedback: string, teacherQc: st
   const corrections = studentFeedback.match(/^[①②③④⑤⑥⑦⑧⑨⑩]/gm) ?? [];
   if (new Set(corrections).size !== corrections.length) issues.push("Output 1 repeats a numbered correction marker (①②③...)");
 
+  if (/Tutor Evaluation/.test(studentFeedback)) issues.push("Output 1 contains Tutor Evaluation content (Teacher QC must never reach the student report)");
+  return issues;
+}
+
+export function checkTeacherStructure(teacherQc: string): string[] {
+  const issues: string[] = [];
   const titles = count(teacherQc, /Tutor Evaluation/g);
   if (titles !== 1) issues.push(`Output 2 has ${titles} "Tutor Evaluation" titles (expected exactly 1)`);
   const items = [...teacherQc.matchAll(/^\s{0,3}(\d{1,2})\.\s/gm)].map((m) => Number(m[1]));
@@ -61,9 +67,12 @@ export function checkNoDuplicateStructure(studentFeedback: string, teacherQc: st
     issues.push(`Output 2 numbered items must be exactly 1 through 10 once each, in order (found: ${items.join(",") || "none"}); do not use other numbered lists`);
   }
 
-  if (/Tutor Evaluation/.test(studentFeedback)) issues.push("Output 1 contains Tutor Evaluation content (Teacher QC must never reach the student report)");
   if (/📘|📝|💬|🌟/.test(teacherQc)) issues.push("Output 2 contains student-facing emoji section markers");
   return issues;
+}
+
+export function checkNoDuplicateStructure(studentFeedback: string, teacherQc: string): string[] {
+  return [...checkStudentStructure(studentFeedback), ...checkTeacherStructure(teacherQc)];
 }
 
 // ---------------------------------------------------------------------------
@@ -176,8 +185,12 @@ function sectionBetween(text: string, startRe: RegExp, endRe: RegExp): string {
   return e ? rest.slice(0, e.index) : rest;
 }
 
+export function skillLimitsFor(lessonDurationMinutes: number) {
+  return SKILL_LIMITS[lessonDurationMinutes <= 37 ? "25" : "50"];
+}
+
 export function checkSkillStructureLimits(studentFeedback: string, lessonDurationMinutes: number): string[] {
-  const limits = SKILL_LIMITS[lessonDurationMinutes <= 37 ? "25" : "50"];
+  const limits = skillLimitsFor(lessonDurationMinutes);
   const profile = lessonDurationMinutes <= 37 ? "25" : "50";
   const topLevelItems = (section: string) => (section.match(/^[-•]\s/gm) ?? []).length;
   const issues: string[] = [];
@@ -266,40 +279,67 @@ export function checkLearnerAddressing(studentFeedback: string, ageBand: AgeBand
 // ---------------------------------------------------------------------------
 // 5. Measured Talk Time
 // ---------------------------------------------------------------------------
-export function checkTalkTimeFigures(studentFeedback: string, teacherQc: string, talkTime: TalkTimeResult): string[] {
-  const issues: string[] = [];
+function strayPercentages(label: string, text: string, talkTime: TalkTimeResult): string[] {
   const allowed = new Set([talkTime.teacherTalkPercentage, talkTime.studentTalkPercentage]);
+  const issues: string[] = [];
+  for (const m of stripQuotedSpans(text).matchAll(/(\d+(?:\.\d+)?)\s*%/g)) {
+    if (!allowed.has(Number(m[1]))) issues.push(`${label}: the percentage "${m[0]}" is not one of the measured talk-time values`);
+  }
+  return issues;
+}
 
+export function checkStudentTalkFigures(studentFeedback: string, talkTime: TalkTimeResult): string[] {
+  return strayPercentages("Output 1", studentFeedback, talkTime);
+}
+
+export function checkTeacherTalkFigures(teacherQc: string, talkTime: TalkTimeResult): string[] {
+  const allowed = new Set([talkTime.teacherTalkPercentage, talkTime.studentTalkPercentage]);
+  const issues: string[] = [];
   const item1 = /^\s{0,3}1\.\s.*$/m.exec(teacherQc)?.[0] ?? "";
   const item1Numbers = [...item1.matchAll(/(\d+(?:\.\d+)?)\s*%/g)].map((m) => Number(m[1]));
   if (item1Numbers.length !== 2 || !item1Numbers.every((n) => allowed.has(n))) {
     issues.push(`Output 2 item 1 must state the measured talk time (Teacher ${talkTime.teacherTalkPercentage}% / Student ${talkTime.studentTalkPercentage}%) and nothing else`);
   }
-  for (const [label, text] of [["Output 1", studentFeedback], ["Output 2", teacherQc]] as const) {
-    for (const m of stripQuotedSpans(text).matchAll(/(\d+(?:\.\d+)?)\s*%/g)) {
-      if (!allowed.has(Number(m[1]))) issues.push(`${label}: the percentage "${m[0]}" is not one of the measured talk-time values`);
-    }
-  }
-  return issues;
+  return [...issues, ...strayPercentages("Output 2", teacherQc, talkTime)];
+}
+
+export function checkTalkTimeFigures(studentFeedback: string, teacherQc: string, talkTime: TalkTimeResult): string[] {
+  return [...checkStudentTalkFigures(studentFeedback, talkTime), ...checkTeacherTalkFigures(teacherQc, talkTime)];
 }
 
 // ---------------------------------------------------------------------------
 // All checks
 // ---------------------------------------------------------------------------
-export function validateEvaluationOutput(output: { studentFeedback: string; teacherQc: string }, ctx: ValidationContext): ValidationResult {
-  const { studentFeedback, teacherQc } = output;
-  const transcript = transcriptText(ctx.roles);
-  const historical1 = checkNoUngroundedHistoricalClaims(studentFeedback, ctx.lessonDateISO, transcript).issues.map((i) => `Output 1: ${i}`);
-  const historical2 = checkNoUngroundedHistoricalClaims(teacherQc, ctx.lessonDateISO, transcript).issues.map((i) => `Output 2: ${i}`);
-  const issues = [
-    ...checkNoDuplicateStructure(studentFeedback, teacherQc),
-    ...checkQuotesAndReading(studentFeedback, teacherQc, ctx.roles),
-    ...checkSkillStructureLimits(studentFeedback, ctx.lessonDurationMinutes),
-    ...checkTimeGrounding(studentFeedback, teacherQc, ctx),
-    ...checkLearnerAddressing(studentFeedback, ctx.ageBand),
-    ...checkTalkTimeFigures(studentFeedback, teacherQc, ctx.talkTime),
-    ...historical1,
-    ...historical2,
-  ];
+function finish(issues: string[]): ValidationResult {
   return { ok: issues.length === 0, issues: [...new Set(issues)].slice(0, 14) };
+}
+
+/** Output 1 alone — each report is generated and validated separately, so only the failing one is regenerated. */
+export function validateStudentFeedback(studentFeedback: string, ctx: ValidationContext): ValidationResult {
+  const historical = checkNoUngroundedHistoricalClaims(studentFeedback, ctx.lessonDateISO, transcriptText(ctx.roles)).issues.map((i) => `Output 1: ${i}`);
+  return finish([
+    ...checkStudentStructure(studentFeedback),
+    ...checkQuotesAndReading(studentFeedback, "", ctx.roles),
+    ...checkSkillStructureLimits(studentFeedback, ctx.lessonDurationMinutes),
+    ...checkTimeGrounding(studentFeedback, "", ctx),
+    ...checkLearnerAddressing(studentFeedback, ctx.ageBand),
+    ...checkStudentTalkFigures(studentFeedback, ctx.talkTime),
+    ...historical,
+  ]);
+}
+
+/** Output 2 alone. */
+export function validateTeacherQc(teacherQc: string, ctx: ValidationContext): ValidationResult {
+  const historical = checkNoUngroundedHistoricalClaims(teacherQc, ctx.lessonDateISO, transcriptText(ctx.roles)).issues.map((i) => `Output 2: ${i}`);
+  return finish([
+    ...checkTeacherStructure(teacherQc),
+    ...checkQuotesAndReading("", teacherQc, ctx.roles),
+    ...checkTimeGrounding("", teacherQc, ctx),
+    ...checkTeacherTalkFigures(teacherQc, ctx.talkTime),
+    ...historical,
+  ]);
+}
+
+export function validateEvaluationOutput(output: { studentFeedback: string; teacherQc: string }, ctx: ValidationContext): ValidationResult {
+  return finish([...validateStudentFeedback(output.studentFeedback, ctx).issues, ...validateTeacherQc(output.teacherQc, ctx).issues]);
 }
