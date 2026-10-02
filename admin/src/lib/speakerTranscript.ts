@@ -43,32 +43,57 @@ export function describeSpeakerMapping(utterances: Utterance[], teacherLabel: st
   return { teacherLabel, speakerCount, method: "first-speaker-heuristic", confidence: speakerCount === 2 ? "unverified" : "low" };
 }
 
-// A teacher request to read something aloud ("please read", "can you read Role B", "we're gonna read the
-// first paragraph"). Deliberately does not match thanks/praise such as "thank you for reading".
+// An explicit teacher instruction to read something aloud ("please read the title", "can you read Role B", "we're gonna
+// read the first paragraph"). Deliberately does not match thanks/praise such as "thank you for reading", and does not
+// match a question about the text ("what is the title of lesson 48?"): the answer to a question is the student's own words.
 const READ_REQUEST =
-  /\b(?:please read|can you read|could you read|you can read|you read|let'?s read|what(?:'s| is) the title|(?:gonna|going to|will|want you to) read|go ahead and read|start reading|read (?:the|this|that|it|all|out|aloud|role|first|second|next|paragraph|sentence|line|here))\b/i;
+  /\b(?:please read|can you read|could you read|you can read|you read|let'?s read|(?:gonna|going to|will|want you to) read|go ahead and read|start reading|read (?:the|this|that|it|all|out|aloud|role|first|second|next|paragraph|sentence|line|here))\b/i;
+// The teacher points at written material without saying "read" ("look at the dialogue on page 12").
+const TEXT_REFERENCE =
+  /\b(?:page \d+|passage|paragraph|article|text ?book|workbook|worksheet|dialog(?:ue)?|script|story|role [a-z]|line \d+)\b/i;
+// A question that asks for the student's own answer, even if it mentions the text ("what is the passage about?").
+const OPEN_QUESTION = /\b(?:what|why|how|who|where|when|which|do you think|did you|have you|tell me)\b/i;
+// The teacher asked or prompted the student, so a long fluent reply is an answer, not a passage. Found on a real recording:
+// a 30-word fluent answer about academic pressure was flagged as reading aloud only because it had no filler words, which
+// hid the one real grammar error in the lesson from the feedback.
+const PROMPT = /\?|\b(?:you|your|tell me)\b/i;
+// Lets a read segment carry on across a short teacher interjection ("okay", "good", "next", "keep going") that is not a question.
+const CONTINUE_CUE = /\b(?:continue|keep going|go on|carry on|next)\b/i;
+const CONTINUE_MAX_WORDS = 3;
 const DISFLUENCY = /\b(?:um+|uh+|er+|hmm+|like|you know|i mean)\b/i;
-// First-person talk about oneself ("I actually have...", "my school") is spontaneous speech, not a passage. Found on a
-// real recording: a 30-word fluent answer about academic pressure was flagged as reading aloud only because it had no
-// filler words, which hid the one real grammar error in the lesson from the feedback.
-const FIRST_PERSON = /\b(?:i|i'm|i've|i'd|i'll|me|my|mine|myself)\b/i;
 const PROSE_LIKE_MIN_WORDS = 30;
 const READ_ALOUD_MIN_WORDS = 4;
 
-/** Flags student turns that probably read written material: (1) the turn(s) right after a teacher read request,
- * until the next teacher turn; (2) long prose-like turns with no speech disfluencies and no first-person talk about oneself. Conservative on purpose —
- * a wrong flag only hides one sentence from being used as an "error". */
+function continuesReading(teacherText: string): boolean {
+  return !teacherText.includes("?") && (CONTINUE_CUE.test(teacherText) || wordCount(teacherText) <= CONTINUE_MAX_WORDS);
+}
+
+/** Flags student turns that probably read written material, using the teacher turn before them as evidence:
+ * (1) the turn(s) right after an explicit read instruction, until the next teacher turn;
+ * (2) the continuation of a flagged read segment across a short, non-question teacher interjection;
+ * (3) long prose-like turns with no speech disfluencies, unless the teacher had just asked or prompted the student
+ * (a pointer to the textbook/passage that is not an open question counts as evidence for reading, not as a prompt).
+ * The student's own words (first-person pronouns etc.) are not used: scripted text says "I"/"my" too.
+ * Conservative on purpose — a wrong flag only hides one sentence from being used as an "error". */
 function detectReadAloud(base: Omit<RoleUtterance, "possibleReadAloud">[]): boolean[] {
   const flags = new Array<boolean>(base.length).fill(false);
+  let teacherText: string | null = null;
   let readRequested = false;
+  let continuing = false;
+  let lastStudentFlagged = false;
   base.forEach((u, i) => {
     if (u.role === "Teacher") {
+      teacherText = u.text;
       readRequested = READ_REQUEST.test(u.text);
+      continuing = lastStudentFlagged && continuesReading(u.text);
       return;
     }
     const words = wordCount(u.text);
-    if (readRequested && words >= READ_ALOUD_MIN_WORDS) flags[i] = true;
-    else if (words >= PROSE_LIKE_MIN_WORDS && !DISFLUENCY.test(u.text) && !FIRST_PERSON.test(u.text)) flags[i] = true;
+    const pointsAtText = teacherText !== null && TEXT_REFERENCE.test(teacherText) && !OPEN_QUESTION.test(teacherText);
+    const prompted = teacherText !== null && PROMPT.test(teacherText) && !pointsAtText;
+    if ((readRequested || continuing) && words >= READ_ALOUD_MIN_WORDS) flags[i] = true;
+    else if (words >= PROSE_LIKE_MIN_WORDS && !DISFLUENCY.test(u.text) && !prompted) flags[i] = true;
+    lastStudentFlagged = flags[i];
   });
   return flags;
 }

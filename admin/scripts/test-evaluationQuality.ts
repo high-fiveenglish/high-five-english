@@ -148,9 +148,9 @@ const GOOD_QC = qcLines();
   );
   assert(!thanks[1].possibleReadAloud, "3. 'thank you for reading' is not a read request");
   const prose = "Researchers from the national health institute studied thousands of adults across wealthy countries and found that regular headaches are common among people of every age and background around the world today";
-  const proseRoles = toRoleUtterances([{ speaker: "A", start: 0, end: 1000, text: "Tell me." }, { speaker: "B", start: 2000, end: 9000, text: prose }], "A");
-  assert(proseRoles[1].possibleReadAloud, "3. a long prose-like student turn with no disfluencies is flagged even without a cue");
-  const talky = toRoleUtterances([{ speaker: "A", start: 0, end: 1000, text: "Tell me." }, { speaker: "B", start: 2000, end: 9000, text: `um ${prose} like you know` }], "A");
+  const proseRoles = toRoleUtterances([{ speaker: "A", start: 0, end: 1000, text: "Okay." }, { speaker: "B", start: 2000, end: 9000, text: prose }], "A");
+  assert(proseRoles[1].possibleReadAloud, "3. a long prose-like student turn with no disfluencies is flagged even without a read cue");
+  const talky = toRoleUtterances([{ speaker: "A", start: 0, end: 1000, text: "Okay." }, { speaker: "B", start: 2000, end: 9000, text: `um ${prose} like you know` }], "A");
   assert(!talky[1].possibleReadAloud, "3. the same length with speech disfluencies is not flagged");
 
   // Regression from a real recording: a fluent 30+ word first-person answer (no filler words) was flagged as reading aloud,
@@ -159,14 +159,69 @@ const GOOD_QC = qcLines();
     "Sometimes I actually feel a lot of pressure from my school and my academy because everyone around me is working very hard, but I did not actually had a headache when I felt those pressures at all";
   const own = toRoleUtterances([{ speaker: "A", start: 0, end: 1000, text: "Do you feel stress sometimes?" }, { speaker: "B", start: 2000, end: 9000, text: fluentOwn }], "A");
   assert(!own[1].possibleReadAloud, "3. a fluent first-person spontaneous answer is not flagged as reading aloud");
+  const ownPrompt = toRoleUtterances([{ speaker: "A", start: 0, end: 1000, text: "Tell me about your weekend." }, { speaker: "B", start: 2000, end: 9000, text: fluentOwn }], "A");
+  assert(!ownPrompt[1].possibleReadAloud, "3. a long fluent answer with 'my' after a prompt without '?' ('tell me about your ...') is not flagged");
+
+  // Scripted text says "I"/"my" too: without an explicit read request right before it, it stays eligible through other evidence.
+  const scriptedWithI =
+    "My name is Tom and I live in a small town near the sea with my parents and my little sister, and every morning I walk to my school along the beach before the shops open";
+  const dialogue = toRoleUtterances(
+    [{ speaker: "A", start: 0, end: 3000, text: "Okay, look at the dialogue on page 12." }, { speaker: "B", start: 4000, end: 12000, text: scriptedWithI }],
+    "A",
+  );
+  assert(dialogue[1].possibleReadAloud, "3. long scripted text with 'I/my' after a textbook/passage reference (no 'read') is flagged");
+  const noCue = toRoleUtterances([{ speaker: "A", start: 0, end: 1000, text: "Okay." }, { speaker: "B", start: 2000, end: 9000, text: scriptedWithI }], "A");
+  assert(noCue[1].possibleReadAloud, "3. long scripted text with 'I/my' and no teacher prompt is flagged by the prose rule (no first-person exemption)");
+  const continued = toRoleUtterances(
+    [
+      { speaker: "A", start: 0, end: 2000, text: "Please read the passage." },
+      { speaker: "B", start: 3000, end: 8000, text: "If you get regular headaches, you're not alone." },
+      { speaker: "A", start: 9000, end: 10000, text: "Good, next." },
+      { speaker: "B", start: 11000, end: 15000, text: "I get them every week, my doctor told me." },
+      { speaker: "A", start: 16000, end: 17000, text: "Okay." },
+      { speaker: "B", start: 18000, end: 22000, text: "Most of my friends have them too, says Anna." },
+    ],
+    "A",
+  );
+  assert(continued[3].possibleReadAloud && continued[5].possibleReadAloud, "3. a read segment continues across short non-question teacher interjections, even with 'I/my'");
+  const continueThenAsk = toRoleUtterances(
+    [
+      { speaker: "A", start: 0, end: 2000, text: "Please read the passage." },
+      { speaker: "B", start: 3000, end: 8000, text: "If you get regular headaches, you're not alone." },
+      { speaker: "A", start: 9000, end: 10000, text: "Good. Do you get headaches?" },
+      { speaker: "B", start: 11000, end: 15000, text: "Yes, I get them when I sleep late." },
+    ],
+    "A",
+  );
+  assert(!continueThenAsk[3].possibleReadAloud, "3. a question after a read segment ends it: the answer is not flagged");
+
+  // A question about the title is a comprehension question; the answer is the student's own words.
   const title = toRoleUtterances(
     [
       { speaker: "A", start: 0, end: 3000, text: "Okay, what is the title of lesson 48?" },
+      { speaker: "B", start: 4000, end: 7000, text: "I think it is about headaches because my mom gets them a lot." },
+    ],
+    "A",
+  );
+  assert(!title[1].possibleReadAloud, "3. a spontaneous answer to 'what is the title of lesson 48?' is not automatically flagged");
+  const passageQuestion = toRoleUtterances(
+    [{ speaker: "A", start: 0, end: 3000, text: "What is the passage about?" }, { speaker: "B", start: 4000, end: 12000, text: fluentOwn }],
+    "A",
+  );
+  assert(!passageQuestion[1].possibleReadAloud, "3. a long answer to an open question that mentions the passage is not flagged");
+  const readTitle = toRoleUtterances(
+    [
+      { speaker: "A", start: 0, end: 3000, text: "Please read the title." },
       { speaker: "B", start: 4000, end: 7000, text: "Half the world's population get headache." },
     ],
     "A",
   );
-  assert(title[1].possibleReadAloud, "3. a title the student reads after 'what is the title of lesson ...?' is flagged (its wording is the book's, not the student's)");
+  assert(readTitle[1].possibleReadAloud, "3. the student turn after an explicit 'Please read the title' is flagged");
+  const readPassage = toRoleUtterances(
+    [{ speaker: "A", start: 0, end: 3000, text: "Please read the passage." }, { speaker: "B", start: 4000, end: 12000, text: scriptedWithI }],
+    "A",
+  );
+  assert(readPassage[1].possibleReadAloud, "3. the student turn after an explicit 'Please read the passage' is flagged");
   const readsWithI = toRoleUtterances(
     [
       { speaker: "A", start: 0, end: 3000, text: "Okay, start reading." },
