@@ -7,7 +7,8 @@ import { handleProcessRecordingRequest, processRecording, type ProcessRecordingD
 import { isAuthorizedProcessingRequest, RECORDING_PROCESSING_SECRET_HEADER } from "../src/lib/recordingProcessingAuth";
 import { ANALYZING_STUCK_AFTER_MS, MAX_ERROR_MESSAGE_LENGTH } from "../src/lib/recordingWorkflow";
 import { studentFirstLesson, teacherFirstLesson, threeVoiceLesson } from "./fixtures/syntheticLessons";
-import { confirmTeacherSpeaker, type ConfirmDeps } from "../src/lib/speakerConfirmation";
+import { confirmTeacherSpeaker, parseStoredUtterances, type ConfirmDeps } from "../src/lib/speakerConfirmation";
+import { computeTalkTime, type Utterance } from "../src/lib/talkTime";
 import {
   recoverStuckTranscribedRecordings,
   TRANSCRIBED_RECOVERY_GRACE_MS,
@@ -46,6 +47,18 @@ interface FakeRow {
   confirmedByTeacherId: number | null;
 }
 
+/** AssemblyAI returns more than speaker/start/end/text: a confidence and a "words" array (text, start, end, confidence, speaker for every word). */
+function withAssemblyAIExtras(utterances: Utterance[], on: boolean): Utterance[] {
+  if (!on) return utterances;
+  return utterances.map((u, i) => ({
+    ...u,
+    confidence: 0.91,
+    channel: "1",
+    metadata: { source: "test", index: i },
+    words: u.text.split(/\s+/).map((w, k) => ({ text: w, start: u.start + k * 100, end: u.start + k * 100 + 90, confidence: 0.88, speaker: u.speaker })),
+  })) as Utterance[];
+}
+
 function tick() {
   return new Promise<void>((resolve) => setTimeout(resolve, 0));
 }
@@ -59,10 +72,13 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
     fetch: "ok" | "null" | "throw" | "noUtterances" | "processing" | "error";
     generateThrows: string | null;
     lesson: "teacherFirst" | "studentFirst" | "threeVoice";
+    /** the real AssemblyAI utterance objects carry word-level data and other metadata */
+    rawExtras: boolean;
   } = {
     fetch: "ok",
     generateThrows: null,
     lesson: "teacherFirst",
+    rawExtras: false,
   };
 
   const deps: ProcessRecordingDeps = {
@@ -109,7 +125,10 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
         id: transcriptId,
         status: "completed",
         text: "synthetic lesson",
-        utterances: behavior.lesson === "studentFirst" ? studentFirstLesson() : behavior.lesson === "threeVoice" ? threeVoiceLesson() : teacherFirstLesson(),
+        utterances: withAssemblyAIExtras(
+          behavior.lesson === "studentFirst" ? studentFirstLesson() : behavior.lesson === "threeVoice" ? threeVoiceLesson() : teacherFirstLesson(),
+          behavior.rawExtras,
+        ),
         audio_duration: 1500,
       };
     },
@@ -712,6 +731,75 @@ async function main() {
     const calls = env.calls.generateDraft;
     const r = await Promise.all([env.confirm(1, 7, "A"), env.confirm(1, 7, "B"), env.confirm(1, 8, "A")]);
     assert(r.every((x) => !x.ok) && env.calls.generateDraft === calls, "race: confirming a recording whose roles were settled automatically is refused every time");
+  }
+
+  // ── 11. Data minimization: only speaker/start/end/text may be stored (no word-level data, no AssemblyAI metadata) ──────────────
+  const ALLOWED_KEYS = "end,speaker,start,text";
+  {
+    // A. real-shaped AssemblyAI utterances (confidence, channel, metadata, words[] with per-word confidence/speaker) -> whitelisted
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = "studentFirst";
+    env.behavior.rawExtras = true;
+    await processRecording(1, env.deps);
+    const stored = env.db.get(1)!.utterances as Record<string, unknown>[];
+    const expectedCount = studentFirstLesson().length;
+    assert(Array.isArray(stored) && stored.length === expectedCount, "whitelist: every utterance is stored (none dropped, none added)");
+    assert(stored.every((u) => Object.keys(u).sort().join() === ALLOWED_KEYS), "whitelist: each stored utterance has exactly speaker/start/end/text");
+    const json = JSON.stringify(stored);
+    assert(!/words|confidence|channel|metadata|source/.test(json), "whitelist: no word-level data, confidence or other metadata in the stored JSON");
+    const original = studentFirstLesson();
+    assert(stored.every((u, i) => u.speaker === original[i].speaker && u.start === original[i].start && u.end === original[i].end && u.text === original[i].text), "whitelist: the four kept values are exactly the original ones, in the original order");
+    assert(json.length < JSON.stringify(withAssemblyAIExtras(original, true)).length / 2, "whitelist: the stored JSON is a fraction of the raw AssemblyAI utterances");
+  }
+  {
+    // B. utterances without any word-level data store the same four fields
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = "threeVoice";
+    await processRecording(1, env.deps);
+    const stored = env.db.get(1)!.utterances as Record<string, unknown>[];
+    assert(stored.length === threeVoiceLesson().length && stored.every((u) => Object.keys(u).sort().join() === ALLOWED_KEYS), "no-word-data: plain utterances are stored with the same four fields");
+    assert(parseStoredUtterances(stored)?.length === stored.length, "no-word-data: parseStoredUtterances accepts what was stored");
+  }
+  {
+    // C. processing regression: the projected data flows through parse -> Talk Time -> Claude unchanged
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = "studentFirst";
+    env.behavior.rawExtras = true;
+    await processRecording(1, env.deps);
+    let received: { utterances: Utterance[]; teacherSpeakerLabel: string | null; teacherPct: number } | null = null;
+    const realGenerate = env.deps.generateDraft;
+    env.deps.generateDraft = async (p) => {
+      received = { utterances: p.utterances, teacherSpeakerLabel: p.teacherSpeakerLabel, teacherPct: p.talkTime.teacherTalkPercentage };
+      return realGenerate(p);
+    };
+    const fetchesBefore = env.calls.fetchTranscript;
+    const res = await env.confirm(1, 7, "B");
+    const got = received as { utterances: Utterance[]; teacherSpeakerLabel: string | null; teacherPct: number } | null;
+    const expectedUtterances = studentFirstLesson();
+    assert(res.ok && env.db.get(1)!.processingStatus === "NEEDS_REVIEW", "regression: LOW -> confirm -> analysis completes with projected data");
+    assert(!!got && JSON.stringify(got.utterances) === JSON.stringify(expectedUtterances), "regression: Claude receives exactly the four-field utterances (same text, times and order as the original)");
+    assert(!!got && got.teacherSpeakerLabel === "B" && got.teacherPct === computeTalkTime(expectedUtterances, "B").teacherTalkPercentage, "regression: Talk Time is computed from the projected data with the teacher's label");
+    // D. confirmation regression: no AssemblyAI read after the choice, one Claude call
+    assert(env.calls.fetchTranscript === fetchesBefore && env.calls.fetchTranscript === 1, "regression: the AssemblyAI read count did not increase after the confirmation");
+    assert(env.calls.generateDraft === 1 && env.calls.claimSucceeded === 1, "regression: exactly one Claude call");
+  }
+  {
+    // missing values are not invented: a malformed utterance is still rejected when the analysis resumes
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = "studentFirst";
+    await processRecording(1, env.deps);
+    const row = env.db.get(1)!;
+    (row.utterances as Record<string, unknown>[])[3] = { speaker: "A", start: 1, end: 2 }; // text missing, as a malformed stored value
+    const r = await env.confirm(1, 7, "B");
+    assert(r.ok === false || env.db.get(1)!.processingStatus !== "NEEDS_REVIEW", "malformed stored utterance: the analysis does not complete on invalid data");
+    assert(env.calls.generateDraft === 0, "malformed stored utterance: Claude is not called");
+  }
+  {
+    // the HIGH path never stores utterances at all (unchanged)
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.rawExtras = true;
+    await processRecording(1, env.deps);
+    assert(env.db.get(1)!.utterances === null && env.db.get(1)!.processingStatus === "NEEDS_REVIEW", "HIGH path: nothing is stored, analysis unchanged (also with raw AssemblyAI extras)");
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);

@@ -9,7 +9,7 @@ import type { AssemblyAITranscriptResult } from "./assemblyai";
 import type { AIEvaluationResult, LessonContext } from "./aiEvaluation";
 import { isAuthorizedProcessingRequest, RECORDING_PROCESSING_SECRET_HEADER } from "./recordingProcessingAuth";
 import { truncateErrorMessage } from "./recordingWorkflow";
-import { parseStoredUtterances, speakerLabelsOf } from "./speakerConfirmation";
+import { parseStoredUtterances, projectUtterancesForStorage, speakerLabelsOf } from "./speakerConfirmation";
 
 export interface RecordingForProcessing {
   id: number;
@@ -131,7 +131,8 @@ export async function processRecording(audioRecordingId: number, deps: ProcessRe
       const inference = (deps.inferRoles ?? inferSpeakerRoles)(transcript.utterances);
       if (inference.confidence !== "HIGH" || inference.teacherLabel === null) {
         await deps.markNeedsSpeakerConfirmation(recording.id, summarizeInference(inference), {
-          utterances: transcript.utterances,
+          // Only speaker/start/end/text are kept — no word-level data or other AssemblyAI metadata (see projectUtterancesForStorage).
+          utterances: projectUtterancesForStorage(transcript.utterances),
           transcript: transcript.text,
           duration: transcript.audio_duration ?? null,
         });

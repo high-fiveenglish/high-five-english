@@ -21,6 +21,7 @@ import { formatAppDate } from "../../src/lib/appTime";
 import { getRecordingProcessingSecret } from "../../src/lib/recordingProcessingAuth";
 import { handleProcessRecordingRequest, type ProcessRecordingDeps } from "../../src/lib/recordingProcessing";
 import { truncateErrorMessage } from "../../src/lib/recordingWorkflow";
+import { projectUtterancesForStorage } from "../../src/lib/speakerConfirmation";
 
 const prismaDeps: ProcessRecordingDeps = {
   async findRecording(id) {
@@ -78,7 +79,8 @@ const prismaDeps: ProcessRecordingDeps = {
       data: {
         processingStatus: "NEEDS_SPEAKER_CONFIRMATION",
         speakerMappingStatus: "NEEDS_CONFIRMATION",
-        transcriptUtterances: snapshot.utterances as unknown as Prisma.InputJsonValue,
+        // Projected again right before the write (idempotent): whatever reaches this column has exactly speaker/start/end/text.
+        transcriptUtterances: projectUtterancesForStorage(snapshot.utterances) as unknown as Prisma.InputJsonValue,
         transcript: snapshot.transcript,
         duration: snapshot.duration,
         errorMessage: truncateErrorMessage(message),

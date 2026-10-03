@@ -9,6 +9,15 @@ import type { Utterance } from "./talkTime";
 
 export const SPEAKER_LABEL_PATTERN = /^[A-Za-z0-9_-]{1,8}$/;
 
+/** What may be stored in AudioRecording.transcriptUtterances: exactly the four fields the analysis needs to resume
+ * (speaker, start, end, text). AssemblyAI's utterance objects carry more — a "words" array with a timestamp, confidence and speaker
+ * for every single word, plus other metadata — and none of that is needed, so none of it is stored (data minimization: this is a real
+ * student's speech). It is a whitelist, not a blacklist: a field AssemblyAI adds tomorrow is dropped too. Missing values are copied as
+ * they are (undefined is omitted by JSON), so parseStoredUtterances still rejects a malformed record later exactly as before. */
+export function projectUtterancesForStorage(utterances: Utterance[]): Utterance[] {
+  return utterances.map((u) => ({ speaker: u.speaker, start: u.start, end: u.end, text: u.text }));
+}
+
 /** The stored AssemblyAI utterances come back from a JSON column; never trust their shape. */
 export function parseStoredUtterances(value: unknown): Utterance[] | null {
   if (!Array.isArray(value) || value.length === 0) return null;

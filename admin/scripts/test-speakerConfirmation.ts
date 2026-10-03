@@ -7,6 +7,7 @@ import {
   CONFIRM_ERROR_MESSAGES,
   confirmTeacherSpeaker,
   parseStoredUtterances,
+  projectUtterancesForStorage,
   speakerChoicesFor,
   speakerLabelsOf,
   type ConfirmDeps,
@@ -153,6 +154,33 @@ async function main() {
     const [x, y] = await Promise.all([ask(v, 7, "A"), ask(v, 7, "B")]);
     assert([x, y].filter((r) => r.ok && r.state === "confirmed").length === 1 && [x, y].filter((r) => !r.ok && r.error === "different_label").length === 1, "concurrent different requests: one wins, the other is refused");
     assert(Object.keys(CONFIRM_ERROR_MESSAGES).length === 4 && Object.values(CONFIRM_ERROR_MESSAGES).every((m) => !/prisma|stack|secret/i.test(m)), "messages: fixed text, nothing internal");
+  }
+
+  // ── data minimization: only speaker/start/end/text are stored ─────────────────────────────────────────────────────────────────
+  {
+    const raw = [
+      { speaker: "A", start: 0, end: 900, text: "Hello there", confidence: 0.93, channel: "1", words: [{ text: "Hello", start: 0, end: 400, confidence: 0.99, speaker: "A" }, { text: "there", start: 450, end: 900, confidence: 0.91, speaker: "A" }], vendorField: { nested: true } },
+      { speaker: "B", start: 1000, end: 1500, text: "Hi", words: [], extra: null },
+    ];
+    const before = JSON.stringify(raw);
+    const kept = projectUtterancesForStorage(raw);
+    assert(JSON.stringify(raw) === before, "projection: the input is not mutated");
+    assert(kept.length === 2 && kept.every((u) => Object.keys(u).sort().join() === "end,speaker,start,text"), "projection: exactly speaker/start/end/text per utterance");
+    assert(kept[0].text === "Hello there" && kept[0].start === 0 && kept[0].end === 900 && kept[1].speaker === "B", "projection: values and order are preserved");
+    assert(!/words|confidence|channel|vendorField|extra/.test(JSON.stringify(kept)), "projection: word-level data and every other field are gone (whitelist, not blacklist)");
+    assert(JSON.stringify(projectUtterancesForStorage(kept)) === JSON.stringify(kept), "projection: idempotent (projecting twice changes nothing)");
+    assert(projectUtterancesForStorage([]).length === 0, "projection: an empty list stays empty");
+    assert(parseStoredUtterances(JSON.parse(JSON.stringify(kept)))?.length === 2, "projection: parseStoredUtterances accepts the projected data after a JSON round trip");
+    const malformed = projectUtterancesForStorage([{ speaker: "A", start: 0, end: 1 } as never]);
+    assert(parseStoredUtterances(JSON.parse(JSON.stringify(malformed))) === null, "projection: a missing value is not invented — the malformed record is still rejected on read");
+  }
+  {
+    // both places that write the column go through the projection
+    const bg = fs.readFileSync(path.resolve(__dirname, "../netlify/functions/process-recording-background.ts"), "utf8");
+    assert(/transcriptUtterances:\s*projectUtterancesForStorage\(/.test(bg), "background function: the column is written from the projection, never from the raw object");
+    assert(!/transcriptUtterances:\s*snapshot\.utterances/.test(bg), "background function: the raw snapshot is not written directly");
+    const proc = fs.readFileSync(path.resolve(__dirname, "../src/lib/recordingProcessing.ts"), "utf8");
+    assert(/utterances:\s*projectUtterancesForStorage\(transcript\.utterances\)/.test(proc), "processRecording: the snapshot handed to the store is already projected");
   }
 
   // ── the migration only ADDS nullable columns (no data is rewritten or dropped) ───────────────────────────────────────────
