@@ -310,6 +310,11 @@ const GOOD_QC = qcLines();
   assert(checkStudentReportHygiene("To build fluency, practice reading the article aloud twice a week.").length === 0, "3c. a practice suggestion about fluency is allowed");
   assert(checkStudentReportHygiene(`The tutor corrected the word "migraine" when the student said it, and the student repeated it.`).length === 0, "3c. a sentence quoting the tutor's correction is allowed");
   assert(checkStudentReportHygiene("The student read the first paragraph and then explained the main idea in their own words.").length === 0, "3c. reading without a quality judgement is allowed");
+  // second real recording: naming the activity is not a judgement
+  assert(checkStudentReportHygiene("- Audio listening and full-text reading aloud for pronunciation check").length === 0, "3c. 'reading aloud for pronunciation check' (lesson content) is allowed");
+  assert(checkStudentReportHygiene("The tutor asked the student to read the story aloud so that pronunciation could be checked.").length === 0, "3c. describing a pronunciation check is allowed");
+  assert(checkStudentReportHygiene("You also read the entire passage aloud with good pacing, which shows your confidence.").length === 1, "3c. 'read aloud with good pacing' is rejected");
+  assert(checkStudentReportHygiene("The student read the new words aloud and pronounced them clearly.").length === 1, "3c. 'pronounced them clearly' is rejected");
 
   // (b) a ❌ sentence that stops where the speaker label changes
   const splitRoles = toRoleUtterances(
@@ -359,6 +364,44 @@ const GOOD_QC = qcLines();
   assert(tsIssues("At [00:10], the tutor asked the student to explain her reasons.").length === 0, "3e. 'At [ts], the tutor asked the student ...' only checks the tutor");
   assert(tsIssues("The tutor asked the student to explain at [00:25].").length === 0, "3e. a phrase that names another person between actor and timestamp is left alone");
   assert(tsIssues("The student answered, and the tutor clarified the distinction at [00:25].").length === 1, "3e. a tutor action at a student line is still caught after a conjunction");
+
+  // ── second real recording: turn-boundary tolerance for the timestamp check ──────────────────────────────────────
+  const boundaryRoles = toRoleUtterances(
+    [
+      { speaker: "A", start: mmss(0, 10), end: mmss(0, 20) + 600, text: "Why do you think the researchers studied rich countries?" },
+      { speaker: "B", start: mmss(0, 25), end: mmss(0, 40) + 400, text: "Maybe they wanted to show that rich people also struggle." },
+      { speaker: "A", start: mmss(0, 40) + 800, end: mmss(0, 50), text: "Yeah. So rich people also have problems." },
+    ],
+    "A",
+  );
+  const bIssues = (text: string) => checkTutorStudentTimestamps(text, boundaryRoles);
+  assert(bIssues("The student offered a thoughtful analysis at [00:40].").length === 0, "3f. a label on the last second of the student's turn (the tutor starts in the same second) is not an error");
+  assert(bIssues("At [00:40], the tutor affirmed the answer.").length === 0, "3f. the same second also belongs to the tutor's next turn");
+  assert(bIssues("At [00:32], the tutor asked why the researchers studied rich countries.").length === 1, "3f. a label in the middle of the student's turn is still caught");
+  assert(bIssues("At [00:22], the tutor asked a follow-up question.").length === 0, "3f. a second that no turn covers is left to the time-grounding check");
+  // a time inside a long line: the message names the label to copy
+  const inside = checkTimeGrounding("", "3. Teaching Quality: The tutor asked about the food at [00:33] and moved on.", { roles: boundaryRoles, lessonDateISO: "2026-10-02", lessonDurationMinutes: 25, ageBand: "teen", talkTime: computeTalkTime([], "A") });
+  assert(inside.length === 1 && /starts at \[00:25\] \(Student\)/.test(inside[0]), "3f. a timestamp inside a long line is rejected with the start label of the covering line");
+  // activity-level sentences ("moved through vocabulary at [ts]") are not speech-act claims
+  assert(bIssues("The tutor introduced the article title at [00:30], moved through vocabulary at [00:32], and played the audio at [00:35].").length === 0, "3f. a milestone list with activity verbs is not checked");
+  const hinted = bIssues("At [00:32], the tutor asked why the researchers studied rich countries.");
+  assert(hinted.length === 1 && /nearest earlier line starts at \[00:10\]/.test(hinted[0]), "3f. the message tells the retry where the tutor's own earlier line starts");
+
+  // ── second real recording: the weak prose fallback must not swallow spontaneous retelling answers ─────────────
+  const fallbackFlag = (teacher: string, student: string) => flagsOf([["T", teacher], ["S", student]])[1];
+  const retelling =
+    "Yeah. When when the man came back to home, there were many people, so he couldn't expect expect it. And also the biggest problem. The. The biggest problem here, some people some people invaded invaded his room.";
+  assert(!fallbackFlag("So his roommate didn't.", retelling), "3g. a retelling with repeated words and errors, after a teacher statement without a question, is not reading");
+  const choppy =
+    "Only. Only we renovated the kitchen and the bathroom. Just. We picked the two place. So not. Yeah. Housewarming party. It's not. It was not really just to show that. Yeah. My house. Yeah.";
+  assert(!fallbackFlag("Right.", choppy), "3g. choppy one- and two-word sentences are free speech, not a passage");
+  const acknowledging =
+    "Charles have a basic manner, very basic manner, and that situation is exactly the problem because they entered the private space of Milo without asking. Yeah. So Charles have to say sorry to Milo.";
+  assert(!fallbackFlag("Okay. So it was not wrong to lock his own door.", acknowledging), "3g. an answer with conversational 'Yeah' inside is free speech");
+  const impersonal =
+    "Researchers from the national health institute studied thousands of adults across wealthy countries and found that regular headaches are common among people of every age and background around the world today.";
+  assert(fallbackFlag("Okay.", impersonal), "3g. a long fluent impersonal passage with no cue is still caught by the fallback");
+  assert(flagsOf([["T", "Okay, please read."], ["S", "Okay. I live in a shared house with three roommates, and we usually text each other before guests come over."]])[1], "3g. an explicit read request still wins when the text itself contains 'Okay'");
   const qcWrong = qcLines({ item5: `A missed correction: the student said "${READING_LINE}" and the tutor should be correcting it.` });
   assert(has(checkQuotesAndReading(GOOD_FEEDBACK, qcWrong, ROLES), /reading aloud/), "3. a 'missed correction' note about the read-aloud passage is rejected");
   assert(buildProjectRules({ lessonDurationMinutes: 25, speakerCount: 2 }).includes("READING / SCRIPT PROTECTION"), "3. the project rules tell Claude not to treat reading as errors");

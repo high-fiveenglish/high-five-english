@@ -64,6 +64,22 @@ const PROMPT = /\?|\b(?:you|your|tell me)\b/i;
 const CONTINUE_CUE = /\b(?:continue|keep going|go on|carry on|next)\b/i;
 const BARE_OKAY = /^\s*(?:ok|okay)[\s.,!]*$/i;
 const DISFLUENCY = /\b(?:um+|uh+|er+|hmm+|like|you know|i mean)\b/i;
+// More signs of free speech used ONLY by the weak prose fallback (a cue such as "please read" still wins): a word said twice
+// in a row ("when when", "expect expect"), conversational acknowledgements inside the turn ("yeah", "okay"), and choppy
+// delivery (many one- or two-word sentences). Found on a real recording: three fluent-looking retelling answers full of real
+// grammar errors were flagged as reading aloud by the fallback, which then made the validator reject the very corrections
+// the report needed.
+const REPEATED_WORD = /\b([a-z']{2,})\s+\1\b/i;
+const CONVERSATIONAL = /\b(?:yeah|yep|uh-huh|mm-hmm|okay|ok)\b/i;
+const CHOPPY_SENTENCE_MAX_WORDS = 2;
+const CHOPPY_SHARE = 0.25;
+
+function soundsLikeFreeSpeech(text: string): boolean {
+  if (DISFLUENCY.test(text) || REPEATED_WORD.test(text) || CONVERSATIONAL.test(text)) return true;
+  const sentences = text.split(/[.!?]+/).map((x) => x.trim()).filter(Boolean);
+  const choppy = sentences.filter((x) => wordCount(x) <= CHOPPY_SENTENCE_MAX_WORDS).length;
+  return choppy >= 2 && choppy / sentences.length >= CHOPPY_SHARE;
+}
 const PROSE_LIKE_MIN_WORDS = 30;
 const READ_ALOUD_MIN_WORDS = 4;
 
@@ -108,7 +124,7 @@ function detectReadAloud(base: Omit<RoleUtterance, "possibleReadAloud">[]): bool
     // A continuation is a bare "okay"/"next": a reply with disfluencies after it is the student talking, not reading on.
     if (readRequested && words >= READ_ALOUD_MIN_WORDS) flags[i] = true;
     else if (continuing && words >= READ_ALOUD_MIN_WORDS && !DISFLUENCY.test(u.text)) flags[i] = true;
-    else if (words >= PROSE_LIKE_MIN_WORDS && !DISFLUENCY.test(u.text) && !prompted && !reactedToReading) flags[i] = true;
+    else if (words >= PROSE_LIKE_MIN_WORDS && !soundsLikeFreeSpeech(u.text) && !prompted && !reactedToReading) flags[i] = true;
     lastStudentFlagged = flags[i];
   });
   return flags;

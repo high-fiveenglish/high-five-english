@@ -262,7 +262,13 @@ export function checkTimeGrounding(studentFeedback: string, teacherQc: string, c
       const sec = m[3] !== undefined ? Number(m[3]) : Number(m[2]);
       const at = h * 3600 + min * 60 + sec;
       const matchesUtterance = startSeconds.some((s) => Math.abs(s - at) <= 2) || Math.abs(totalSeconds - at) <= 2;
-      if (!matchesUtterance) issues.push(`${label}: the time "${m[0]}" does not match any timestamp in the transcript`);
+      if (!matchesUtterance) {
+        // A label can only name the START of a line. When a point inside a long line is wanted, the retry needs to be told
+        // which label to copy (found on a real recording: the model cited "04:26" inside a 43-second tutor line four times).
+        const covering = ctx.roles.filter((r) => Math.floor(r.startMs / 1000) <= at).pop();
+        const hint = covering ? ` — a timestamp is only the start of a line; the line that covers this moment starts at [${formatTimestamp(covering.startMs)}] (${covering.role}), cite that one` : "";
+        issues.push(`${label}: the time "${m[0]}" does not match any timestamp in the transcript${hint}`);
+      }
     }
   };
 
@@ -333,12 +339,23 @@ function finish(issues: string[]): ValidationResult {
 const TRANSCRIPT_TOOL_MENTION = /\b(?:speech[- ]to[- ]text|transcri(?:pt|ption|bed|ber)|STT|ASR|text artifact)\b/i;
 const NO_ERROR_ITEM = /\bno (?:correction|error|mistake)s? (?:was |is |were |are )?(?:needed|necessary|required)\b|\bnot (?:really )?an error\b|\bno error here\b/i;
 
-const ACTOR_AT_TS_BEFORE = /\b(?:at|around)\s+\[(\d{1,2}:\d{2}(?::\d{2})?)\],?\s+the (tutor|teacher|student)(?!['’]s)\b/gi;
+// Only speech acts are checked ("asked", "said", "corrected" ...). A sentence such as "the tutor moved through vocabulary at
+// [09:07]" describes a stretch of the lesson, and its label may point at any line inside that stretch.
+const SPEECH_VERB =
+  "(?:also |then |first |later |again )?(?:asked|said|says|replied|answered|responded|corrected|clarified|rephrased|repeated|explained|confirmed|affirmed|praised|read|defined|stated|posed|prompted|reframed|recast|expanded|acknowledged|encouraged|offered|gave|mentioned|produced|used|spoke|told|complimented|introduced the (?:word|term|title|question))\\b";
+const ACTOR_AT_TS_BEFORE = new RegExp(
+  "\\b(?:at|around)\\s+\\[(\\d{1,2}:\\d{2}(?::\\d{2})?)\\],?\\s+the (tutor|teacher|student)(?!['’]s) " + SPEECH_VERB,
+  "gi",
+);
 // "the tutor <verb phrase> at [ts]": the actor must be the subject of its clause (start of sentence, after , ; ( or a
 // conjunction) — not the object of another verb ("the tutor asked the student to ... at [ts]") — and the phrase between
 // the actor and the timestamp must not name anyone else.
-const ACTOR_AT_TS_AFTER =
-  /(?<=(?:^|[.!?,;:(]\s*|\b(?:and|but|while|when|as|so|then|because)\s+))the (tutor|teacher|student)(?!['’]s) (?:(?!\b(?:tutor|teacher|student|she|her|he|his|they|their)\b)[^.,;:()\[\]"“”]){1,80}?\b(?:at|around) \[(\d{1,2}:\d{2}(?::\d{2})?)\]/gim;
+const ACTOR_AT_TS_AFTER = new RegExp(
+  "(?<=(?:^|[.!?,;:(]\\s*|\\b(?:and|but|while|when|as|so|then|because)\\s+))the (tutor|teacher|student)(?!['’]s) " +
+    SPEECH_VERB +
+    "(?:(?!\\b(?:tutor|teacher|student|she|her|he|his|they|their)\\b)[^.,;:()\\[\\]\"“”]){0,80}?\\b(?:at|around) \\[(\\d{1,2}:\\d{2}(?::\\d{2})?)\\]",
+  "gim",
+);
 
 /** Output 2 cites many [mm:ss] labels. The existing time check only proves a label exists; this one proves that a sentence
  * saying "at [23:42], the tutor asked ..." points at a line the Tutor actually speaks (and "the student ..." at a Student
@@ -349,11 +366,19 @@ export function checkTutorStudentTimestamps(teacherQc: string, roles: RoleUttera
   const issues: string[] = [];
   const check = (ts: string, actor: string) => {
     const role = /student/i.test(actor) ? "Student" : "Teacher";
-    const speakingThere = roles.filter((r) => formatTimestamp(r.startMs) === ts.padStart(5, "0"));
+    // Whose line covers this second? A turn covers [start, end] in whole seconds, so a label that points at the last second of
+    // the student's turn (the next turn starts in the same second) is not an error. A second nobody covers is left to the
+    // existing time-grounding check.
+    const parts = ts.split(":").map(Number);
+    const seconds = parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : parts[0] * 60 + parts[1];
+    const speakingThere = roles.filter((r) => Math.floor(r.startMs / 1000) <= seconds && seconds <= Math.floor(r.endMs / 1000));
     if (speakingThere.length > 0 && speakingThere.every((r) => r.role !== role)) {
       const other = role === "Teacher" ? "the Student" : "the Tutor";
+      // Help the retry: the nearest earlier line of the role the sentence is about.
+      const earlier = roles.filter((r) => r.role === role && Math.floor(r.startMs / 1000) <= seconds).pop();
+      const hint = earlier ? ` (the ${actor.toLowerCase()}'s nearest earlier line starts at [${formatTimestamp(earlier.startMs)}])` : "";
       issues.push(
-        `Output 2: [${ts}] is a line where ${other} speaks, but the sentence says the ${actor.toLowerCase()} acted there — cite the timestamp of the ${actor.toLowerCase()}'s own line`,
+        `Output 2: [${ts}] is a line where ${other} speaks, but the sentence says the ${actor.toLowerCase()} acted there — cite the timestamp of the ${actor.toLowerCase()}'s own line${hint}`,
       );
     }
   };
@@ -362,7 +387,12 @@ export function checkTutorStudentTimestamps(teacherQc: string, roles: RoleUttera
   return [...new Set(issues)];
 }
 
-const SPEECH_QUALITY = /\b(?:fluent(?:ly)?|fluency|pacing|pronunciation|pronounced|mispronounc\w*|accent|intonation)\b/i;
+// An EVALUATION of how the student sounded. Merely naming the activity ("reading aloud for a pronunciation check", from a
+// lesson where the tutor said exactly that) is a description of the lesson, not a judgement, so a bare "pronunciation" or
+// "pacing" does not count — only fluent/fluency, an evaluative adjective in front of pacing/pronunciation/intonation/accent,
+// or "pronounced ... well".
+const SPEECH_QUALITY =
+  /\b(?:fluent(?:ly)?|fluency|mispronounc\w*)\b|\b(?:good|great|excellent|clear|natural|steady|nice|strong|smooth|appropriate|perfect|accurate)\s+(?:pacing|pace|pronunciation|intonation|accent)\b|\bpronounced\b[^.]{0,30}\b(?:well|clearly|correctly|perfectly)\b/i;
 const SPEECH_SUBJECT = /\b(?:read|reads|reading|spoke|speak|speaks|speaking|delivery|voice|pace)\b/i;
 const SUGGESTION = /\b(?:practice|practise|try|might|could|should|to build|to improve|to strengthen|to develop|work on)\b/i;
 
