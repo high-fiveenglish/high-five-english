@@ -15,6 +15,8 @@ jobs:
   validate-admin:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
     steps:
       - name: Checkout
@@ -31,6 +33,10 @@ jobs:
         working-directory: admin
         run: npm ci
 
+      - name: Next.js typegen
+        working-directory: admin
+        run: npx next typegen
+
       - name: TypeScript
         working-directory: admin
         run: npx tsc --noEmit
@@ -43,7 +49,7 @@ jobs:
         working-directory: admin
         run: |
           set -euo pipefail
-          for f in             scripts/test-talkTime.ts             scripts/test-assemblyaiParsing.ts             scripts/test-recordingWorkflow.ts             scripts/test-recordingProcessing.ts             scripts/test-teacherQcVisibility.ts             scripts/test-aiEvaluationDraft.ts             scripts/test-evaluationFormatPreservation.ts             scripts/test-evaluationTranslation.ts
+          for f in             scripts/test-talkTime.ts             scripts/test-assemblyaiParsing.ts             scripts/test-recordingWorkflow.ts             scripts/test-recordingProcessing.ts             scripts/test-teacherQcVisibility.ts             scripts/test-aiEvaluationDraft.ts             scripts/test-evaluationFormatPreservation.ts             scripts/test-evaluationTranslation.ts             scripts/test-evaluationQuality.ts             scripts/test-recordingWebhook.ts             scripts/test-recordingPublish.ts             scripts/test-speakerRoles.ts             scripts/test-speakerConfirmation.ts
           do
             echo "===== $f ====="
             npx tsx "$f"
