@@ -628,6 +628,92 @@ async function main() {
     assert(env.db.get(1)!.utterances === null, "regression: nothing extra is stored for a HIGH lesson");
   }
 
+  // ── 9. Safety review: after the teacher's choice nothing may touch AssemblyAI or the role inference again ──────────────────
+  {
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = "studentFirst";
+    await processRecording(1, env.deps); // first pass: reads the transcript once and stops at NEEDS_SPEAKER_CONFIRMATION
+    // From here on, any AssemblyAI read or any new role inference is a test failure (it would throw and fail the analysis).
+    let forbiddenCalls = 0;
+    env.deps.fetchTranscript = async () => {
+      forbiddenCalls++;
+      throw new Error("AssemblyAI must not be called after Teacher Confirmation");
+    };
+    env.deps.inferRoles = () => {
+      forbiddenCalls++;
+      throw new Error("role inference must not run after Teacher Confirmation");
+    };
+    const r = await env.confirm(1, 7, "B");
+    assert(r.ok && env.db.get(1)!.processingStatus === "NEEDS_REVIEW", "no AssemblyAI after confirmation: the analysis still completes from the stored utterances");
+    assert(forbiddenCalls === 0 && env.calls.generateDraft === 1, "no AssemblyAI after confirmation: fetchTranscript and inferSpeakerRoles were never called");
+  }
+
+  // ── 10. Race matrix: Claude is called at most once in every case ─────────────────────────────────────────────────────────────
+  {
+    // confirmation (same and different label) while the analysis is RUNNING, plus another background invocation and the recovery
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = "studentFirst";
+    await processRecording(1, env.deps);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const realGenerate = env.deps.generateDraft;
+    env.deps.generateDraft = async (p) => {
+      await gate; // the analysis stays in ANALYZING until released
+      return realGenerate(p);
+    };
+    const background = { done: null as Promise<boolean> | null };
+    const confirmNoWait = (label: string) =>
+      confirmTeacherSpeaker({ ...env.confirmDeps, triggerProcessing: async (id) => ((background.done ??= env.authorizedTrigger(id)), true) }, { teacherId: 7, sessionId: 1, label });
+    const first = await confirmNoWait("B");
+    assert(first.ok && first.state === "confirmed", "race: the first confirmation succeeds");
+    await tick();
+    await tick();
+    assert(env.db.get(1)!.processingStatus === "ANALYZING", "race: the analysis is running (ANALYZING)");
+    const dup = await confirmNoWait("B");
+    const diff = await confirmNoWait("A");
+    assert(dup.ok && dup.state === "already_confirmed" && !dup.triggered, "race: same choice during ANALYZING -> already_confirmed, no new trigger");
+    assert(!diff.ok && diff.error === "different_label", "race: different choice during ANALYZING -> refused");
+    const second = await processRecording(1, env.deps);
+    const recovery = await recoverStuckTranscribedRecordings(env.recoveryDeps(env.authorizedTrigger), new Date(NOW.getTime() + 60 * 60 * 1000));
+    assert(second === "already_claimed", "race: another background invocation during ANALYZING stops at the claim");
+    assert(recovery.retriggered.length === 0, "race: the scheduled recovery does not re-trigger a record that is ANALYZING");
+    release();
+    await background.done;
+    assert(env.db.get(1)!.processingStatus === "NEEDS_REVIEW" && env.calls.generateDraft === 1 && env.calls.claimSucceeded === 1, "race: exactly one Claude call and one finished draft");
+    const late = await env.confirm(1, 7, "B");
+    const lateOther = await env.confirm(1, 7, "A");
+    assert(late.ok && late.state === "already_confirmed" && !lateOther.ok, "race: after NEEDS_REVIEW the same choice is a no-op and another choice is refused");
+    assert(env.calls.generateDraft === 1 && env.db.get(1)!.confirmedTeacherSpeaker === "B", "race: after NEEDS_REVIEW nothing re-ran and the label is unchanged");
+  }
+  {
+    // recovery + the teacher's manual retry + background invocations, all at once, for a record whose first trigger was lost
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = "studentFirst";
+    await processRecording(1, env.deps);
+    await confirmTeacherSpeaker({ ...env.confirmDeps, triggerProcessing: async () => false }, { teacherId: 7, sessionId: 1, label: "B" });
+    assert(env.db.get(1)!.processingStatus === "TEACHER_SPEAKER_CONFIRMED", "race: the lost trigger leaves TEACHER_SPEAKER_CONFIRMED");
+    const later = new Date(NOW.getTime() + 30 * 60 * 1000);
+    await Promise.all([
+      recoverStuckTranscribedRecordings(env.recoveryDeps(env.authorizedTrigger), later),
+      recoverStuckTranscribedRecordings(env.recoveryDeps(env.authorizedTrigger), later),
+      env.confirm(1, 7, "B"),
+      env.confirm(1, 7, "B"),
+      env.authorizedTrigger(1),
+      processRecording(1, env.deps),
+    ]);
+    assert(env.calls.claimSucceeded === 1 && env.calls.generateDraft === 1, `race: recovery x2 + manual retry x2 + background x2 -> exactly one Claude call (got ${env.calls.generateDraft})`);
+    assert(env.db.get(1)!.processingStatus === "NEEDS_REVIEW" && env.db.get(1)!.aiDraft === "feedback #1", "race: one finished draft, not overwritten");
+    assert(env.calls.fetchTranscript === 1, "race: AssemblyAI was read only in the very first pass");
+  }
+  {
+    // a confirmation request for a recording nobody asked about (HIGH, already analysed) never reaches Claude
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    await processRecording(1, env.deps);
+    const calls = env.calls.generateDraft;
+    const r = await Promise.all([env.confirm(1, 7, "A"), env.confirm(1, 7, "B"), env.confirm(1, 8, "A")]);
+    assert(r.every((x) => !x.ok) && env.calls.generateDraft === calls, "race: confirming a recording whose roles were settled automatically is refused every time");
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   if (fail > 0) process.exit(1);
 }
