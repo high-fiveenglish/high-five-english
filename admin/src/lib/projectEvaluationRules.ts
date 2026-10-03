@@ -104,8 +104,8 @@ this replaces the skill's "estimated" wording). Do not estimate, recompute, or s
 transcript text. Any % figure you write must be one of these two numbers.
 
 Note for Output 2 only: the mapping of "speaker A/B" to "Teacher/Student" used to
-produce these numbers is an UNVERIFIED HEURISTIC (first speaker assumed to be the
-teacher) pending real-recording validation — if anything in the transcript suggests
+produce these numbers is an UNVERIFIED HEURISTIC (inferred from the transcript text, not
+from listening) pending real-recording validation — if anything in the transcript suggests
 the mapping looks backwards, say so explicitly in Output 2's Pacing & Engagement
 section rather than silently trusting or silently ignoring it.
 `.trim();
@@ -149,8 +149,8 @@ It never replaces the skill's teaching-content rules.)
 
 2. SPEAKER GROUNDING
 - The transcript is speaker-labeled ("Teacher" / "Student") with [mm:ss] timestamps. Judge each line only by who
-  actually said it. ${mappingNote} The labels come from an unverified heuristic (the first speaker is assumed to be
-  the teacher). If the content clearly contradicts the labels, do not build conclusions on the roles and say so in
+  actually said it. ${mappingNote} The labels come from an unverified heuristic (inferred from the transcript text — questions, lesson-management
+  phrases, instructions and reply patterns — not from listening). If the content clearly contradicts the labels, do not build conclusions on the roles and say so in
   Output 2 item 2.
 
 3. QUOTE GROUNDING

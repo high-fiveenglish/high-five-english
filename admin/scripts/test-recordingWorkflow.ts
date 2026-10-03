@@ -47,6 +47,9 @@ for (const st of ["ANALYSIS_FAILED", "TRANSCRIPTION_FAILED", "UPLOAD_FAILED", "S
 // safeRecordingFailureMessage — 내부 errorMessage 대신 고정 문구만
 assertEqual(safeRecordingFailureMessage("ANALYSIS_FAILED")?.includes("manually"), true, "ANALYSIS_FAILED -> 고정 안내 문구");
 assertEqual(safeRecordingFailureMessage("NEEDS_REVIEW"), null, "실패가 아닌 상태 -> 문구 없음");
+assertEqual(/which voice is the teacher/.test(safeRecordingFailureMessage("NEEDS_SPEAKER_CONFIRMATION") ?? ""), true, "NEEDS_SPEAKER_CONFIRMATION -> 교사 확인 필요 안내 문구");
+assertEqual(ALREADY_PROGRESSED_STATUSES.includes("NEEDS_SPEAKER_CONFIRMATION"), true, "NEEDS_SPEAKER_CONFIRMATION는 진행된 상태");
+assertEqual(AWAITING_TRANSCRIPT_STATUSES.includes("NEEDS_SPEAKER_CONFIRMATION"), false, "NEEDS_SPEAKER_CONFIRMATION는 webhook이 되살릴 수 없음");
 assertEqual(safeRecordingFailureMessage("ANALYZING"), null, "진행 중 -> 문구 없음");
 
 // truncateErrorMessage

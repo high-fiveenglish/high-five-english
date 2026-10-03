@@ -22,7 +22,8 @@ import { generateAIEvaluationDraft, type LessonContext } from "../src/lib/aiEval
 import { validateStudentFeedback, validateTeacherQc } from "../src/lib/evaluationValidation";
 import type { AgeBand } from "../src/lib/projectEvaluationRules";
 import { formatTimestamp, toRoleUtterances } from "../src/lib/speakerTranscript";
-import { computeTalkTime, guessTeacherSpeakerLabel } from "../src/lib/talkTime";
+import { inferSpeakerRoles } from "../src/lib/speakerRoles";
+import { computeTalkTime } from "../src/lib/talkTime";
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -84,12 +85,28 @@ async function main() {
   if (utterances.length === 0) throw new Error("the transcript has no utterances");
 
   // ── speaker mapping, Talk Time, reading flags ──────────────────────────────────────────────────────────────────
-  const teacherLabel = guessTeacherSpeakerLabel(utterances);
-  if (!teacherLabel) throw new Error("could not choose a teacher label");
+  // The same role inference and confidence gate the background function uses. LOW confidence stops here (no Claude call), exactly as
+  // the application would; --teacher <label> simulates the teacher's manual confirmation so the rest of the pipeline can still be checked.
+  const inference = inferSpeakerRoles(utterances);
+  console.log(`\nspeaker roles (transcript-based inference, NOT aurally verified): ${inference.confidence}${inference.teacherLabel ? " teacher=" + inference.teacherLabel : ""}`);
+  console.log(`  first speaker: ${inference.firstSpeaker} | voices: ${inference.speakerCount}${inference.minorSpeakers.length ? " (minor: " + inference.minorSpeakers.join(",") + ")" : ""}`);
+  for (const f of inference.features) {
+    console.log(`  ${f.label}: turns ${f.turns}, ${Math.round(f.seconds)}s, avg ${f.avgWordsPerTurn} words | questions ${f.questions}, management ${f.management}, instructions ${f.instructions}, short replies ${f.shortReplies}/${f.repliesToQuestion}, open/close ${f.openingClosing}`);
+  }
+  console.log(`  votes: ${JSON.stringify(inference.votes)}`);
+  console.log(`  reasons: ${inference.reasons.join("; ")}`);
+  const override = arg("teacher");
+  const teacherLabel = override ?? inference.teacherLabel;
+  if (!teacherLabel) {
+    console.log("\nSTOPPED: roles not confirmed (LOW confidence). In the application this record becomes NEEDS_SPEAKER_CONFIRMATION and no AI report is generated.");
+    console.log("Re-run with --teacher <label> to simulate the teacher's confirmation.");
+    return;
+  }
+  if (override) console.log(`  (manual override: teacher = ${override})`);
   const talkTime = computeTalkTime(utterances, teacherLabel);
   const roles = toRoleUtterances(utterances, teacherLabel);
   console.log(`\nduration: ${tr.audio_duration ?? "?"}s | utterances: ${utterances.length} | speaker labels: ${[...new Set(utterances.map((u) => u.speaker))].join(", ")}`);
-  console.log(`first speaker: ${utterances[0].speaker} -> assumed Teacher label: ${teacherLabel}  (CHECK BY EAR that the first speaker really is the teacher)`);
+  console.log(`teacher label used: ${teacherLabel}  (CHECK BY EAR that this voice really is the teacher)`);
   console.log(`Talk Time: Teacher ${talkTime.teacherTalkPercentage}% (${talkTime.teacherSpeakingSeconds}s) / Student ${talkTime.studentTalkPercentage}% (${talkTime.studentSpeakingSeconds}s)`);
   const flagged = roles.filter((r) => r.possibleReadAloud);
   console.log(`\nStudent turns flagged as possible reading aloud: ${flagged.length} of ${roles.filter((r) => r.role === "Student").length}`);

@@ -2,8 +2,9 @@
 // deps로 주입받는다 — Netlify 함수 파일은 Prisma 기반 deps를 조립해 넘기기만 하고,
 // admin/scripts/test-recordingProcessing.ts는 같은 로직을 in-memory fake deps로
 // 검증한다(인증 거절, TRANSCRIBED 복구, 중복 호출 시 ANALYZING 선점 1회).
-import { computeTalkTime, guessTeacherSpeakerLabel } from "./talkTime";
+import { computeTalkTime } from "./talkTime";
 import type { TalkTimeResult, Utterance } from "./talkTime";
+import { inferSpeakerRoles, summarizeInference, type SpeakerRoleInference } from "./speakerRoles";
 import type { AssemblyAITranscriptResult } from "./assemblyai";
 import type { AIEvaluationResult, LessonContext } from "./aiEvaluation";
 import { isAuthorizedProcessingRequest, RECORDING_PROCESSING_SECRET_HEADER } from "./recordingProcessingAuth";
@@ -29,6 +30,11 @@ export interface ProcessRecordingDeps {
   /** fromStatus 상태일 때만 ANALYSIS_FAILED로 바꾼다 — 중복 호출된 쪽의 실패가 이미
    * 다른 호출이 선점/완료한 레코드(ANALYZING/NEEDS_REVIEW)를 덮어쓰지 않게 한다. */
   markFailed(id: number, fromStatus: "TRANSCRIBED" | "ANALYZING", errorMessage: string): Promise<void>;
+  /** The roles could not be confirmed automatically: TRANSCRIBED -> NEEDS_SPEAKER_CONFIRMATION (single conditional UPDATE, so a
+   * duplicate invocation changes nothing). The message holds evidence counts only, never transcript text. */
+  markNeedsSpeakerConfirmation(id: number, message: string): Promise<void>;
+  /** Test seam: defaults to the real inferSpeakerRoles. */
+  inferRoles?: (utterances: Utterance[]) => SpeakerRoleInference;
   saveDraft(id: number, result: AIEvaluationResult): Promise<void>;
   /** Claude에는 plain text가 아니라 원본 utterances(화자·타임스탬프 포함)를 넘긴다. */
   generateDraft(params: {
@@ -43,6 +49,7 @@ export type ProcessRecordingOutcome =
   | "not_found"
   | "transcript_unavailable"
   | "transcript_fetch_failed"
+  | "needs_speaker_confirmation"
   | "already_claimed"
   | "draft_generation_failed"
   | "ok"
@@ -75,10 +82,16 @@ export async function processRecording(audioRecordingId: number, deps: ProcessRe
       return "transcript_unavailable";
     }
 
-    const teacherLabel = guessTeacherSpeakerLabel(transcript.utterances);
-    const talkTime = teacherLabel
-      ? computeTalkTime(transcript.utterances, teacherLabel)
-      : { teacherSpeakingSeconds: 0, studentSpeakingSeconds: 0, teacherTalkPercentage: 0, studentTalkPercentage: 0 };
+    // Who is the teacher? The old "first speaker" rule failed on real recordings (a student spoke first), and with swapped roles
+    // Talk Time, reading detection and both reports are wrong. Only a HIGH-confidence inference proceeds; otherwise NO Claude
+    // call is made and the record waits for the teacher to confirm the roles (speakerRoles.ts has the evidence rules).
+    const inference = (deps.inferRoles ?? inferSpeakerRoles)(transcript.utterances);
+    if (inference.confidence !== "HIGH" || inference.teacherLabel === null) {
+      await deps.markNeedsSpeakerConfirmation(recording.id, summarizeInference(inference));
+      return "needs_speaker_confirmation";
+    }
+    const teacherLabel = inference.teacherLabel;
+    const talkTime = computeTalkTime(transcript.utterances, teacherLabel);
 
     // webhook 쪽 race 방지(updateMany + where 상태 조건)와 같은 패턴을 여기서도
     // 쓴다 — 이 함수 자체가 중복 호출될 가능성(webhook 재전송, Netlify 재시도,

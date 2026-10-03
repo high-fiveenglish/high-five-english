@@ -213,7 +213,7 @@ export async function generateAIEvaluationDraft(params: GenerateAIEvaluationPara
       studentPercentage: params.talkTime.studentTalkPercentage,
     }),
     "",
-    `SPEAKER MAPPING: roles were assigned by an unverified heuristic (the first speaker is assumed to be the teacher; ${mapping?.speakerCount ?? 0} speaker label(s) detected; confidence: ${mapping?.confidence ?? "low"}).`,
+    `SPEAKER MAPPING: roles were assigned by an unverified heuristic (inferred from the transcript text — questions, lesson-management phrases, instructions and reply patterns — not from listening; ${mapping?.speakerCount ?? 0} speaker label(s) detected; confidence: ${mapping?.confidence ?? "low"}).`,
     "",
     "TRANSCRIPT (speaker-labeled, [mm:ss] timestamps):",
     renderSpeakerTranscript(roles),

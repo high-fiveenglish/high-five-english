@@ -6,6 +6,7 @@
 import { handleProcessRecordingRequest, processRecording, type ProcessRecordingDeps } from "../src/lib/recordingProcessing";
 import { isAuthorizedProcessingRequest, RECORDING_PROCESSING_SECRET_HEADER } from "../src/lib/recordingProcessingAuth";
 import { ANALYZING_STUCK_AFTER_MS, MAX_ERROR_MESSAGE_LENGTH } from "../src/lib/recordingWorkflow";
+import { studentFirstLesson, teacherFirstLesson, threeVoiceLesson } from "./fixtures/syntheticLessons";
 import {
   recoverStuckTranscribedRecordings,
   TRANSCRIBED_RECOVERY_GRACE_MS,
@@ -43,12 +44,17 @@ function tick() {
 
 function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> } = {}) {
   const db = new Map<number, FakeRow>(rows.map((r) => [r.id, { ...r }]));
-  const calls = { findRecording: 0, fetchTranscript: 0, claimForAnalysis: 0, claimSucceeded: 0, markFailed: 0, saveDraft: 0, generateDraft: 0 };
+  const calls = { findRecording: 0, fetchTranscript: 0, claimForAnalysis: 0, claimSucceeded: 0, markFailed: 0, markNeedsConfirmation: 0, saveDraft: 0, generateDraft: 0 };
   let fetchCount = 0;
   // 테스트가 외부 API 실패 유형을 바꿔 가며 시뮬레이션하는 스위치.
-  const behavior: { fetch: "ok" | "null" | "throw" | "noUtterances" | "processing" | "error"; generateThrows: string | null } = {
+  const behavior: {
+    fetch: "ok" | "null" | "throw" | "noUtterances" | "processing" | "error";
+    generateThrows: string | null;
+    lesson: "teacherFirst" | "studentFirst" | "threeVoice";
+  } = {
     fetch: "ok",
     generateThrows: null,
+    lesson: "teacherFirst",
   };
 
   const deps: ProcessRecordingDeps = {
@@ -91,12 +97,9 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
       return {
         id: transcriptId,
         status: "completed",
-        text: "Teacher: Hello. Student: Hi.",
-        utterances: [
-          { speaker: "A", start: 0, end: 4000, text: "Hello." },
-          { speaker: "B", start: 4000, end: 6000, text: "Hi." },
-        ],
-        audio_duration: 6,
+        text: "synthetic lesson",
+        utterances: behavior.lesson === "studentFirst" ? studentFirstLesson() : behavior.lesson === "threeVoice" ? threeVoiceLesson() : teacherFirstLesson(),
+        audio_duration: 1500,
       };
     },
     async claimForAnalysis(id) {
@@ -114,6 +117,13 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
       if (!row || row.processingStatus !== fromStatus) return;
       row.processingStatus = "ANALYSIS_FAILED";
       row.errorMessage = errorMessage;
+    },
+    async markNeedsSpeakerConfirmation(id, message) {
+      calls.markNeedsConfirmation++;
+      const row = db.get(id);
+      if (!row || row.processingStatus !== "TRANSCRIBED") return;
+      row.processingStatus = "NEEDS_SPEAKER_CONFIRMATION";
+      row.errorMessage = message;
     },
     async saveDraft(id, result) {
       calls.saveDraft++;
@@ -393,9 +403,46 @@ async function main() {
     assert(res.status === 400 && env.totalDepCalls() === 0, `invalid id(${String(bad)}): 400, deps 호출 0회`);
   }
 
+  // ── 7. Speaker-role confidence gate: LOW confidence must stop BEFORE Claude, never swap the roles silently ────────
+  for (const lesson of ["studentFirst", "threeVoice"] as const) {
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = lesson;
+    const out = await processRecording(1, env.deps);
+    assert(out === "needs_speaker_confirmation", `gate(${lesson}): needs_speaker_confirmation (got ${out})`);
+    const row = env.db.get(1)!;
+    assert(row.processingStatus === "NEEDS_SPEAKER_CONFIRMATION", `gate(${lesson}): status NEEDS_SPEAKER_CONFIRMATION`);
+    assert(env.calls.generateDraft === 0 && env.calls.claimForAnalysis === 0 && env.calls.saveDraft === 0, `gate(${lesson}): no claim, no Claude call, no draft`);
+    assert(row.aiDraft === null && row.teacherQcDraft === null, `gate(${lesson}): no draft text is stored`);
+    assert(/^LOW: /.test(row.errorMessage ?? "") && (row.errorMessage ?? "").length <= MAX_ERROR_MESSAGE_LENGTH, `gate(${lesson}): the stored reason is a short LOW summary`);
+    const texts = [...studentFirstLesson(), ...threeVoiceLesson()].map((u) => u.text).filter((t) => t.length > 12);
+    assert(!texts.some((t) => (row.errorMessage ?? "").includes(t)), `gate(${lesson}): the stored reason contains no transcript text`);
+    // asked again (duplicate invocation / re-trigger): still no Claude call, status unchanged
+    const again = await processRecording(1, env.deps);
+    assert(again === "needs_speaker_confirmation" && env.calls.generateDraft === 0 && env.db.get(1)!.processingStatus === "NEEDS_SPEAKER_CONFIRMATION", `gate(${lesson}): a repeated invocation still does not call Claude`);
+  }
+  {
+    // two concurrent invocations on a LOW-confidence recording: the status changes once, Claude is never called
+    const env = createFakeEnv([transcribedRow(1, 30 * 60 * 1000)]);
+    env.behavior.lesson = "studentFirst";
+    const [a, b] = await Promise.all([processRecording(1, env.deps), processRecording(1, env.deps)]);
+    assert(a === "needs_speaker_confirmation" && b === "needs_speaker_confirmation" && env.calls.generateDraft === 0, "gate(concurrent): both stop, no Claude call");
+    assert(env.db.get(1)!.processingStatus === "NEEDS_SPEAKER_CONFIRMATION", "gate(concurrent): one consistent final status");
+    // the scheduled recovery must not touch it (it is not TRANSCRIBED and not ANALYZING)
+    const report = await recoverStuckTranscribedRecordings(env.recoveryDeps(env.authorizedTrigger), NOW);
+    assert(report.retriggered.length === 0 && report.exhausted.length === 0 && report.analysisAbandoned.length === 0, "gate: recovery leaves a record that waits for the teacher alone");
+    assert(env.db.get(1)!.processingStatus === "NEEDS_SPEAKER_CONFIRMATION", "gate: status unchanged after recovery");
+  }
+  {
+    // HIGH confidence proceeds exactly as before
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    const out = await processRecording(1, env.deps);
+    assert(out === "ok" && env.calls.markNeedsConfirmation === 0 && env.calls.generateDraft === 1, "gate: a clear teacher-first lesson (HIGH) is analysed as before");
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   if (fail > 0) process.exit(1);
 }
+
 
 
 main();

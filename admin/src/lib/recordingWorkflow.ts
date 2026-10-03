@@ -10,7 +10,7 @@
  * 넘겨, "조회 후 갱신"이 아니라 단일 UPDATE문으로 상태 전이를 원자적으로 만든다 —
  * 동시에 도착한 중복 요청 중 하나만 실제로 행을 바꾸게 해 race condition(Claude
  * 중복 호출, aiDraft 중복 저장)을 막는다. */
-export const ALREADY_PROGRESSED_STATUSES = ["TRANSCRIBED", "ANALYZING", "NEEDS_REVIEW", "PUBLISHED", "COMPLETED"];
+export const ALREADY_PROGRESSED_STATUSES = ["TRANSCRIBED", "ANALYZING", "NEEDS_SPEAKER_CONFIRMATION", "NEEDS_REVIEW", "PUBLISHED", "COMPLETED"];
 
 /** AssemblyAI webhook이 레코드를 TRANSCRIBED(또는 TRANSCRIPTION_FAILED)로 옮길 수 있는
  * 유일한 출발 상태 — "전사 결과를 기다리는 중"인 상태뿐이다. notIn(ALREADY_PROGRESSED) 대신
@@ -27,6 +27,8 @@ export const ANALYZING_STUCK_AFTER_MS = 30 * 60 * 1000;
 /** 강사 화면에 보여 줄 실패 안내 — DB의 errorMessage(내부 오류 문구·검증 사유가 섞여 있음)는
  * 화면/클라이언트로 내보내지 않고, 상태별 고정 문구만 보여 준다. */
 const SAFE_FAILURE_MESSAGES: Record<string, string> = {
+  NEEDS_SPEAKER_CONFIRMATION:
+    "We could not tell with enough confidence which voice is the teacher, so no AI draft was created (a draft with the roles swapped would be wrong). You can still write today's evaluation manually.",
   UPLOAD_FAILED: "The recording upload failed. You can still write today's evaluation manually.",
   TRANSCRIPTION_FAILED: "Transcription failed. You can still write today's evaluation manually.",
   ANALYSIS_FAILED: "The AI draft could not be generated. You can still write today's evaluation manually.",

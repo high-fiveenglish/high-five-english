@@ -629,6 +629,11 @@ async function main() {
       async claimForAnalysis() {
         return true;
       },
+      // this fixture is a short synthetic transcript: the role gate is tested in test-speakerRoles.ts / test-recordingProcessing.ts
+      inferRoles: () => ({ confidence: "HIGH", teacherLabel: TEACHER, firstSpeaker: TEACHER, speakerCount: 2, minorSpeakers: [], votes: { questions: TEACHER, management: TEACHER, instructions: TEACHER, replies: TEACHER, "opening-closing": TEACHER }, features: [], reasons: [] }),
+      async markNeedsSpeakerConfirmation() {
+        throw new Error("the gate must not stop this fixture");
+      },
       async markFailed(_id, from, msg) {
         marked.push({ from, msg });
       },

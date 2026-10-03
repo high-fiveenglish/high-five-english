@@ -19,6 +19,7 @@ import { ageBandFromBirthDate } from "../../src/lib/projectEvaluationRules";
 import { formatAppDate } from "../../src/lib/appTime";
 import { getRecordingProcessingSecret } from "../../src/lib/recordingProcessingAuth";
 import { handleProcessRecordingRequest, type ProcessRecordingDeps } from "../../src/lib/recordingProcessing";
+import { truncateErrorMessage } from "../../src/lib/recordingWorkflow";
 
 const prismaDeps: ProcessRecordingDeps = {
   async findRecording(id) {
@@ -61,6 +62,13 @@ const prismaDeps: ProcessRecordingDeps = {
     await prisma.audioRecording.updateMany({
       where: { id, processingStatus: fromStatus },
       data: { processingStatus: "ANALYSIS_FAILED", errorMessage },
+    });
+  },
+  async markNeedsSpeakerConfirmation(id, message) {
+    // Only a record that is still TRANSCRIBED moves; a duplicate invocation changes nothing.
+    await prisma.audioRecording.updateMany({
+      where: { id, processingStatus: "TRANSCRIBED" },
+      data: { processingStatus: "NEEDS_SPEAKER_CONFIRMATION", errorMessage: truncateErrorMessage(message) },
     });
   },
   async saveDraft(id, result) {

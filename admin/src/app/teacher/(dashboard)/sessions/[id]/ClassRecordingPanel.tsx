@@ -22,6 +22,7 @@ const STATUS_LABEL: Record<string, string> = {
   TRANSCRIBING: "Transcribing",
   TRANSCRIBED: "Transcribed",
   ANALYZING: "Generating AI draft",
+  NEEDS_SPEAKER_CONFIRMATION: "Speaker check needed",
   NEEDS_REVIEW: "Draft ready for review",
   PUBLISHED: "Published",
   COMPLETED: "Completed",

@@ -141,7 +141,7 @@ async function main() {
     assert(((await again.json()) as { note?: string }).note === "already_processed" && env.triggered.length === 1, "replay: 재전송은 already_processed, trigger 추가 없음");
   }
   // 이미 진행/종료된 어떤 상태의 레코드도 completed webhook으로 되살아나거나 재처리되지 않는다.
-  for (const status of ["TRANSCRIBED", "ANALYZING", "NEEDS_REVIEW", "PUBLISHED", "COMPLETED", "ANALYSIS_FAILED", "TRANSCRIPTION_FAILED", "UPLOAD_FAILED", "SAVE_FAILED"]) {
+  for (const status of ["TRANSCRIBED", "ANALYZING", "NEEDS_SPEAKER_CONFIRMATION", "NEEDS_REVIEW", "PUBLISHED", "COMPLETED", "ANALYSIS_FAILED", "TRANSCRIPTION_FAILED", "UPLOAD_FAILED", "SAVE_FAILED"]) {
     const env = createEnv([row(1, status)]);
     const res = await handleAssemblyAIWebhook(env.req(completed(1)), SECRET, env.deps);
     assert(res.status === 200 && env.db.get(1)!.processingStatus === status && env.triggered.length === 0, `completed on ${status}: 상태 유지, trigger 없음`);
@@ -159,7 +159,7 @@ async function main() {
     const res = await handleAssemblyAIWebhook(env.req({ transcript_id: "tx-1", status: "error" }), SECRET, env.deps);
     assert(res.status === 200 && env.db.get(1)!.processingStatus === "TRANSCRIPTION_FAILED" && env.triggered.length === 0, "error: TRANSCRIPTION_FAILED, trigger 없음");
   }
-  for (const status of ["TRANSCRIBED", "ANALYZING", "NEEDS_REVIEW", "PUBLISHED", "ANALYSIS_FAILED"]) {
+  for (const status of ["TRANSCRIBED", "ANALYZING", "NEEDS_SPEAKER_CONFIRMATION", "NEEDS_REVIEW", "PUBLISHED", "ANALYSIS_FAILED"]) {
     // 늦게 온/조작된 error webhook이 이미 진행된 레코드의 상태·실패 사유를 덮어쓰지 않는다.
     const env = createEnv([{ ...row(1, status), errorMessage: status === "ANALYSIS_FAILED" ? "original reason" : null }]);
     await handleAssemblyAIWebhook(env.req({ transcript_id: "tx-1", status: "error" }), SECRET, env.deps);
