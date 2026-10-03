@@ -7,6 +7,7 @@ import { handleProcessRecordingRequest, processRecording, type ProcessRecordingD
 import { isAuthorizedProcessingRequest, RECORDING_PROCESSING_SECRET_HEADER } from "../src/lib/recordingProcessingAuth";
 import { ANALYZING_STUCK_AFTER_MS, MAX_ERROR_MESSAGE_LENGTH } from "../src/lib/recordingWorkflow";
 import { studentFirstLesson, teacherFirstLesson, threeVoiceLesson } from "./fixtures/syntheticLessons";
+import { confirmTeacherSpeaker, type ConfirmDeps } from "../src/lib/speakerConfirmation";
 import {
   recoverStuckTranscribedRecordings,
   TRANSCRIBED_RECOVERY_GRACE_MS,
@@ -36,6 +37,13 @@ interface FakeRow {
   aiDraft: string | null;
   teacherQcDraft: string | null;
   errorMessage: string | null;
+  /** ClassSession.teacherId — the owner of the lesson */
+  sessionTeacherId: number;
+  confirmedTeacherSpeaker: string | null;
+  /** stored utterances (JSON column) */
+  utterances: unknown;
+  speakerMappingStatus: string | null;
+  confirmedByTeacherId: number | null;
 }
 
 function tick() {
@@ -66,6 +74,9 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
       return {
         id: row.id,
         providerTranscriptId: row.providerTranscriptId,
+        processingStatus: row.processingStatus,
+        confirmedTeacherSpeaker: row.confirmedTeacherSpeaker,
+        storedUtterances: row.utterances,
         lessonContext: {
           lessonDate: "2026-10-01",
           lessonDurationMinutes: 25,
@@ -102,10 +113,10 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
         audio_duration: 1500,
       };
     },
-    async claimForAnalysis(id) {
+    async claimForAnalysis(id, _data, fromStatus) {
       calls.claimForAnalysis++;
       const row = db.get(id);
-      if (!row || row.processingStatus !== "TRANSCRIBED") return false;
+      if (!row || row.processingStatus !== fromStatus) return false;
       row.processingStatus = "ANALYZING";
       row.updatedAt = NOW;
       calls.claimSucceeded++;
@@ -118,11 +129,13 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
       row.processingStatus = "ANALYSIS_FAILED";
       row.errorMessage = errorMessage;
     },
-    async markNeedsSpeakerConfirmation(id, message) {
+    async markNeedsSpeakerConfirmation(id, message, snapshot) {
       calls.markNeedsConfirmation++;
       const row = db.get(id);
       if (!row || row.processingStatus !== "TRANSCRIBED") return;
       row.processingStatus = "NEEDS_SPEAKER_CONFIRMATION";
+      row.speakerMappingStatus = "NEEDS_CONFIRMATION";
+      row.utterances = JSON.parse(JSON.stringify(snapshot.utterances)); // a JSON column round-trips plain data
       row.errorMessage = message;
     },
     async saveDraft(id, result) {
@@ -156,12 +169,12 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
     return {
       async findStuckTranscribed(olderThan) {
         return [...db.values()]
-          .filter((r) => r.processingStatus === "TRANSCRIBED" && r.updatedAt < olderThan)
+          .filter((r) => (r.processingStatus === "TRANSCRIBED" || r.processingStatus === "TEACHER_SPEAKER_CONFIRMED") && r.updatedAt < olderThan)
           .map((r) => ({ id: r.id, updatedAt: r.updatedAt }));
       },
       async markRecoveryExhausted(id, errorMessage) {
         const row = db.get(id);
-        if (!row || row.processingStatus !== "TRANSCRIBED") return;
+        if (!row || (row.processingStatus !== "TRANSCRIBED" && row.processingStatus !== "TEACHER_SPEAKER_CONFIRMED")) return;
         row.processingStatus = "ANALYSIS_FAILED";
         row.errorMessage = errorMessage;
       },
@@ -189,7 +202,32 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
     return res.ok;
   }
 
-  return { db, calls, deps, behavior, totalDepCalls, request, recoveryDeps, authorizedTrigger };
+  /** The same Teacher Confirmation logic the Server Action uses, wired to this fake database; the trigger really runs the background handler. */
+  const confirmDeps: ConfirmDeps = {
+    async findSession(sessionId) {
+      const row = db.get(sessionId); // in this fake the session id equals the recording id
+      if (!row) return null;
+      return {
+        sessionTeacherId: row.sessionTeacherId,
+        recording: { id: row.id, processingStatus: row.processingStatus, confirmedTeacherSpeaker: row.confirmedTeacherSpeaker, utterances: row.utterances },
+      };
+    },
+    async markConfirmed(recordingId, label, teacherId) {
+      const row = db.get(recordingId);
+      if (!row || row.processingStatus !== "NEEDS_SPEAKER_CONFIRMATION") return false;
+      row.processingStatus = "TEACHER_SPEAKER_CONFIRMED";
+      row.speakerMappingStatus = "TEACHER_CONFIRMED";
+      row.confirmedTeacherSpeaker = label;
+      row.confirmedByTeacherId = teacherId;
+      row.errorMessage = null;
+      row.updatedAt = NOW;
+      return true;
+    },
+    triggerProcessing: authorizedTrigger,
+  };
+  const confirm = (sessionId: number, teacherId: number, label: unknown) => confirmTeacherSpeaker(confirmDeps, { teacherId, sessionId, label });
+
+  return { db, calls, deps, behavior, totalDepCalls, request, recoveryDeps, authorizedTrigger, confirm, confirmDeps };
 }
 
 function transcribedRow(id: number, ageMs: number): FakeRow {
@@ -201,6 +239,11 @@ function transcribedRow(id: number, ageMs: number): FakeRow {
     aiDraft: null,
     teacherQcDraft: null,
     errorMessage: null,
+    sessionTeacherId: 7,
+    confirmedTeacherSpeaker: null,
+    utterances: null,
+    speakerMappingStatus: null,
+    confirmedByTeacherId: null,
   };
 }
 
@@ -439,9 +482,156 @@ async function main() {
     assert(out === "ok" && env.calls.markNeedsConfirmation === 0 && env.calls.generateDraft === 1, "gate: a clear teacher-first lesson (HIGH) is analysed as before");
   }
 
+  // ── 8. Teacher Confirmation: LOW -> the teacher picks the voice -> analysis resumes from the STORED transcript ─────────────────
+  for (const [lesson, pick] of [["studentFirst", "B"], ["threeVoice", "C"]] as const) {
+    // A (studentFirst, teacher picks B) and B (threeVoice, teacher picks C — the audio track — the teacher's choice is respected)
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = lesson;
+    assert((await processRecording(1, env.deps)) === "needs_speaker_confirmation", `confirm(${lesson}): first pass stops at NEEDS_SPEAKER_CONFIRMATION`);
+    assert(env.calls.fetchTranscript === 1 && env.calls.generateDraft === 0, `confirm(${lesson}): one AssemblyAI read so far, no Claude call`);
+    const stored = env.db.get(1)!;
+    assert(Array.isArray(stored.utterances) && (stored.utterances as unknown[]).length > 0 && stored.speakerMappingStatus === "NEEDS_CONFIRMATION", `confirm(${lesson}): the utterances were kept for the re-analysis`);
+
+    const res = await env.confirm(1, 7, pick);
+    assert(res.ok && res.state === "confirmed" && res.triggered, `confirm(${lesson}): teacher selects ${pick} -> confirmed and the analysis was triggered`);
+    const row = env.db.get(1)!;
+    assert(row.processingStatus === "NEEDS_REVIEW", `confirm(${lesson}): the analysis ran (TEACHER_SPEAKER_CONFIRMED -> ANALYZING -> NEEDS_REVIEW), got ${row.processingStatus}`);
+    assert(row.confirmedTeacherSpeaker === pick && row.confirmedByTeacherId === 7 && row.speakerMappingStatus === "TEACHER_CONFIRMED", `confirm(${lesson}): label, teacher id and status are recorded`);
+    assert(env.calls.fetchTranscript === 1, `confirm(${lesson}): AssemblyAI was NOT called again after the confirmation (still ${env.calls.fetchTranscript} read)`);
+    assert(env.calls.generateDraft === 1 && env.calls.claimSucceeded === 1, `confirm(${lesson}): Claude was called exactly once`);
+  }
+  {
+    // the confirmed label is what reaches Claude (and Talk Time is computed with it), not the inference
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = "studentFirst";
+    let seen: { label: string | null; teacherPct: number } | null = null;
+    const original = env.deps.generateDraft;
+    env.deps.generateDraft = async (p) => {
+      seen = { label: p.teacherSpeakerLabel, teacherPct: p.talkTime.teacherTalkPercentage };
+      return original(p);
+    };
+    await processRecording(1, env.deps);
+    await env.confirm(1, 7, "B");
+    const got = seen as { label: string | null; teacherPct: number } | null;
+    assert(got?.label === "B" && (got?.teacherPct ?? 0) > 0, "confirm: Claude receives the label the teacher chose and a Talk Time computed with it");
+  }
+  {
+    // C. already confirmed: a second request or a page refresh never starts a second analysis
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = "studentFirst";
+    await processRecording(1, env.deps);
+    await env.confirm(1, 7, "B");
+    const again = await env.confirm(1, 7, "B");
+    assert(again.ok && again.state === "already_confirmed" && !again.triggered, "idempotent: the same choice again -> already_confirmed, nothing triggered (analysis finished)");
+    const other = await env.confirm(1, 7, "A");
+    assert(!other.ok && other.error === "different_label", "idempotent: a different choice after the analysis ran is rejected");
+    assert(env.db.get(1)!.confirmedTeacherSpeaker === "B" && env.db.get(1)!.processingStatus === "NEEDS_REVIEW" && env.db.get(1)!.aiDraft === "feedback #1", "idempotent: the finished draft and the confirmed label are untouched");
+    assert(env.calls.generateDraft === 1 && env.calls.fetchTranscript === 1, "idempotent: still one Claude call and one AssemblyAI read");
+  }
+  {
+    // H. duplicate requests in parallel (double click / two tabs): one analysis only
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = "studentFirst";
+    await processRecording(1, env.deps);
+    const [r1, r2, r3] = await Promise.all([env.confirm(1, 7, "B"), env.confirm(1, 7, "B"), env.confirm(1, 7, "B")]);
+    assert([r1, r2, r3].every((r) => r.ok), "duplicate requests: none is rejected");
+    assert([r1, r2, r3].filter((r) => r.ok && r.state === "confirmed").length === 1, "duplicate requests: exactly one performs the confirmation");
+    assert(env.calls.generateDraft === 1 && env.calls.claimSucceeded === 1 && env.calls.fetchTranscript === 1, "duplicate requests: one Claude call, one claim, no new AssemblyAI read");
+    assert(env.db.get(1)!.processingStatus === "NEEDS_REVIEW", "duplicate requests: one finished draft");
+    // two different choices at the same moment: the first wins, the second is refused
+    const env2 = createFakeEnv([transcribedRow(1, 0)]);
+    env2.behavior.lesson = "studentFirst";
+    await processRecording(1, env2.deps);
+    const [x, y] = await Promise.all([env2.confirm(1, 7, "A"), env2.confirm(1, 7, "B")]);
+    const wins = [x, y].filter((r) => r.ok);
+    assert(wins.length >= 1 && env2.calls.generateDraft === 1, "conflicting choices: at most one analysis is started");
+    assert(env2.db.get(1)!.confirmedTeacherSpeaker === (x.ok && x.state === "confirmed" ? "A" : "B"), "conflicting choices: the stored label is the winner's");
+  }
+  {
+    // D / E: authorization and label validation happen before anything changes
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = "studentFirst";
+    await processRecording(1, env.deps);
+    const before = JSON.stringify(env.db.get(1));
+    const other = await env.confirm(1, 8, "B");
+    assert(!other.ok && other.error === "not_found", "authorization: another teacher is rejected (same answer as for a lesson that does not exist)");
+    for (const bad of ["Z", "", "b", "B ", "../B", "A;DROP", "a".repeat(40), 5, null, undefined, { label: "B" }, ["B"]]) {
+      const r = await env.confirm(1, 7, bad);
+      assert(!r.ok && r.error === "invalid_label", `invalid label ${JSON.stringify(bad)} is rejected`);
+    }
+    const missing = await env.confirm(999, 7, "B");
+    assert(!missing.ok && missing.error === "not_found", "authorization: an unknown lesson is rejected");
+    assert(JSON.stringify(env.db.get(1)) === before && env.calls.generateDraft === 0, "rejected requests change nothing and never reach Claude");
+  }
+  {
+    // F: no confirmation -> no Claude call, however often the background function is invoked (webhook replay, recovery, re-trigger)
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = "threeVoice";
+    await processRecording(1, env.deps);
+    for (let i = 0; i < 3; i++) await processRecording(1, env.deps);
+    await env.authorizedTrigger(1);
+    await recoverStuckTranscribedRecordings(env.recoveryDeps(env.authorizedTrigger), new Date(NOW.getTime() + 48 * 3600 * 1000));
+    assert(env.calls.generateDraft === 0 && env.calls.claimForAnalysis === 0, "no confirmation: repeated invocations and recovery never call Claude");
+    assert(env.calls.fetchTranscript === 1, "no confirmation: AssemblyAI was read once, not on every invocation (the record is waiting)");
+    assert(env.db.get(1)!.processingStatus === "NEEDS_SPEAKER_CONFIRMATION", "no confirmation: the record keeps waiting for the teacher");
+  }
+  {
+    // a recording whose roles were settled automatically (HIGH) has nothing to confirm
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    await processRecording(1, env.deps);
+    const r = await env.confirm(1, 7, "A");
+    assert(!r.ok && r.error === "not_waiting", "HIGH recording: confirmation is refused (nothing to confirm) and the draft is not touched");
+    assert(env.db.get(1)!.processingStatus === "NEEDS_REVIEW" && env.db.get(1)!.confirmedTeacherSpeaker === null, "HIGH recording: still NEEDS_REVIEW with no confirmed label");
+  }
+  {
+    // the trigger of the confirmation was lost: the record stays TEACHER_SPEAKER_CONFIRMED and the scheduled recovery resumes it
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = "studentFirst";
+    await processRecording(1, env.deps);
+    const lost = await confirmTeacherSpeaker({ ...env.confirmDeps, triggerProcessing: async () => false }, { teacherId: 7, sessionId: 1, label: "B" });
+    assert(lost.ok && lost.state === "confirmed" && !lost.triggered, "lost trigger: the confirmation itself is saved");
+    assert(env.db.get(1)!.processingStatus === "TEACHER_SPEAKER_CONFIRMED" && env.calls.generateDraft === 0, "lost trigger: waiting in TEACHER_SPEAKER_CONFIRMED, no Claude call yet");
+    const report = await recoverStuckTranscribedRecordings(env.recoveryDeps(env.authorizedTrigger), new Date(NOW.getTime() + 30 * 60 * 1000));
+    assert(report.retriggered.length === 1 && env.db.get(1)!.processingStatus === "NEEDS_REVIEW", "lost trigger: the scheduled recovery resumes the analysis");
+    assert(env.calls.fetchTranscript === 1 && env.calls.generateDraft === 1, "lost trigger: recovery used the stored transcript (no AssemblyAI read) and called Claude once");
+    // re-clicking while the record still waits re-triggers safely (the claim is atomic)
+    const env2 = createFakeEnv([transcribedRow(1, 0)]);
+    env2.behavior.lesson = "studentFirst";
+    await processRecording(1, env2.deps);
+    await confirmTeacherSpeaker({ ...env2.confirmDeps, triggerProcessing: async () => false }, { teacherId: 7, sessionId: 1, label: "B" });
+    const retry = await env2.confirm(1, 7, "B");
+    assert(retry.ok && retry.state === "already_confirmed" && retry.triggered && env2.db.get(1)!.processingStatus === "NEEDS_REVIEW", "lost trigger: the same choice again re-triggers and finishes once");
+    assert(env2.calls.generateDraft === 1, "lost trigger: still exactly one Claude call");
+  }
+  {
+    // corrupted stored data never reaches Claude
+    const env = createFakeEnv([{ ...transcribedRow(1, 0), processingStatus: "TEACHER_SPEAKER_CONFIRMED", confirmedTeacherSpeaker: "B", utterances: [{ speaker: "A" }] }]);
+    const out = await processRecording(1, env.deps);
+    assert(out === "transcript_unavailable" && env.db.get(1)!.processingStatus === "ANALYSIS_FAILED" && env.calls.generateDraft === 0, "invalid stored utterances: ANALYSIS_FAILED, no Claude call");
+    const env2 = createFakeEnv([{ ...transcribedRow(1, 0), processingStatus: "TEACHER_SPEAKER_CONFIRMED", confirmedTeacherSpeaker: "Q", utterances: teacherFirstLesson() }]);
+    const out2 = await processRecording(1, env2.deps);
+    assert(out2 === "transcript_unavailable" && env2.calls.generateDraft === 0 && env2.calls.fetchTranscript === 0, "a confirmed label that is not in the transcript: ANALYSIS_FAILED, no Claude call, no AssemblyAI read");
+  }
+  {
+    // I. three voices: confirmation required, and every real voice (A, B and C) can be chosen
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    env.behavior.lesson = "threeVoice";
+    await processRecording(1, env.deps);
+    assert(env.db.get(1)!.processingStatus === "NEEDS_SPEAKER_CONFIRMATION", "three voices: confirmation required");
+    const labels = new Set(((env.db.get(1)!.utterances as { speaker: string }[]) ?? []).map((u) => u.speaker));
+    assert(labels.size === 3 && labels.has("C"), "three voices: the stored transcript offers A, B and C");
+  }
+  {
+    // J. regression: a clear lesson is analysed exactly as before (no stored utterances, mapping AUTO is set by the claim)
+    const env = createFakeEnv([transcribedRow(1, 0)]);
+    assert((await processRecording(1, env.deps)) === "ok" && env.calls.markNeedsConfirmation === 0 && env.calls.fetchTranscript === 1 && env.calls.generateDraft === 1, "regression: a HIGH lesson still goes straight to Claude");
+    assert(env.db.get(1)!.utterances === null, "regression: nothing extra is stored for a HIGH lesson");
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   if (fail > 0) process.exit(1);
 }
+
 
 
 

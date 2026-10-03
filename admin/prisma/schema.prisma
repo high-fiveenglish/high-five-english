@@ -683,12 +683,25 @@ model AudioRecording {
   teacherQcDraft String? @db.Text
 
   // UPLOADED → PUBLIC_READY → TRANSCRIBING → TRANSCRIBED → ANALYZING → NEEDS_REVIEW
-  // → PUBLISHED → COMPLETED, 실패 시 UPLOAD_FAILED/TRANSCRIPTION_FAILED/
+  // → PUBLISHED → COMPLETED. 화자(강사) 확인이 필요하면 TRANSCRIBED → NEEDS_SPEAKER_CONFIRMATION
+  // → TEACHER_SPEAKER_CONFIRMED → ANALYZING 으로 간다. 실패 시 UPLOAD_FAILED/TRANSCRIPTION_FAILED/
   // ANALYSIS_FAILED/SAVE_FAILED 중 하나. LessonEvaluation처럼 plain String(Prisma enum
   // 아님) — 이 코드베이스의 다른 status 필드(LevelTest.progressStatus 등)와 동일한
   // 관례.
   processingStatus String  @default("UPLOADED")
   errorMessage     String? @db.Text
+
+  // ── 화자(강사) 확인 ─────────────────────────────────────────────────────────────────────────
+  // AssemblyAI는 목소리를 "A"/"B"/"C"로만 구분한다. 코드가 강사를 확신할 수 없으면(speakerRoles.ts, LOW)
+  // 분석을 멈추고 담당 강사가 직접 고르게 한다. 고른 뒤에는 AssemblyAI를 다시 호출하지 않고 여기에 저장해
+  // 둔 발화(transcriptUtterances)와 화자 라벨(confirmedTeacherSpeaker)로 분석을 재개한다 — 비용 절감과
+  // 전사 결과 변동 방지(같은 transcript로 재현 가능)가 목적이다.
+  // speakerMappingStatus: null(아직 판정 전) | "AUTO"(코드가 HIGH로 판정) | "NEEDS_CONFIRMATION" | "TEACHER_CONFIRMED"
+  speakerMappingStatus        String?
+  transcriptUtterances        Json? // AssemblyAI utterances 원본(화자 라벨 포함) — 확인이 필요한 녹음에서만 저장
+  confirmedTeacherSpeaker     String? // 강사가 고른 AssemblyAI 화자 라벨(예: "B")
+  speakerConfirmedAt          DateTime?
+  speakerConfirmedByTeacherId Int? // 확인한 강사 id — AuditLog.actorId처럼 FK 없는 기록용 값
 
   uploadedAt DateTime  @default(now())
   analyzedAt DateTime?

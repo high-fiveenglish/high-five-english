@@ -621,7 +621,7 @@ async function main() {
     let saved = 0;
     const deps: ProcessRecordingDeps = {
       async findRecording() {
-        return { id: 1, providerTranscriptId: "tx-1", lessonContext: LESSON };
+        return { id: 1, providerTranscriptId: "tx-1", processingStatus: "TRANSCRIBED", confirmedTeacherSpeaker: null, storedUtterances: null, lessonContext: LESSON };
       },
       async fetchTranscript() {
         return { id: "tx-1", status: "completed", text: UTTS.map((u) => u.text).join(" "), utterances: UTTS, audio_duration: 1510 };

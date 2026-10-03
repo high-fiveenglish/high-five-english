@@ -10,7 +10,7 @@
  * 넘겨, "조회 후 갱신"이 아니라 단일 UPDATE문으로 상태 전이를 원자적으로 만든다 —
  * 동시에 도착한 중복 요청 중 하나만 실제로 행을 바꾸게 해 race condition(Claude
  * 중복 호출, aiDraft 중복 저장)을 막는다. */
-export const ALREADY_PROGRESSED_STATUSES = ["TRANSCRIBED", "ANALYZING", "NEEDS_SPEAKER_CONFIRMATION", "NEEDS_REVIEW", "PUBLISHED", "COMPLETED"];
+export const ALREADY_PROGRESSED_STATUSES = ["TRANSCRIBED", "ANALYZING", "NEEDS_SPEAKER_CONFIRMATION", "TEACHER_SPEAKER_CONFIRMED", "NEEDS_REVIEW", "PUBLISHED", "COMPLETED"];
 
 /** AssemblyAI webhook이 레코드를 TRANSCRIBED(또는 TRANSCRIPTION_FAILED)로 옮길 수 있는
  * 유일한 출발 상태 — "전사 결과를 기다리는 중"인 상태뿐이다. notIn(ALREADY_PROGRESSED) 대신

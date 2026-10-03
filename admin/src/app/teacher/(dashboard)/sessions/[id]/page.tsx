@@ -6,6 +6,7 @@ import { SESSION_STATUS_LABEL_EN, studentDisplayName } from "@/lib/teacherPortal
 import { EvaluationForm } from "./EvaluationForm";
 import { ClassRecordingPanel } from "./ClassRecordingPanel";
 import { safeRecordingFailureMessage } from "@/lib/recordingWorkflow";
+import { parseStoredUtterances, speakerChoicesFor } from "@/lib/speakerConfirmation";
 
 const fmtDateTime = formatAppDateTime;
 
@@ -42,6 +43,16 @@ export default async function SessionEvaluationPage({
 
   if (!session || session.teacherId !== teacher.id) notFound();
 
+  // Only while the analysis waits for the teacher to pick the teacher voice: a neutral list of the voices in the STORED transcript
+  // (alphabetical, no score, no recommendation) built on the server. The utterances themselves never reach the browser — only a few
+  // short excerpts so the teacher can recognise their own voice.
+  let speakerChoices = null;
+  if (session.audioRecording?.processingStatus === "NEEDS_SPEAKER_CONFIRMATION") {
+    const stored = await prisma.audioRecording.findUnique({ where: { classSessionId: session.id }, select: { transcriptUtterances: true } });
+    const utterances = parseStoredUtterances(stored?.transcriptUtterances);
+    speakerChoices = utterances ? speakerChoicesFor(utterances) : null;
+  }
+
   return (
     <div>
       <h1 className="mb-1 text-xl font-bold text-slate-900">Daily Evaluation</h1>
@@ -75,6 +86,7 @@ export default async function SessionEvaluationPage({
                 : null
             }
             hasExistingEvaluation={!!session.evaluation}
+            speakerChoices={speakerChoices}
           />
         </div>
       )}

@@ -13,6 +13,7 @@
 // recover-transcribed-recordings뿐이며 둘 다 recordingTrigger.ts로 이 헤더를 붙인다.
 // 처리 로직 본체와 테스트는 recordingProcessing.ts / test-recordingProcessing.ts 참고.
 import { prisma } from "../../src/lib/prisma";
+import type { Prisma } from "../../src/generated/prisma/client";
 import { fetchTranscript } from "../../src/lib/assemblyai";
 import { generateAIEvaluationDraft } from "../../src/lib/aiEvaluation";
 import { ageBandFromBirthDate } from "../../src/lib/projectEvaluationRules";
@@ -38,6 +39,9 @@ const prismaDeps: ProcessRecordingDeps = {
     return {
       id: recording.id,
       providerTranscriptId: recording.providerTranscriptId,
+      processingStatus: recording.processingStatus,
+      confirmedTeacherSpeaker: recording.confirmedTeacherSpeaker,
+      storedUtterances: recording.transcriptUtterances,
       lessonContext: {
         // ClassSession.scheduledAt(실제 수업 날짜)에서 애플리케이션이 뽑아 전달한다 —
         // Claude가 날짜를 추측하지 않는다(appTime.ts의 Asia/Seoul 고정 정책 그대로 재사용).
@@ -51,9 +55,11 @@ const prismaDeps: ProcessRecordingDeps = {
     };
   },
   fetchTranscript,
-  async claimForAnalysis(id, data) {
+  async claimForAnalysis(id, data, fromStatus) {
+    // Exactly one invocation can move the record out of its start state (TRANSCRIBED, or TEACHER_SPEAKER_CONFIRMED after the
+    // teacher chose the voice); everyone else gets count 0 and never calls Claude.
     const claimed = await prisma.audioRecording.updateMany({
-      where: { id, processingStatus: "TRANSCRIBED" },
+      where: { id, processingStatus: fromStatus },
       data: { processingStatus: "ANALYZING", ...data },
     });
     return claimed.count === 1;
@@ -64,11 +70,19 @@ const prismaDeps: ProcessRecordingDeps = {
       data: { processingStatus: "ANALYSIS_FAILED", errorMessage },
     });
   },
-  async markNeedsSpeakerConfirmation(id, message) {
-    // Only a record that is still TRANSCRIBED moves; a duplicate invocation changes nothing.
+  async markNeedsSpeakerConfirmation(id, message, snapshot) {
+    // Only a record that is still TRANSCRIBED moves; a duplicate invocation changes nothing. The utterances (with AssemblyAI's speaker
+    // labels) are kept so the analysis can resume after the teacher's choice WITHOUT calling AssemblyAI again.
     await prisma.audioRecording.updateMany({
       where: { id, processingStatus: "TRANSCRIBED" },
-      data: { processingStatus: "NEEDS_SPEAKER_CONFIRMATION", errorMessage: truncateErrorMessage(message) },
+      data: {
+        processingStatus: "NEEDS_SPEAKER_CONFIRMATION",
+        speakerMappingStatus: "NEEDS_CONFIRMATION",
+        transcriptUtterances: snapshot.utterances as unknown as Prisma.InputJsonValue,
+        transcript: snapshot.transcript,
+        duration: snapshot.duration,
+        errorMessage: truncateErrorMessage(message),
+      },
     });
   },
   async saveDraft(id, result) {

@@ -6,6 +6,8 @@ import { requireTeacher } from "@/lib/teacherAuth";
 import { requirePermission, resolveRolePermissions, logAudit } from "@/lib/rbac";
 import { languageForRegion, translateLessonEvaluation, shouldTranslate } from "@/lib/levelTestTranslation";
 import { shouldRequireOverwriteConfirmation } from "@/lib/recordingWorkflow";
+import { triggerRecordingProcessing } from "@/lib/recordingTrigger";
+import { CONFIRM_ERROR_MESSAGES, confirmTeacherSpeaker } from "@/lib/speakerConfirmation";
 import {
   commitAIDraftPublish,
   evaluationBlockedReason,
@@ -135,4 +137,76 @@ export async function publishAIDraft(
   revalidatePath("/teacher");
   revalidatePath(`/teacher/sessions/${sessionId}`);
   return { success: true as const };
+}
+
+// ── Teacher Confirmation of the speaker roles ──────────────────────────────────────────────────────────────────────
+// The analysis stopped because the application could not tell with enough confidence which voice is the teacher. The teacher of THIS
+// lesson picks the voice; the analysis then resumes from the transcript that is already stored (AssemblyAI is not called again).
+// Who may confirm, which labels are valid and what happens on a repeated request are decided in speakerConfirmation.ts (server side);
+// this action only authenticates, wires the database and revalidates the page.
+export type ConfirmSpeakerState = { error?: string; success?: true; message?: string } | undefined;
+
+export async function confirmTeacherSpeakerAction(
+  sessionId: number,
+  _prevState: ConfirmSpeakerState,
+  formData: FormData,
+): Promise<ConfirmSpeakerState> {
+  const teacher = await requireTeacher();
+  const actor = {
+    role: "TEACHER" as const,
+    id: teacher.id,
+    name: teacher.realName,
+    permissions: await resolveRolePermissions("TEACHER"),
+  };
+  requirePermission(actor, "own_evaluations.update");
+
+  const result = await confirmTeacherSpeaker(
+    {
+      async findSession(id) {
+        if (!Number.isSafeInteger(id) || id <= 0) return null;
+        const session = await prisma.classSession.findUnique({
+          where: { id },
+          select: {
+            teacherId: true,
+            audioRecording: { select: { id: true, processingStatus: true, confirmedTeacherSpeaker: true, transcriptUtterances: true } },
+          },
+        });
+        if (!session) return null;
+        const rec = session.audioRecording;
+        return {
+          sessionTeacherId: session.teacherId ?? -1,
+          recording: rec
+            ? { id: rec.id, processingStatus: rec.processingStatus, confirmedTeacherSpeaker: rec.confirmedTeacherSpeaker, utterances: rec.transcriptUtterances }
+            : null,
+        };
+      },
+      async markConfirmed(recordingId, label, teacherId) {
+        // One conditional UPDATE: only a recording that is still waiting changes; of two concurrent requests only one gets count 1.
+        const res = await prisma.audioRecording.updateMany({
+          where: { id: recordingId, processingStatus: "NEEDS_SPEAKER_CONFIRMATION" },
+          data: {
+            processingStatus: "TEACHER_SPEAKER_CONFIRMED",
+            speakerMappingStatus: "TEACHER_CONFIRMED",
+            confirmedTeacherSpeaker: label,
+            speakerConfirmedAt: new Date(),
+            speakerConfirmedByTeacherId: teacherId,
+            errorMessage: null,
+          },
+        });
+        return res.count === 1;
+      },
+      triggerProcessing: triggerRecordingProcessing,
+    },
+    { teacherId: teacher.id, sessionId, label: formData.get("teacherSpeaker") },
+  );
+
+  if (!result.ok) return { error: CONFIRM_ERROR_MESSAGES[result.error] };
+  revalidatePath(`/teacher/sessions/${sessionId}`);
+  return {
+    success: true as const,
+    message:
+      result.state === "confirmed"
+        ? "Thank you. The AI draft is being prepared from the existing transcript."
+        : "This speaker was already confirmed.",
+  };
 }

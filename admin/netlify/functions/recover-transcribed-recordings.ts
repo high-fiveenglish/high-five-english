@@ -11,7 +11,8 @@ export default async () => {
   const report = await recoverStuckTranscribedRecordings({
     async findStuckTranscribed(olderThan) {
       return prisma.audioRecording.findMany({
-        where: { processingStatus: "TRANSCRIBED", updatedAt: { lt: olderThan } },
+        // TEACHER_SPEAKER_CONFIRMED is a start state too: the teacher chose the voice, but the request that resumes the analysis may have been lost.
+        where: { processingStatus: { in: ["TRANSCRIBED", "TEACHER_SPEAKER_CONFIRMED"] }, updatedAt: { lt: olderThan } },
         select: { id: true, updatedAt: true },
         orderBy: { updatedAt: "asc" },
         take: 20,
@@ -19,7 +20,7 @@ export default async () => {
     },
     async markRecoveryExhausted(id, errorMessage) {
       await prisma.audioRecording.updateMany({
-        where: { id, processingStatus: "TRANSCRIBED" },
+        where: { id, processingStatus: { in: ["TRANSCRIBED", "TEACHER_SPEAKER_CONFIRMED"] } },
         data: { processingStatus: "ANALYSIS_FAILED", errorMessage },
       });
     },

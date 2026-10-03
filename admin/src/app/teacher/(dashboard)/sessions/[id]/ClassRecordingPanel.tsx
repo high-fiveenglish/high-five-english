@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { publishAIDraft } from "./recordingActions";
+import { confirmTeacherSpeakerAction, publishAIDraft } from "./recordingActions";
+import type { SpeakerChoice } from "@/lib/speakerConfirmation";
 
 export type RecordingSummary = {
   processingStatus: string;
@@ -22,7 +23,8 @@ const STATUS_LABEL: Record<string, string> = {
   TRANSCRIBING: "Transcribing",
   TRANSCRIBED: "Transcribed",
   ANALYZING: "Generating AI draft",
-  NEEDS_SPEAKER_CONFIRMATION: "Speaker check needed",
+  NEEDS_SPEAKER_CONFIRMATION: "Speaker identification required",
+  TEACHER_SPEAKER_CONFIRMED: "Speaker confirmed — preparing AI draft",
   NEEDS_REVIEW: "Draft ready for review",
   PUBLISHED: "Published",
   COMPLETED: "Completed",
@@ -40,10 +42,12 @@ export function ClassRecordingPanel({
   sessionId,
   recording,
   hasExistingEvaluation,
+  speakerChoices,
 }: {
   sessionId: number;
   recording: RecordingSummary | null;
   hasExistingEvaluation: boolean;
+  speakerChoices?: SpeakerChoice[] | null;
 }) {
   if (!recording) {
     return (
@@ -87,7 +91,15 @@ export function ClassRecordingPanel({
           </>
         )}
       </dl>
-      {recording.errorMessage && <p className="text-sm text-red-600">{recording.errorMessage}</p>}
+      {recording.processingStatus === "NEEDS_SPEAKER_CONFIRMATION" ? (
+        speakerChoices && speakerChoices.length > 0 ? (
+          <SpeakerConfirmation sessionId={sessionId} choices={speakerChoices} />
+        ) : (
+          <p className="text-sm text-red-600">{recording.errorMessage}</p>
+        )
+      ) : (
+        recording.errorMessage && <p className="text-sm text-red-600">{recording.errorMessage}</p>
+      )}
 
       {recording.processingStatus === "NEEDS_REVIEW" && recording.aiDraft && (
         <ReviewDraft sessionId={sessionId} draft={recording.aiDraft} hasExistingEvaluation={hasExistingEvaluation} />
@@ -150,6 +162,55 @@ function ReviewDraft({
         className="w-fit rounded-lg bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50"
       >
         {pending ? "Publishing..." : state?.needsConfirmation ? "Confirm & Replace" : "Publish as Evaluation"}
+      </button>
+    </form>
+  );
+}
+
+// Shown while the analysis waits for the teacher. Nothing is pre-selected and the application does not say which voice it thinks is the
+// teacher — the choice must be the teacher's own. The server validates the label and the ownership again (speakerConfirmation.ts).
+function SpeakerConfirmation({ sessionId, choices }: { sessionId: number; choices: SpeakerChoice[] }) {
+  const action = confirmTeacherSpeakerAction.bind(null, sessionId);
+  const [state, formAction, pending] = useActionState(action, undefined);
+
+  if (state?.success) {
+    return <p className="border-t border-slate-100 pt-3 text-sm font-semibold text-emerald-600">{state.message}</p>;
+  }
+
+  return (
+    <form action={formAction} className="flex flex-col gap-3 border-t border-slate-100 pt-3">
+      <div>
+        <h3 className="text-sm font-bold text-slate-800">Speaker identification required</h3>
+        <p className="text-sm text-slate-600">Please select which speaker is the teacher.</p>
+        <p className="mt-1 text-xs text-slate-500">
+          The AI draft is generated from the transcript that already exists, using your choice. No new transcription is made.
+        </p>
+      </div>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="sr-only">Which speaker is the teacher?</legend>
+        {choices.map((c) => (
+          <label key={c.label} className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-3 text-sm hover:border-slate-400">
+            <input type="radio" name="teacherSpeaker" value={c.label} required className="mt-1" />
+            <span className="flex flex-col gap-1">
+              <span className="font-semibold text-slate-800">
+                Speaker {c.label} <span className="font-normal text-slate-500">— {c.turns} turns · {c.minutes} min</span>
+              </span>
+              {c.excerpts.map((e) => (
+                <span key={e.at} className="text-xs text-slate-600">
+                  [{e.at}] {e.text}
+                </span>
+              ))}
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+      <button
+        type="submit"
+        disabled={pending}
+        className="w-fit rounded-lg bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50"
+      >
+        {pending ? "Saving..." : "Confirm teacher speaker"}
       </button>
     </form>
   );
