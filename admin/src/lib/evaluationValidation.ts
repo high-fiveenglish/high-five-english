@@ -6,7 +6,7 @@
 //   learner addressing (child/teen) · measured Talk Time · historical/date grounding
 import { extractQuotedSpans, normalizeForMatch, stripQuotedSpans, wordCount } from "./evaluationText";
 import { checkNoUngroundedHistoricalClaims, OUTPUT1_LABELS, type AgeBand } from "./projectEvaluationRules";
-import type { RoleUtterance } from "./speakerTranscript";
+import { formatTimestamp, type RoleUtterance } from "./speakerTranscript";
 import type { TalkTimeResult } from "./talkTime";
 
 export interface ValidationContext {
@@ -104,6 +104,16 @@ function isCompactSubsequence(q: string[], u: string[]): boolean {
   return false;
 }
 
+/** True when this student turn stops mid-sentence and the next turn is the Teacher's, starting in lower case — the speaker
+ * labels split one sentence in two. Found on a real recording: "...but now I'm actually a little too" (Student) |
+ * "grown up for a cycling." (Teacher). Such a fragment is a diarization artifact, not a student error. */
+function endsAtSpeakerSplit(turn: RoleUtterance, fragmentNorm: string, roles: RoleUtterance[]): boolean {
+  if (!normalizeForMatch(turn.text).endsWith(fragmentNorm)) return false;
+  if (/[.?!…]["”']?\s*$/.test(turn.text.trim())) return false;
+  const next = roles[roles.indexOf(turn) + 1];
+  return !!next && next.role === "Teacher" && /^[a-z]/.test(next.text.trim());
+}
+
 function utterancesContaining(fragmentNorm: string, roles: RoleUtterance[]): RoleUtterance[] {
   const q = fragmentNorm.split(" ");
   return roles.filter((r) => {
@@ -137,6 +147,8 @@ export function checkQuotesAndReading(studentFeedback: string, teacherQc: string
           else if (byStudent.length === 0) issues.push(`${label}: a ❌ sentence was said by the Teacher, not the student: "${short(frag)}"`);
           else if (byStudent.every((r) => r.possibleReadAloud)) {
             issues.push(`${label}: a ❌ correction targets a passage the student was reading aloud, not spontaneous speech: "${short(frag)}"`);
+          } else if (byStudent.every((r) => endsAtSpeakerSplit(r, norm, roles))) {
+            issues.push(`${label}: a ❌ sentence stops where the speaker label changes (the rest of the sentence was attributed to the Teacher), so it is not a complete student sentence — choose a different, complete sentence: "${short(frag)}"`);
           }
         }
         continue;
@@ -321,12 +333,55 @@ function finish(issues: string[]): ValidationResult {
 const TRANSCRIPT_TOOL_MENTION = /\b(?:speech[- ]to[- ]text|transcri(?:pt|ption|bed|ber)|STT|ASR|text artifact)\b/i;
 const NO_ERROR_ITEM = /\bno (?:correction|error|mistake)s? (?:was |is |were |are )?(?:needed|necessary|required)\b|\bnot (?:really )?an error\b|\bno error here\b/i;
 
+const ACTOR_AT_TS_BEFORE = /\b(?:at|around)\s+\[(\d{1,2}:\d{2}(?::\d{2})?)\],?\s+the (tutor|teacher|student)(?!['’]s)\b/gi;
+// "the tutor <verb phrase> at [ts]": the actor must be the subject of its clause (start of sentence, after , ; ( or a
+// conjunction) — not the object of another verb ("the tutor asked the student to ... at [ts]") — and the phrase between
+// the actor and the timestamp must not name anyone else.
+const ACTOR_AT_TS_AFTER =
+  /(?<=(?:^|[.!?,;:(]\s*|\b(?:and|but|while|when|as|so|then|because)\s+))the (tutor|teacher|student)(?!['’]s) (?:(?!\b(?:tutor|teacher|student|she|her|he|his|they|their)\b)[^.,;:()\[\]"“”]){1,80}?\b(?:at|around) \[(\d{1,2}:\d{2}(?::\d{2})?)\]/gim;
+
+/** Output 2 cites many [mm:ss] labels. The existing time check only proves a label exists; this one proves that a sentence
+ * saying "at [23:42], the tutor asked ..." points at a line the Tutor actually speaks (and "the student ..." at a Student
+ * line). Found on a real recording: the tutor's question at [23:21] was cited at [23:42], the student's answer.
+ * Only the direct forms "at [ts], the tutor ..." and "the tutor ... at [ts]" are checked; a timestamp that merely opens
+ * a section or follows a "when the student ..." clause is left alone. */
+export function checkTutorStudentTimestamps(teacherQc: string, roles: RoleUtterance[]): string[] {
+  const issues: string[] = [];
+  const check = (ts: string, actor: string) => {
+    const role = /student/i.test(actor) ? "Student" : "Teacher";
+    const speakingThere = roles.filter((r) => formatTimestamp(r.startMs) === ts.padStart(5, "0"));
+    if (speakingThere.length > 0 && speakingThere.every((r) => r.role !== role)) {
+      const other = role === "Teacher" ? "the Student" : "the Tutor";
+      issues.push(
+        `Output 2: [${ts}] is a line where ${other} speaks, but the sentence says the ${actor.toLowerCase()} acted there — cite the timestamp of the ${actor.toLowerCase()}'s own line`,
+      );
+    }
+  };
+  for (const m of teacherQc.matchAll(ACTOR_AT_TS_BEFORE)) check(m[1], m[2]);
+  for (const m of teacherQc.matchAll(ACTOR_AT_TS_AFTER)) check(m[2], m[1]);
+  return [...new Set(issues)];
+}
+
+const SPEECH_QUALITY = /\b(?:fluent(?:ly)?|fluency|pacing|pronunciation|pronounced|mispronounc\w*|accent|intonation)\b/i;
+const SPEECH_SUBJECT = /\b(?:read|reads|reading|spoke|speak|speaks|speaking|delivery|voice|pace)\b/i;
+const SUGGESTION = /\b(?:practice|practise|try|might|could|should|to build|to improve|to strengthen|to develop|work on)\b/i;
+
 /** Parent-facing report hygiene found on a real recording: a polish item that itself says "No correction was needed here",
  * and an item about a word that "is likely a speech-to-text artifact". Neither belongs in a report to the family. */
 export function checkStudentReportHygiene(studentFeedback: string): string[] {
   const issues: string[] = [];
   if (TRANSCRIPT_TOOL_MENTION.test(studentFeedback)) {
     issues.push("Output 1 mentions the transcript or speech-to-text — the family report must not discuss how the recording was transcribed; leave out any item that depends on a transcription artifact");
+  }
+  // "read the article fluently", "with clear pacing": the model only has text and cannot hear how the student sounded.
+  // A sentence that quotes a tutor line (a tutor-corrected pronunciation) or only suggests practice is allowed.
+  const judged = studentFeedback
+    .split(/(?<=[.!?])\s+|\n/)
+    .filter((sentence) => SPEECH_QUALITY.test(sentence) && SPEECH_SUBJECT.test(sentence) && !/["“]/.test(sentence) && !SUGGESTION.test(sentence));
+  if (judged.length > 0) {
+    issues.push(
+      `Output 1 judges how the student sounded (fluency, pacing, pronunciation: "${short(judged[0].trim(), 70)}") — you only have a text transcript and cannot hear the recording; remove that statement unless the tutor corrected a pronunciation in the transcript`,
+    );
   }
   if (NO_ERROR_ITEM.test(studentFeedback)) {
     issues.push("Output 1 has a polish item that says no correction is needed — every ✅ polish item must be a real student error; remove the item instead");
@@ -355,6 +410,7 @@ export function validateTeacherQc(teacherQc: string, ctx: ValidationContext): Va
   return finish([
     ...checkTeacherStructure(teacherQc),
     ...checkQuotesAndReading("", teacherQc, ctx.roles),
+    ...checkTutorStudentTimestamps(teacherQc, ctx.roles),
     ...checkTimeGrounding("", teacherQc, ctx),
     ...checkTeacherTalkFigures(teacherQc, ctx.talkTime),
     ...historical,

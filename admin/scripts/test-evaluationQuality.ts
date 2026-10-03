@@ -18,6 +18,7 @@ import {
   checkQuotesAndReading,
   checkSkillStructureLimits,
   checkStudentReportHygiene,
+  checkTutorStudentTimestamps,
   checkTalkTimeFigures,
   checkTimeGrounding,
   validateEvaluationOutput,
@@ -300,6 +301,64 @@ const GOOD_QC = qcLines();
     polish: `✅ A Few Things to Polish\n③ Pronoun reference: No correction was needed here — this was a strength.`,
   });
   assert(checkStudentReportHygiene(noError).length === 1, "3b. a polish item that says no correction is needed is rejected");
+
+  // ── validators added after the second real-recording run (synthetic text, same shapes) ─────────────────────────
+  // (a) Output 1 must not judge how the student sounded: the model only has text.
+  assert(checkStudentReportHygiene("The student also read the full article passage fluently and answered follow-up questions.").length === 1, "3c. 'read ... fluently' is rejected");
+  assert(checkStudentReportHygiene("The student read the report aloud with clear pacing and good intonation.").length === 1, "3c. 'with clear pacing' is rejected");
+  assert(checkStudentReportHygiene("The student's pronunciation of the new words was excellent.").length === 0, "3c. a sentence without a speaking/reading verb is left to the other checks");
+  assert(checkStudentReportHygiene("To build fluency, practice reading the article aloud twice a week.").length === 0, "3c. a practice suggestion about fluency is allowed");
+  assert(checkStudentReportHygiene(`The tutor corrected the word "migraine" when the student said it, and the student repeated it.`).length === 0, "3c. a sentence quoting the tutor's correction is allowed");
+  assert(checkStudentReportHygiene("The student read the first paragraph and then explained the main idea in their own words.").length === 0, "3c. reading without a quality judgement is allowed");
+
+  // (b) a ❌ sentence that stops where the speaker label changes
+  const splitRoles = toRoleUtterances(
+    [
+      { speaker: "A", start: 0, end: 4000, text: "Do you still cycle to school?" },
+      { speaker: "B", start: 5000, end: 12000, text: "I used to cycle when I was young, but. But now I'm actually a little too" },
+      { speaker: "A", start: 12000, end: 15000, text: "grown up for a cycling. I see." },
+      { speaker: "B", start: 16000, end: 21000, text: "Yes. I walk to school with my friends every morning." },
+    ],
+    "A",
+  );
+  const polishWith = (wrong: string) =>
+    feedback({ ...BLOCK, polish: `✅ A Few Things to Polish\nOne small item.\n\n① Unfinished thought\n❌ "${wrong}"\n✅ "A complete sentence."\nWhy this happened:\nA short reason.` });
+  assert(has(checkQuotesAndReading(polishWith("But now I'm actually a little too"), GOOD_QC, splitRoles), /speaker label changes/), "3d. a ❌ sentence cut where the speaker label changes is rejected");
+  assert(!has(checkQuotesAndReading(polishWith("I walk to school with my friends every morning."), GOOD_QC, splitRoles), /speaker label changes/), "3d. a complete ❌ sentence is accepted");
+  const noSplitRoles = toRoleUtterances(
+    [
+      { speaker: "A", start: 0, end: 4000, text: "Do you still cycle to school?" },
+      { speaker: "B", start: 5000, end: 12000, text: "I used to cycle when I was young, but now I'm actually a little too" },
+      { speaker: "A", start: 12000, end: 15000, text: "Grown up. I see." },
+    ],
+    "A",
+  );
+  assert(!has(checkQuotesAndReading(polishWith("now I'm actually a little too"), GOOD_QC, noSplitRoles), /speaker label changes/), "3d. if the next turn does not continue the sentence (upper case) it is not treated as a split");
+
+  // (c) a tutor/student action cited at a timestamp where the other person speaks
+  const tsRoles = toRoleUtterances(
+    [
+      { speaker: "A", start: mmss(0, 10), end: mmss(0, 20), text: "Why do you think the researchers studied rich countries?" },
+      { speaker: "B", start: mmss(0, 25), end: mmss(0, 40), text: "Maybe they wanted to show that rich people also struggle sometimes." },
+      { speaker: "A", start: mmss(0, 41), end: mmss(0, 50), text: "That is a very good answer." },
+    ],
+    "A",
+  );
+  const tsIssues = (text: string) => checkTutorStudentTimestamps(text, tsRoles);
+  assert(tsIssues("At [00:25], the tutor asked why the researchers studied rich countries.").length === 1, "3e. 'At [ts], the tutor asked' at a Student line is rejected");
+  assert(tsIssues("The tutor clarified the distinction at [00:25].").length === 1, "3e. 'the tutor ... at [ts]' at a Student line is rejected");
+  assert(tsIssues("At [00:10], the student answered the question about the researchers.").length === 1, "3e. 'At [ts], the student ...' at a Tutor line is rejected");
+  assert(tsIssues("At [00:10], the tutor asked why the researchers studied rich countries.").length === 0, "3e. the tutor at the tutor's own line is accepted");
+  assert(tsIssues("At [00:25], the student offered a thoughtful observation about the study.").length === 0, "3e. the student at the student's own line is accepted");
+  assert(tsIssues("At [00:10], the student's thought was incomplete, and the tutor completed it.").length === 0, "3e. a possessive ('the student's thought') is not an action by the student");
+  assert(tsIssues("At [00:25], when the student answered, the tutor listened and then praised it at [00:41].").length === 0, "3e. a 'when the student ...' clause and a correct later timestamp are accepted");
+  assert(tsIssues("During vocabulary matching (starting at [00:25]), the tutor confirmed each answer.").length === 0, "3e. a timestamp that only opens a section is not an action claim");
+  assert(tsIssues("At [09:59], the tutor asked something.").length === 0, "3e. a timestamp that matches no line is left to the existing time-grounding check");
+  // Found by a confirmation run: the OBJECT of a verb is not the actor ("the tutor asked the student to ... at [ts]").
+  assert(tsIssues("The tutor asked the student to give her own reasons at [00:10].").length === 0, "3e. 'the student' as the object of 'asked' is not an actor claim");
+  assert(tsIssues("At [00:10], the tutor asked the student to explain her reasons.").length === 0, "3e. 'At [ts], the tutor asked the student ...' only checks the tutor");
+  assert(tsIssues("The tutor asked the student to explain at [00:25].").length === 0, "3e. a phrase that names another person between actor and timestamp is left alone");
+  assert(tsIssues("The student answered, and the tutor clarified the distinction at [00:25].").length === 1, "3e. a tutor action at a student line is still caught after a conjunction");
   const qcWrong = qcLines({ item5: `A missed correction: the student said "${READING_LINE}" and the tutor should be correcting it.` });
   assert(has(checkQuotesAndReading(GOOD_FEEDBACK, qcWrong, ROLES), /reading aloud/), "3. a 'missed correction' note about the read-aloud passage is rejected");
   assert(buildProjectRules({ lessonDurationMinutes: 25, speakerCount: 2 }).includes("READING / SCRIPT PROTECTION"), "3. the project rules tell Claude not to treat reading as errors");
