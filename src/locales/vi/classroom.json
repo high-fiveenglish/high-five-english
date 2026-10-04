@@ -116,7 +116,12 @@
     "grammar": "Ngữ pháp",
     "vocabulary": "Từ vựng",
     "speaking": "Nói",
-    "teacher_comment": "Nhận xét tổng quan của giáo viên"
+    "teacher_comment": "Nhận xét tổng quan của giáo viên",
+    "not_ready": "Bản đánh giá chưa sẵn sàng. Bạn sẽ xem được tại đây khi giáo viên viết xong.",
+    "session_expired": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+    "error": "Không thể tải bản đánh giá. Vui lòng thử lại sau.",
+    "retry": "Thử lại",
+    "original_english": "English (bản gốc)"
   },
   "page": {
     "eyebrow": "Trang cá nhân",

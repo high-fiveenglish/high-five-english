@@ -93,6 +93,58 @@ export async function fetchRealClassroom(
   return parseSnapshotResponse(res);
 }
 
+// "내 강의실 > 평가서 보기" — admin의 GET /api/public/classroom/evaluation?lessonId=<수업 id>가 돌려주는, 이 학생
+// 본인 수업에 게시된 평가서. 다른 학생의 수업이거나 평가서가 아직 없으면 admin은 똑같이 404를 준다(존재 여부를 숨김).
+export type RealLessonEvaluation = {
+  lessonId: number;
+  date: string;
+  content: string;
+  contentTranslated: string | null;
+  translatedLangLabel: string | null;
+};
+
+export type RealLessonEvaluationResult =
+  | { status: "ok"; evaluation: RealLessonEvaluation }
+  | { status: "not_found" }
+  | { status: "session_expired" }
+  | { status: "error"; kind: "network" | "server" };
+
+export const EVALUATION_FETCH_TIMEOUT_MS = 15_000;
+
+function isRealLessonEvaluation(v: unknown): v is RealLessonEvaluation {
+  if (!v || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.lessonId === "number" &&
+    typeof o.date === "string" &&
+    typeof o.content === "string" &&
+    (o.contentTranslated === null || typeof o.contentTranslated === "string") &&
+    (o.translatedLangLabel === null || typeof o.translatedLangLabel === "string")
+  );
+}
+
+// 어떤 경우에도 "불러오는 중"이 끝나도록 결과를 항상 돌려준다 — 네트워크 오류·응답 지연(타임아웃)·예상 밖 응답도
+// 전부 { status: "error" }로 바뀌어 화면이 오류 안내와 다시 시도 버튼을 보여줄 수 있다.
+export async function fetchRealLessonEvaluation(token: string, lessonId: number): Promise<RealLessonEvaluationResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), EVALUATION_FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${ADMIN_API_URL}/api/public/classroom/evaluation?lessonId=${encodeURIComponent(String(lessonId))}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    });
+    if (res.status === 401) return { status: "session_expired" };
+    if (res.status === 404) return { status: "not_found" };
+    if (!res.ok) return { status: "error", kind: "server" };
+    const data: unknown = await res.json();
+    return isRealLessonEvaluation(data) ? { status: "ok", evaluation: data } : { status: "error", kind: "server" };
+  } catch {
+    return { status: "error", kind: "network" };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export type RealEnrollmentHistoryRow = {
   enrollment: RealClassroomSnapshot["enrollment"];
   lessons: RealLesson[];

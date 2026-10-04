@@ -116,7 +116,12 @@
     "grammar": "语法",
     "vocabulary": "词汇",
     "speaking": "口语",
-    "teacher_comment": "教师综合评语"
+    "teacher_comment": "教师综合评语",
+    "not_ready": "评价报告尚未准备好。老师写完后即可在此查看。",
+    "session_expired": "登录已过期，请重新登录。",
+    "error": "无法加载评价报告，请稍后再试。",
+    "retry": "重试",
+    "original_english": "English（原文）"
   },
   "page": {
     "eyebrow": "我的页面",
