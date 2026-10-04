@@ -147,7 +147,6 @@ export async function publishAIDraft(
 export type ConfirmSpeakerState = { error?: string; success?: true; message?: string } | undefined;
 
 export async function confirmTeacherSpeakerAction(
-  sessionId: number,
   _prevState: ConfirmSpeakerState,
   formData: FormData,
 ): Promise<ConfirmSpeakerState> {
@@ -159,6 +158,11 @@ export async function confirmTeacherSpeakerAction(
     permissions: await resolveRolePermissions("TEACHER"),
   };
   requirePermission(actor, "own_evaluations.update");
+
+  // The lesson id arrives as a plain form field, NOT as a bound argument (.bind). A bound server action rendered again on the server
+  // after a no-JavaScript POST that returned an error waits forever for its bound arguments (the response never ends, the CPU spins).
+  // Nothing is trusted here: confirmTeacherSpeaker() checks that this lesson belongs to the logged-in teacher, so another id is "not found".
+  const sessionId = Number(formData.get("sessionId"));
 
   const result = await confirmTeacherSpeaker(
     {

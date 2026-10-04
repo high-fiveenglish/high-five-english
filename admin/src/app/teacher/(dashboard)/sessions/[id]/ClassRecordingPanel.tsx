@@ -159,7 +159,7 @@ function ReviewDraft({
         onClick={() => {
           if (hasExistingEvaluation && state?.needsConfirmation) setConfirming(true);
         }}
-        className="w-fit rounded-lg bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50"
+        className="w-fit rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
       >
         {pending ? "Publishing..." : state?.needsConfirmation ? "Confirm & Replace" : "Publish as Evaluation"}
       </button>
@@ -170,8 +170,7 @@ function ReviewDraft({
 // Shown while the analysis waits for the teacher. Nothing is pre-selected and the application does not say which voice it thinks is the
 // teacher — the choice must be the teacher's own. The server validates the label and the ownership again (speakerConfirmation.ts).
 function SpeakerConfirmation({ sessionId, choices }: { sessionId: number; choices: SpeakerChoice[] }) {
-  const action = confirmTeacherSpeakerAction.bind(null, sessionId);
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const [state, formAction, pending] = useActionState(confirmTeacherSpeakerAction, undefined);
 
   if (state?.success) {
     return <p className="border-t border-slate-100 pt-3 text-sm font-semibold text-emerald-600">{state.message}</p>;
@@ -179,6 +178,7 @@ function SpeakerConfirmation({ sessionId, choices }: { sessionId: number; choice
 
   return (
     <form action={formAction} className="flex flex-col gap-3 border-t border-slate-100 pt-3">
+      <input type="hidden" name="sessionId" value={sessionId} />
       <div>
         <h3 className="text-sm font-bold text-slate-800">Speaker identification required</h3>
         <p className="text-sm text-slate-600">Please select which speaker is the teacher.</p>
@@ -208,7 +208,7 @@ function SpeakerConfirmation({ sessionId, choices }: { sessionId: number; choice
       <button
         type="submit"
         disabled={pending}
-        className="w-fit rounded-lg bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50"
+        className="w-fit rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
       >
         {pending ? "Saving..." : "Confirm teacher speaker"}
       </button>

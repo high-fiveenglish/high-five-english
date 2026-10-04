@@ -102,6 +102,26 @@ assert(!/console\.(log|error|warn)/.test(webhookRoute), "webhook 라우트: 로�
   assert(!/speakerRoles|inferSpeakerRoles|votes|confidence/.test(panel), "ClassRecordingPanel: the inference result is not shown or used as a default");
   assert(panel.includes("Speaker identification required") && panel.includes("Please select which speaker is the teacher."), "ClassRecordingPanel: the required wording is shown");
 
+  // Browser-smoke defect 1: the buttons used "bg-brand-700", a colour the Tailwind theme does not define, so they rendered as white text on a
+  // transparent background (invisible on the white card). Every brand-* utility must exist in the theme, and the two buttons use the same
+  // solid style as the rest of the teacher area.
+  const globalsCss = fs.readFileSync(path.join(root, "src", "app", "globals.css"), "utf8");
+  const brandClasses = [...new Set(panel.match(/\b(?:bg|text|border)-brand-\d+\b/g) ?? [])];
+  for (const cls of brandClasses) {
+    assert(globalsCss.includes(`--color-${cls.replace(/^(?:bg|text|border)-/, "")}`), `ClassRecordingPanel: ${cls} is defined in the theme`);
+  }
+  const solidButton = 'className="w-fit rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"';
+  assert(panel.split(solidButton).length - 1 === (panel.match(/type="submit"/g) ?? []).length && panel.includes(solidButton), "ClassRecordingPanel: every submit button (Publish, Confirm) is solid bg-slate-900 + white text, with hover and disabled states");
+
+  // Browser-smoke defect 2: a BOUND server action (.bind(null, sessionId)) used with useActionState never finishes rendering on the server when
+  // a native (no-JavaScript) form POST comes back with an error — the response hangs and the CPU spins. The confirmation form therefore sends the
+  // lesson id as a plain hidden field; the server still checks that the lesson belongs to the logged-in teacher.
+  assert(!/confirmTeacherSpeakerAction\s*\.bind/.test(panel), "ClassRecordingPanel: the confirmation action is not a bound action");
+  assert(/useActionState\(confirmTeacherSpeakerAction,/.test(panel) && /<input type="hidden" name="sessionId" value=\{sessionId\}/.test(panel), "ClassRecordingPanel: the lesson id is a hidden form field");
+  assert(/export async function confirmTeacherSpeakerAction\(\s*_prevState: ConfirmSpeakerState,\s*formData: FormData,/.test(actions), "confirmTeacherSpeakerAction: (prevState, formData) — no bound arguments");
+  assert(confirmAction.includes('Number(formData.get("sessionId"))'), "confirmTeacherSpeakerAction: the lesson id is read from the form");
+  assert(confirmAction.includes("!Number.isSafeInteger(id) || id <= 0"), "confirmTeacherSpeakerAction: a malformed lesson id (NaN, 0, negative, fractional) is 'not found' before any query");
+
   const bg = fs.readFileSync(path.join(root, "netlify", "functions", "process-recording-background.ts"), "utf8");
   assert(bg.includes("fromStatus") && /where: \{ id, processingStatus: fromStatus \}/.test(bg), "background function: the claim is a conditional update on the start state (TRANSCRIBED or TEACHER_SPEAKER_CONFIRMED)");
   const rec = fs.readFileSync(path.join(root, "src", "lib", "recordingProcessing.ts"), "utf8");
