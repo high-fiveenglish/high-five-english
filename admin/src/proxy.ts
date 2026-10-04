@@ -52,6 +52,10 @@ export const config = {
     // 각각 검사한다(proxy 함수 본문 참고). "/teacher"/"/student"는 정확히 그 경로이거나
     // "/"로 시작하는 하위 경로일 때만 매칭 — "/teachers"·"/students" 같은 관리자 목록
     // 페이지가 접두사 일치로 오매칭되지 않도록 한다.
-    "/((?!login|api/public|_next/static|_next/image|favicon.ico).*)",
+    // /.netlify/functions/process-recording-background 한 경로만 예외다: 이 함수는 로그인 쿠키가 없는 서버 간 호출
+    // (assemblyai-webhook, recover-transcribed-recordings → recordingTrigger.ts)로만 불리고, 쿠키 대신 함수 자체가
+    // X-Recording-Processing-Secret 헤더를 검증한다(recordingProcessingAuth.ts, 틀리면 401). 예외가 없으면 이 호출이
+    // /login으로 리다이렉트되어(405) 분석이 영원히 시작되지 않는다. 다른 /.netlify/* 경로는 계속 보호된다.
+    "/((?!login|api/public|_next/static|_next/image|favicon.ico|\\.netlify/functions/process-recording-background$).*)",
   ],
 };
