@@ -1,0 +1,106 @@
+// Netlify Background Function — 최대 15분까지 실행 가능하며, 트리거한 쪽(webhook
+// 라우트)의 HTTP 응답 시간과 완전히 분리되어 독립적으로 완료된다. 파일명의
+// "-background" 접미사가 Netlify에 이 동작을 지시한다.
+//
+// 역할: AssemblyAI transcript 조회 → Talk Time Ratio 계산(애플리케이션 코드) →
+// student context 조회(나이/교재/수업유형) → Claude로 Output1(학생 피드백)/
+// Output2(강사 QC) 동시 생성(online-english-feedback Skill 원문이 평가 기준의 출처,
+// 애플리케이션 규칙은 projectEvaluationRules.ts) →
+// AudioRecording.aiDraft / teacherQcDraft에 각각 저장.
+//
+// 인증: X-Recording-Processing-Secret 헤더가 RECORDING_PROCESSING_SECRET과 일치하는
+// 요청만 처리한다(recordingProcessingAuth.ts). 호출자는 assemblyai-webhook과
+// recover-transcribed-recordings뿐이며 둘 다 recordingTrigger.ts로 이 헤더를 붙인다.
+// 처리 로직 본체와 테스트는 recordingProcessing.ts / test-recordingProcessing.ts 참고.
+import { prisma } from "../../src/lib/prisma";
+import type { Prisma } from "../../src/generated/prisma/client";
+import { fetchTranscript } from "../../src/lib/assemblyai";
+import { generateAIEvaluationDraft } from "../../src/lib/aiEvaluation";
+import { ageBandFromBirthDate } from "../../src/lib/projectEvaluationRules";
+import { formatAppDate } from "../../src/lib/appTime";
+import { getRecordingProcessingSecret } from "../../src/lib/recordingProcessingAuth";
+import { handleProcessRecordingRequest, type ProcessRecordingDeps } from "../../src/lib/recordingProcessing";
+import { truncateErrorMessage } from "../../src/lib/recordingWorkflow";
+import { projectUtterancesForStorage } from "../../src/lib/speakerConfirmation";
+
+const prismaDeps: ProcessRecordingDeps = {
+  async findRecording(id) {
+    const recording = await prisma.audioRecording.findUnique({
+      where: { id },
+      include: {
+        classSession: {
+          include: {
+            student: { select: { birthDate: true, region: true } },
+            enrollment: { select: { textbookName: true, classMethod: true } },
+          },
+        },
+      },
+    });
+    if (!recording) return null;
+    return {
+      id: recording.id,
+      providerTranscriptId: recording.providerTranscriptId,
+      processingStatus: recording.processingStatus,
+      confirmedTeacherSpeaker: recording.confirmedTeacherSpeaker,
+      storedUtterances: recording.transcriptUtterances,
+      lessonContext: {
+        // ClassSession.scheduledAt(실제 수업 날짜)에서 애플리케이션이 뽑아 전달한다 —
+        // Claude가 날짜를 추측하지 않는다(appTime.ts의 Asia/Seoul 고정 정책 그대로 재사용).
+        lessonDate: formatAppDate(recording.classSession.scheduledAt),
+        lessonDurationMinutes: recording.classSession.durationMin,
+        studentAgeBand: ageBandFromBirthDate(recording.classSession.student.birthDate),
+        studentRegion: recording.classSession.student.region,
+        textbookName: recording.classSession.enrollment.textbookName,
+        classMethod: recording.classSession.enrollment.classMethod,
+      },
+    };
+  },
+  fetchTranscript,
+  async claimForAnalysis(id, data, fromStatus) {
+    // Exactly one invocation can move the record out of its start state (TRANSCRIBED, or TEACHER_SPEAKER_CONFIRMED after the
+    // teacher chose the voice); everyone else gets count 0 and never calls Claude.
+    const claimed = await prisma.audioRecording.updateMany({
+      where: { id, processingStatus: fromStatus },
+      data: { processingStatus: "ANALYZING", ...data },
+    });
+    return claimed.count === 1;
+  },
+  async markFailed(id, fromStatus, errorMessage) {
+    await prisma.audioRecording.updateMany({
+      where: { id, processingStatus: fromStatus },
+      data: { processingStatus: "ANALYSIS_FAILED", errorMessage },
+    });
+  },
+  async markNeedsSpeakerConfirmation(id, message, snapshot) {
+    // Only a record that is still TRANSCRIBED moves; a duplicate invocation changes nothing. The utterances (with AssemblyAI's speaker
+    // labels) are kept so the analysis can resume after the teacher's choice WITHOUT calling AssemblyAI again.
+    await prisma.audioRecording.updateMany({
+      where: { id, processingStatus: "TRANSCRIBED" },
+      data: {
+        processingStatus: "NEEDS_SPEAKER_CONFIRMATION",
+        speakerMappingStatus: "NEEDS_CONFIRMATION",
+        // Projected again right before the write (idempotent): whatever reaches this column has exactly speaker/start/end/text.
+        transcriptUtterances: projectUtterancesForStorage(snapshot.utterances) as unknown as Prisma.InputJsonValue,
+        transcript: snapshot.transcript,
+        duration: snapshot.duration,
+        errorMessage: truncateErrorMessage(message),
+      },
+    });
+  },
+  async saveDraft(id, result) {
+    // 여전히 ANALYZING일 때만 저장한다 — 복구가 이미 ANALYSIS_FAILED로 끝낸 레코드를 되살리거나
+    // 다른 상태를 덮어쓰지 않는다. 바뀐 행이 없으면 저장하지 않고 조용히 끝낸다.
+    await prisma.audioRecording.updateMany({
+      where: { id, processingStatus: "ANALYZING" },
+      data: {
+        processingStatus: "NEEDS_REVIEW",
+        aiDraft: result.studentFeedback,
+        teacherQcDraft: result.teacherQc,
+        analyzedAt: new Date(),
+      },
+    });
+  },
+  generateDraft: generateAIEvaluationDraft,
+};
+
+export default async (req: Request) => handleProcessRecordingRequest(req, getRecordingProcessingSecret(), prismaDeps);
