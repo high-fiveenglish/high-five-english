@@ -6,6 +6,7 @@ import {
   commitAIDraftPublish,
   evaluationBlockedReason,
   MAX_PUBLISH_CONTENT_LENGTH,
+  parseSessionIdField,
   PublishConflictError,
   type PublishOps,
 } from "../src/lib/recordingPublish";
@@ -157,6 +158,33 @@ async function main() {
     }
     assert(evaluationBlockedReason({ status: "SCHEDULED", scheduledAt: new Date("2026-10-03T00:00:00Z") }, now) !== null, "guard: 아직 시작 전인 수업은 차단");
     assert(MAX_PUBLISH_CONTENT_LENGTH >= 8000 && MAX_PUBLISH_CONTENT_LENGTH <= 100000, "guard: 서버 측 길이 상한이 정상 초안은 허용하고 남용은 막는 범위");
+  }
+
+  // ── 5. hidden sessionId 필드(bind 대신 폼 값) — 잘못된 값은 DB 조회 전에 null ────────────
+  {
+    assert(parseSessionIdField("42") === 42, "sessionId: 양의 정수는 허용");
+    assert(parseSessionIdField(String(Number.MAX_SAFE_INTEGER)) === Number.MAX_SAFE_INTEGER, "sessionId: 최대 safe integer 허용");
+    const malformed: Array<[string, FormDataEntryValue | null]> = [
+      ["missing", null],
+      ["empty", ""],
+      ["NaN", "NaN"],
+      ["abc", "abc"],
+      ["0", "0"],
+      ["negative", "-5"],
+      ["fractional", "1.5"],
+      ["exponent", "1e3"],
+      ["hex", "0x10"],
+      ["leading zero", "012"],
+      ["whitespace", " 42 "],
+      ["Infinity", "Infinity"],
+      ["unsafe huge", "9007199254740993"],
+      ["too many digits", "1".repeat(40)],
+      ["injection-like", "42; DROP TABLE"],
+      ["file", new File(["42"], "id.txt")],
+    ];
+    for (const [label, value] of malformed) {
+      assert(parseSessionIdField(value) === null, `sessionId: ${label} → null (rejected before any query)`);
+    }
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);

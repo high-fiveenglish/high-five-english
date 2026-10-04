@@ -122,6 +122,20 @@ assert(!/console\.(log|error|warn)/.test(webhookRoute), "webhook 라우트: 로�
   assert(confirmAction.includes('Number(formData.get("sessionId"))'), "confirmTeacherSpeakerAction: the lesson id is read from the form");
   assert(confirmAction.includes("!Number.isSafeInteger(id) || id <= 0"), "confirmTeacherSpeakerAction: a malformed lesson id (NaN, 0, negative, fractional) is 'not found' before any query");
 
+  // Same native-POST hang in Publish as Evaluation: publishAIDraft must not be a bound action either.
+  const publishAction = actions.slice(actions.indexOf("export async function publishAIDraft"), actions.indexOf("export async function confirmTeacherSpeakerAction"));
+  assert(!/\.bind\s*\(/.test(panel), "ClassRecordingPanel: no server action is bound (.bind) anywhere in the panel");
+  assert(/useActionState\(publishAIDraft,/.test(panel), "ClassRecordingPanel: Publish passes publishAIDraft to useActionState directly");
+  assert((panel.match(/<input type="hidden" name="sessionId" value=\{sessionId\} \/>/g) ?? []).length === 2, "ClassRecordingPanel: both forms (Publish, Confirm) send the lesson id as a hidden field");
+  assert(/export async function publishAIDraft\(\s*_prevState: PublishAIDraftState,\s*formData: FormData,/.test(actions), "publishAIDraft: (prevState, formData) — no bound arguments");
+  const parseIdx = publishAction.indexOf('parseSessionIdField(formData.get("sessionId"))');
+  assert(parseIdx > 0 && /if \(sessionId === null\) \{\s*return \{ error:/.test(publishAction), "publishAIDraft: the lesson id is read from the form and a malformed one returns an error");
+  assert(parseIdx < publishAction.indexOf("prisma."), "publishAIDraft: the lesson id is validated before any database query");
+  assert(publishAction.indexOf("requireTeacher()") < parseIdx && publishAction.includes('requirePermission(actor, "own_evaluations.update")'), "publishAIDraft: authentication + permission still run first");
+  assert(publishAction.includes("session.teacherId !== teacher.id") && publishAction.includes('processingStatus !== "NEEDS_REVIEW"') && publishAction.includes("evaluationBlockedReason(session)"), "publishAIDraft: ownership, NEEDS_REVIEW and class-state guards unchanged");
+  assert(publishAction.includes("shouldRequireOverwriteConfirmation") && publishAction.includes("commitAIDraftPublish"), "publishAIDraft: overwrite confirmation + conditional transactional write unchanged");
+  assert(!/formData\.get\(\s*["'](?:teacherId|teacher_id|userId|actorId)["']/.test(publishAction), "publishAIDraft: the teacher id is never taken from the request");
+
   const bg = fs.readFileSync(path.join(root, "netlify", "functions", "process-recording-background.ts"), "utf8");
   assert(bg.includes("fromStatus") && /where: \{ id, processingStatus: fromStatus \}/.test(bg), "background function: the claim is a conditional update on the start state (TRANSCRIBED or TEACHER_SPEAKER_CONFIRMED)");
   const rec = fs.readFileSync(path.join(root, "src", "lib", "recordingProcessing.ts"), "utf8");

@@ -128,13 +128,13 @@ function ReviewDraft({
   draft: string;
   hasExistingEvaluation: boolean;
 }) {
-  const action = publishAIDraft.bind(null, sessionId);
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const [state, formAction, pending] = useActionState(publishAIDraft, undefined);
   const [content, setContent] = useState(draft);
   const [confirming, setConfirming] = useState(false);
 
   return (
     <form action={formAction} className="flex flex-col gap-2 border-t border-slate-100 pt-3">
+      <input type="hidden" name="sessionId" value={sessionId} />
       <p className="text-xs font-semibold text-slate-500">AI-generated draft — review and edit before publishing.</p>
       <textarea
         name="content"

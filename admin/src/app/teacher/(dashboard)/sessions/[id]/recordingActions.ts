@@ -12,6 +12,7 @@ import {
   commitAIDraftPublish,
   evaluationBlockedReason,
   MAX_PUBLISH_CONTENT_LENGTH,
+  parseSessionIdField,
   PublishConflictError,
   PUBLISH_CONFLICT_MESSAGES,
 } from "@/lib/recordingPublish";
@@ -20,12 +21,11 @@ import {
 // actions.ts)과 같은 소유권 검증·번역 캐시 패턴을 그대로 재사용한다 — 다른 점은
 // "이미 작성된 평가서가 있으면 명시적 확인 없이 덮어쓰지 않는다"는 보호 규칙뿐이다.
 // 반환 타입을 명시적으로 고정하는 이유: useActionState의 오버로드 추론이 3갈래
-// union(error/needsConfirmation/success)을 bind()와 함께 쓸 때 타입을 제대로 좁히지
-// 못해 일으키는 TS 오버로드 불일치를 막기 위함(ClassRecordingPanel.tsx 참고).
+// union(error/needsConfirmation/success)을 제대로 좁히지 못해 일으키는 TS 오버로드
+// 불일치를 막기 위함(ClassRecordingPanel.tsx 참고).
 export type PublishAIDraftState = { error?: string; success?: true; needsConfirmation?: true } | undefined;
 
 export async function publishAIDraft(
-  sessionId: number,
   _prevState: PublishAIDraftState,
   formData: FormData,
 ): Promise<PublishAIDraftState> {
@@ -37,6 +37,14 @@ export async function publishAIDraft(
     permissions: await resolveRolePermissions("TEACHER"),
   };
   requirePermission(actor, "own_evaluations.update");
+
+  // The lesson id arrives as a plain hidden form field, NOT as a bound argument (.bind) — same reason as confirmTeacherSpeakerAction below:
+  // a bound action re-rendered on the server after a no-JavaScript POST that returned an error never finishes. The id is not trusted:
+  // a malformed one is rejected before any query, and the ownership check below still decides whether this teacher may publish.
+  const sessionId = parseSessionIdField(formData.get("sessionId"));
+  if (sessionId === null) {
+    return { error: "You can only publish drafts for your own classes." };
+  }
 
   const content = String(formData.get("content") ?? "").trim();
   const confirmOverwrite = formData.get("confirmOverwrite") === "true";

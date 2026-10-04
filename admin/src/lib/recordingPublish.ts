@@ -71,6 +71,15 @@ export async function commitAIDraftPublish(ops: PublishOps, params: CommitPublis
   }
 }
 
+/** publish 폼의 hidden sessionId 필드를 해석한다. 서버 액션에 bind로 넘기지 않는 이유는
+ * recordingActions.ts 참고. 요청 값은 신뢰하지 않는다 — 양의 정수 10진수 문자열만 허용하고
+ * (NaN, 빈 값, 0, 음수, 소수, 지수/16진 표기, 공백, 거대한 값, 파일은 null), 소유권은 호출부가 DB로 다시 확인한다. */
+export function parseSessionIdField(value: FormDataEntryValue | null): number | null {
+  if (typeof value !== "string" || !/^[1-9]\d{0,15}$/.test(value)) return null;
+  const id = Number(value);
+  return Number.isSafeInteger(id) ? id : null;
+}
+
 /** saveEvaluation(sessions/[id]/actions.ts)과 같은 수업 상태·시각 조건 — 서버 액션은 별도 POST
  * 엔드포인트라 페이지의 UI 제한을 믿지 않고 여기서도 검증한다. 막아야 하면 사유 문구를 돌려준다. */
 export function evaluationBlockedReason(session: { status: string; scheduledAt: Date }, now: Date = new Date()): string | null {
