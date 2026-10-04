@@ -116,7 +116,12 @@
     "grammar": "Grammar",
     "vocabulary": "Vocabulary",
     "speaking": "Speaking",
-    "teacher_comment": "Teacher's Overall Comment"
+    "teacher_comment": "Teacher's Overall Comment",
+    "not_ready": "Your evaluation isn't ready yet. You'll be able to read it here once your teacher has finished writing it.",
+    "session_expired": "Your login session has expired. Please log in again.",
+    "error": "We couldn't load the evaluation. Please try again in a moment.",
+    "retry": "Try again",
+    "original_english": "English (original)"
   },
   "page": {
     "eyebrow": "My Page",
