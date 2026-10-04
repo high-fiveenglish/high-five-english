@@ -5,6 +5,7 @@
 //   duplicates · quotation grounding · reading-aloud protection · timestamp/duration grounding ·
 //   learner addressing (child/teen) · measured Talk Time · historical/date grounding
 import { extractQuotedSpans, normalizeForMatch, stripQuotedSpans, wordCount } from "./evaluationText";
+import { detectLearnerErrors } from "./learnerErrors";
 import { checkNoUngroundedHistoricalClaims, OUTPUT1_LABELS, type AgeBand } from "./projectEvaluationRules";
 import { formatTimestamp, type RoleUtterance } from "./speakerTranscript";
 import type { TalkTimeResult } from "./talkTime";
@@ -357,6 +358,15 @@ const ACTOR_AT_TS_AFTER = new RegExp(
   "gim",
 );
 
+// A speech act: a speaking verb (SPEECH_VERB) or the noun for one ("the tutor's weather question").
+const SPEECH_ACT = new RegExp(
+  `\\b(?:${SPEECH_VERB})|\\b(?:question|answer|reply|response|explanation|correction|prompt|instruction|feedback|praise|greeting|comment|remark|suggestion|clarification|request|reaction|follow-up)s?\\b`,
+  "i",
+);
+const TUTOR_MENTION = /\b(?:tutor|teacher)(?:['’]s)?\b/i;
+const STUDENT_MENTION = /\bstudent(?:['’]s)?\b/i;
+const AT_TS = /(?<!\b(?:starting|beginning|begins|began|from|until|through|between|since) )\bat \[(\d{1,2}:\d{2}(?::\d{2})?)\]/gi;
+
 /** Output 2 cites many [mm:ss] labels. The existing time check only proves a label exists; this one proves that a sentence
  * saying "at [23:42], the tutor asked ..." points at a line the Tutor actually speaks (and "the student ..." at a Student
  * line). Found on a real recording: the tutor's question at [23:21] was cited at [23:42], the student's answer.
@@ -364,14 +374,21 @@ const ACTOR_AT_TS_AFTER = new RegExp(
  * a section or follows a "when the student ..." clause is left alone. */
 export function checkTutorStudentTimestamps(teacherQc: string, roles: RoleUtterance[]): string[] {
   const issues: string[] = [];
-  const check = (ts: string, actor: string) => {
+  const check = (ts: string, actor: string, claim: string) => {
     const role = /student/i.test(actor) ? "Student" : "Teacher";
     // Whose line covers this second? A turn covers [start, end] in whole seconds, so a label that points at the last second of
     // the student's turn (the next turn starts in the same second) is not an error. A second nobody covers is left to the
     // existing time-grounding check.
     const parts = ts.split(":").map(Number);
     const seconds = parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : parts[0] * 60 + parts[1];
-    const speakingThere = roles.filter((r) => Math.floor(r.startMs / 1000) <= seconds && seconds <= Math.floor(r.endMs / 1000));
+    // Exception to the leniency above, for ASKING only: who asked a question is what a tutor evaluation is about, and a label is the
+    // START of a line, so when a line starts at exactly this second that line decides who asked — even if the previous speaker's turn
+    // ends in the same second. (Found in the re-run after the first E2E: "the student asked clarifying questions at [10:31]" passed
+    // because the student's turn still covered that second, but the question that starts at [10:31] was the tutor's.)
+    const startingHere = roles.filter((r) => Math.floor(r.startMs / 1000) === seconds);
+    const asking = /\b(?:ask|asks|asked|asking|questions?|clarif\w*)\b/i.test(claim);
+    const speakingThere =
+      asking && startingHere.length > 0 ? startingHere : roles.filter((r) => Math.floor(r.startMs / 1000) <= seconds && seconds <= Math.floor(r.endMs / 1000));
     if (speakingThere.length > 0 && speakingThere.every((r) => r.role !== role)) {
       const other = role === "Teacher" ? "the Student" : "the Tutor";
       // Help the retry: the nearest earlier line of the role the sentence is about.
@@ -382,9 +399,39 @@ export function checkTutorStudentTimestamps(teacherQc: string, roles: RoleUttera
       );
     }
   };
-  for (const m of teacherQc.matchAll(ACTOR_AT_TS_BEFORE)) check(m[1], m[2]);
-  for (const m of teacherQc.matchAll(ACTOR_AT_TS_AFTER)) check(m[2], m[1]);
+  for (const m of teacherQc.matchAll(ACTOR_AT_TS_BEFORE)) check(m[1], m[2], m[0]);
+  for (const m of teacherQc.matchAll(ACTOR_AT_TS_AFTER)) check(m[2], m[1], m[0]);
+
+  // The natural forms the two patterns above cannot see. Found on a real recording: "(e.g., at [14:59], \"how is the weather now?\" was
+  // somewhat abrupt ...)" cited the student's answer for a tutor question, and "[23:42] (\"why do you think ...\")" did the same.
+  // Output 2 may no longer quote (checkTeacherQcNoQuotations), so the speaker is named in the sentence instead: when ONE role is
+  // mentioned in a sentence that describes a speech act ("question", "explained", ...), every "at [ts]" in that sentence must be a
+  // line that role speaks. A sentence naming both roles ("the tutor asked the student ... at [ts]") is ambiguous and left alone, and
+  // only "at [ts]" counts — a stretch opener such as "starting around [19:03]" may point at any line inside the stretch.
+  for (const sentence of teacherQc.split(/(?<=[.!?])\s+(?=[A-Z(\[])|\n+/)) {
+    if (!SPEECH_ACT.test(sentence)) continue;
+    const tutor = TUTOR_MENTION.test(sentence);
+    const student = STUDENT_MENTION.test(sentence);
+    if (tutor === student) continue;
+    for (const m of sentence.matchAll(AT_TS)) check(m[1], tutor ? "tutor" : "student", sentence);
+  }
   return [...new Set(issues)];
+}
+
+/** Output 2 describes the lesson in the checker's own words (PROJECT AI EVALUATION RULES §3; the final checklist says the same):
+ * "Output 2 contains NO quotation marks". The instruction used to be unenforced — a real recording produced 18 quotations that the
+ * validator accepted because they happened to be in the transcript — and the quotations were exactly where a timestamp was
+ * attached to the wrong line. One policy now: no quotation marks in Output 2, enforced here. Apostrophes are not quotation marks. */
+export function checkTeacherQcNoQuotations(teacherQc: string): string[] {
+  const marks = (teacherQc.match(/["“”„‟«»]/g) ?? []).length;
+  if (marks === 0) return [];
+  // Name what is left: in the re-run the model kept a quoted SINGLE WORD ("tension") through two retries because the notice only gave a
+  // count and it did not consider one word a quotation. Showing the spans (and saying a single word counts) fixes that in one retry.
+  const spans = [...new Set(extractQuotedSpans(teacherQc).map((q) => q.text.trim()).filter(Boolean))].slice(0, 4);
+  const shown = spans.length > 0 ? ` — still in the text: ${spans.map((s) => `"${short(s, 40)}"`).join(", ")}` : "";
+  return [
+    `Output 2 contains ${marks} quotation mark${marks === 1 ? "" : "s"}${shown}. Output 2 must not quote anyone and must not put even a single word in quotation marks: remove EVERY quotation mark, write the word without quotation marks, describe what the tutor or student said in your own words and point to the moment with its [mm:ss] label (for example: at [09:10] the tutor asked why the researchers studied rich countries)`,
+  ];
 }
 
 // An EVALUATION of how the student sounded. Merely naming the activity ("reading aloud for a pronunciation check", from a
@@ -419,12 +466,92 @@ export function checkStudentReportHygiene(studentFeedback: string): string[] {
   return issues;
 }
 
+// ---------------------------------------------------------------------------
+// 6. Quality of the ✅ "A Few Things to Polish" corrections (found on a real recording)
+// ---------------------------------------------------------------------------
+// Words a ✅ may add to a sentence without fixing any grammar: they soften or emphasise the statement. A correction that ONLY adds
+// these is an opinion about style, not an error. (Articles, prepositions, auxiliaries and "of" are deliberately NOT in the list:
+// inserting those is how real errors are fixed.)
+const QUALIFIER_WORDS = new Set([
+  "always", "usually", "often", "sometimes", "really", "very", "quite", "just", "actually", "also", "too", "maybe", "perhaps", "probably",
+  "generally", "definitely", "still", "even", "rather", "pretty", "so", "far", "mostly", "typically", "certainly", "truly",
+]);
+
+interface PolishItem {
+  /** the ❌ sentence, without the marker and the surrounding quotation marks */
+  wrong: string;
+  /** the first corrected sentence of the ✅ line (the line may offer alternatives in quotation marks) */
+  right: string;
+}
+
+function polishItems(studentFeedback: string): PolishItem[] {
+  const section = sectionBetween(studentFeedback, /^✅\s*A Few Things to Polish.*$/m, /^🌟/m);
+  const items: PolishItem[] = [];
+  for (const block of section.split(/^(?=[①②③④⑤⑥⑦⑧⑨⑩])/m)) {
+    if (!/^[①②③④⑤⑥⑦⑧⑨⑩]/.test(block)) continue;
+    const lines = block.split("\n").map((l) => l.trim());
+    const wrongLine = lines.find((l) => l.startsWith("❌"));
+    const rightLine = lines.find((l, i) => l.startsWith("✅") && i > lines.indexOf(wrongLine ?? ""));
+    if (!wrongLine || !rightLine) continue;
+    const unquote = (l: string, marker: string) => {
+      const body = l.replace(marker, "").trim();
+      return extractQuotedSpans(body)[0]?.text ?? body.replace(/^["“]|["”]$/g, "");
+    };
+    items.push({ wrong: unquote(wrongLine, "❌"), right: unquote(rightLine, "✅") });
+  }
+  return items;
+}
+
+/** A ✅ correction must change something grammatical. When the ✅ sentence is the ❌ sentence plus only qualifiers ("It's not safe." →
+ * "It's not always safe"), or is identical to it, the ❌ sentence was already correct English and is being presented to the parent
+ * as the student's mistake. Found on a real recording; rejected here, and the retry is told to choose a real error or drop the item. */
+export function checkPolishItems(studentFeedback: string): string[] {
+  const issues: string[] = [];
+  for (const item of polishItems(studentFeedback)) {
+    const wrong = normalizeForMatch(item.wrong).split(" ").filter(Boolean);
+    const right = normalizeForMatch(item.right).split(" ").filter(Boolean);
+    if (wrong.length === 0 || right.length === 0) continue;
+    let w = 0;
+    const added: string[] = [];
+    for (const token of right) {
+      if (w < wrong.length && token === wrong[w]) w++;
+      else added.push(token);
+    }
+    if (w < wrong.length) continue; // something of the ❌ sentence was removed or replaced: a real edit
+    if (added.length === 0) {
+      issues.push(`Output 1: a ✅ correction is identical to its ❌ sentence "${short(item.wrong, 70)}" — a sentence that needs no change must not be listed; choose a real error or leave the item out`);
+    } else if (added.every((t) => QUALIFIER_WORDS.has(t))) {
+      issues.push(
+        `Output 1: the ✅ correction of "${short(item.wrong, 70)}" only adds a qualifier (${added.join(" ")}) — that sentence is already correct English, so it is not a student error; choose a sentence with a real grammar error (agreement, tense, plural, article, word order, missing auxiliary) or leave the item out`,
+      );
+    }
+  }
+  return issues;
+}
+
+/** When the pattern detector (learnerErrors.ts) finds a clear learner error in the student's own speech, at least one ❌ item must be
+ * one of them: the report must not list doubtful items while an unmistakable error goes unmentioned (real recording: "almost every
+ * boys have", "there was two boys", "didn't actually had" were all skipped). */
+export function checkClearErrorsAddressed(studentFeedback: string, roles: RoleUtterance[]): string[] {
+  const candidates = detectLearnerErrors(roles);
+  if (candidates.length === 0) return [];
+  const wrongSentences = polishItems(studentFeedback).map((i) => normalizeForMatch(i.wrong));
+  const addressed = candidates.some((c) => wrongSentences.some((w) => ` ${w} `.includes(` ${normalizeForMatch(c.phrase)} `)));
+  if (addressed) return [];
+  const list = candidates.slice(0, 3).map((c) => `[${c.ts}] "...${c.phrase}..."`).join("; ");
+  return [
+    `Output 1: the transcript contains clear learner errors that no ✅ correction addresses (${list}) — at least one ❌ item must be one of them: copy the whole Student sentence that contains the error`,
+  ];
+}
+
 /** Output 1 alone — each report is generated and validated separately, so only the failing one is regenerated. */
 export function validateStudentFeedback(studentFeedback: string, ctx: ValidationContext): ValidationResult {
   const historical = checkNoUngroundedHistoricalClaims(studentFeedback, ctx.lessonDateISO, transcriptText(ctx.roles)).issues.map((i) => `Output 1: ${i}`);
   return finish([
     ...checkStudentStructure(studentFeedback),
     ...checkStudentReportHygiene(studentFeedback),
+    ...checkPolishItems(studentFeedback),
+    ...checkClearErrorsAddressed(studentFeedback, ctx.roles),
     ...checkQuotesAndReading(studentFeedback, "", ctx.roles),
     ...checkSkillStructureLimits(studentFeedback, ctx.lessonDurationMinutes),
     ...checkTimeGrounding(studentFeedback, "", ctx),
@@ -439,6 +566,7 @@ export function validateTeacherQc(teacherQc: string, ctx: ValidationContext): Va
   const historical = checkNoUngroundedHistoricalClaims(teacherQc, ctx.lessonDateISO, transcriptText(ctx.roles)).issues.map((i) => `Output 2: ${i}`);
   return finish([
     ...checkTeacherStructure(teacherQc),
+    ...checkTeacherQcNoQuotations(teacherQc),
     ...checkQuotesAndReading("", teacherQc, ctx.roles),
     ...checkTutorStudentTimestamps(teacherQc, ctx.roles),
     ...checkTimeGrounding("", teacherQc, ctx),

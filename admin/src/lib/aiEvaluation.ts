@@ -17,6 +17,7 @@ import {
   type AgeBand,
 } from "./projectEvaluationRules";
 import { skillLimitsFor, validateStudentFeedback, validateTeacherQc, type ValidationContext } from "./evaluationValidation";
+import { detectLearnerErrors, formatLearnerErrorBlock, type LearnerErrorCandidate } from "./learnerErrors";
 import {
   describeSpeakerMapping,
   formatTimestamp,
@@ -131,7 +132,7 @@ function defaultCreateMessage(): CreateMessageFn | null {
 
 /** 전사 뒤(모델이 마지막으로 읽는 위치)에 두는 압축 체크리스트: 이 요청에서 실제로 검증되는 항목만 담는다.
  * 시스템 프롬프트의 긴 규칙을 반복하는 것이 아니라, 어기면 거부되는 항목을 눈에 띄게 다시 보여 주는 용도다. */
-function finalChecklist(kind: OutputKind, ctx: LessonContext, talkTime: TalkTimeResult): string {
+function finalChecklist(kind: OutputKind, ctx: LessonContext, talkTime: TalkTimeResult, learnerErrors: LearnerErrorCandidate[] = []): string {
   if (kind === "student") {
     const limits = skillLimitsFor(ctx.lessonDurationMinutes);
     const thirdPerson = ctx.studentAgeBand === "child" || ctx.studentAgeBand === "teen";
@@ -143,11 +144,15 @@ function finalChecklist(kind: OutputKind, ctx: LessonContext, talkTime: TalkTime
       "- Quotation marks only for: the ❌ sentence, an Example line, and one student sentence in the 🌟 section — each copied word for word. Describe everything else in your own words, without quotation marks.",
       ...(thirdPerson ? ['- Write about "the student" in the 3rd person. Never write "you" or "your" outside quotation marks.'] : []),
       `- Do not write any number of minutes or seconds, except the lesson length (${ctx.lessonDurationMinutes} minutes).`,
+      "- Every ❌ sentence must contain a REAL grammar error (agreement, tense, plural/count, article, word order, missing auxiliary, preposition). If a sentence is already correct English — even if it could sound softer or more precise — do NOT list it; a ✅ that only adds a qualifier (always, usually, really, so far ...) is rejected. When you are not sure a sentence is wrong, leave it out: fewer corrections is better than a doubtful one.",
+      "- The title of each correction names the grammar point that actually changes between the ❌ and the ✅ sentence.",
+      ...(learnerErrors.length > 0 ? ["- The CLEAR LEARNER ERRORS list above is mandatory: at least one ❌ item must be one of those errors."] : []),
     ].join("\n");
   }
   return [
     "FINAL CHECKLIST — the application rejects Output 2 if any line below is violated:",
-    "- Output 2 contains NO quotation marks at all. Describe what the tutor or student said in your own words.",
+    "- Output 2 contains NO quotation marks at all — not even around a single word (write tension, not \"tension\"). Describe what the tutor or student said in your own words.",
+    "- A [mm:ss] label must be the start of a line spoken by the person the sentence is about: a sentence about the tutor cites a Tutor line, a sentence about the student cites a Student line (a tutor question is NOT at the timestamp of the student's answer).",
     "- Refer to a moment only with a [mm:ss] label copied from the start of a transcript line; never invent a time. Do not write any duration in minutes or seconds, except the lesson length (" + ctx.lessonDurationMinutes + " minutes). Item 10 may suggest a practice time.",
     `- Item 1 is exactly: "1. Talk Time Ratio: Teacher ${talkTime.teacherTalkPercentage}% / Student ${talkTime.studentTalkPercentage}%". No other % figure anywhere.`,
     "- One title line, then items 1 through 10 exactly once, in order; no other numbered lists; no emoji.",
@@ -219,6 +224,9 @@ export async function generateAIEvaluationDraft(params: GenerateAIEvaluationPara
     renderSpeakerTranscript(roles),
   ].join("\n");
 
+  // Clear learner errors found by fixed grammar patterns (learnerErrors.ts): shown to the model for Output 1 and re-checked by the validator.
+  const learnerErrors = detectLearnerErrors(roles);
+
   const validationContext: ValidationContext = {
     roles,
     lessonDateISO: ctx.lessonDate,
@@ -239,7 +247,8 @@ export async function generateAIEvaluationDraft(params: GenerateAIEvaluationPara
       const userMessage = [
         baseUserMessage,
         "",
-        finalChecklist(kind, ctx, params.talkTime),
+        ...(kind === "student" && learnerErrors.length > 0 ? [formatLearnerErrorBlock(learnerErrors), ""] : []),
+        finalChecklist(kind, ctx, params.talkTime, kind === "student" ? learnerErrors : []),
         "",
         spec.request,
         ...(attempt > 1 ? ["", retryNotice(issues, previousReport)] : []),

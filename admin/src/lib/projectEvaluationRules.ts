@@ -160,7 +160,7 @@ It never replaces the skill's teaching-content rules.)
   the transcript.
 - "Example:" lines hold a sentence the student actually said or, if the student produced none, a model sentence the
   tutor actually said. If the transcript has neither for an item, leave the Example line out. Never invent one.
-- Output 2 contains NO quotation marks. Support every observation with a [mm:ss] timestamp from the transcript and
+- Output 2 contains NO quotation marks — not even around a single word. Support every observation with a [mm:ss] timestamp from the transcript and
   describe what was said in your own words (for example: "at [09:10] the tutor asked why the researchers studied rich
   countries"). Output 1 may quote only: the ❌ student sentence, the Example line, and the one spontaneous student
   sentence in the 🌟 section — each copied word for word.
@@ -177,6 +177,9 @@ It never replaces the skill's teaching-content rules.)
   then a role-play, then vocabulary") without inventing how long each part lasted.
 - A suggested practice time (for example "5 minutes a day") is allowed only in the closing practice suggestion of
   the 🌟 section and in Output 2 item 10.
+- A [mm:ss] label belongs to the person the sentence is about: a sentence about the tutor cites a line the TUTOR
+  speaks, a sentence about the student cites a line the STUDENT speaks. Never cite the student's answer for a
+  tutor question or the reverse.
 
 5. READING / SCRIPT PROTECTION
 - Lines marked "(possible reading aloud)", and any text the student reads from a textbook, article, script, role-play
@@ -211,6 +214,19 @@ It never replaces the skill's teaching-content rules.)
   exactly one title and items 1 through 10 exactly once, in order. When the 🌟 section is finished, stop. Never begin
   a second report, a "final version" or a repeat of any section.
 - Output 2 never contains the student-facing emoji sections, and Output 1 never contains Tutor Evaluation content.
+
+8. CORRECTION QUALITY (Output 1, ✅ "A Few Things to Polish")
+- A ❌ item must break a grammar rule in the sentence itself: subject-verb agreement, tense, plural / countable nouns,
+  articles, word order, a missing auxiliary, a wrong preposition. A sentence that is already correct English is NOT an
+  error, even if it could be softer, more precise or more polite — never list it, and never "correct" it by adding a
+  qualifier such as always, usually, really, very, maybe or so far.
+- The ✅ sentence must change the part that is wrong. The title of the item and the "Why this happened" text must name
+  the grammar point that really changes between the ❌ and the ✅ sentence (never a different one).
+- Prefer unmistakable errors (for example a plural after "every", "there was" + a plural noun, "didn't" + a past form,
+  "is there" + a plural) over small matters of taste. When the application lists CLEAR LEARNER ERRORS, at least one ❌
+  item must be one of them.
+- If you are not sure a sentence is wrong, leave it out. Fewer corrections — even a single one — is better than a
+  doubtful one; never invent a correction to fill the section.
 `.trim();
 }
 

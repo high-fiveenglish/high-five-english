@@ -13,17 +13,24 @@ import {
   talkTimeOverrideBlock,
 } from "../src/lib/projectEvaluationRules";
 import {
+  checkClearErrorsAddressed,
   checkLearnerAddressing,
   checkNoDuplicateStructure,
   checkQuotesAndReading,
+  checkPolishItems,
   checkSkillStructureLimits,
   checkStudentReportHygiene,
+  checkTeacherQcNoQuotations,
   checkTutorStudentTimestamps,
   checkTalkTimeFigures,
   checkTimeGrounding,
   validateEvaluationOutput,
+  validateStudentFeedback,
+  validateTeacherQc,
   type ValidationContext,
 } from "../src/lib/evaluationValidation";
+import { detectLearnerErrors, formatLearnerErrorBlock } from "../src/lib/learnerErrors";
+import { LEARNER_ERROR_LESSON } from "./fixtures/learnerErrorLesson";
 import { describeSpeakerMapping, formatTimestamp, renderSpeakerTranscript, toRoleUtterances } from "../src/lib/speakerTranscript";
 import { computeTalkTime, guessTeacherSpeakerLabel, type Utterance } from "../src/lib/talkTime";
 import { ONLINE_ENGLISH_FEEDBACK_SKILL, ONLINE_ENGLISH_FEEDBACK_SKILL_META } from "../src/lib/skill/onlineEnglishFeedbackSkill";
@@ -93,10 +100,10 @@ const qcLines = (extra: { item3?: string; item5?: string } = {}) =>
     `1. Talk Time Ratio: Teacher ${T}% / Student ${S}%`,
     `2. Pacing & Engagement: Pass. This was a 25-minute lesson that moved from a warm-up to reading and discussion. The speaker roles come from an unverified heuristic.`,
     `3. Teaching Quality: 4 / 5`,
-    `   - Rationale: ${extra.item3 ?? `The tutor asked an open question, "Why do you think they studied rich countries?", and built on the answer.`}`,
+    `   - Rationale: ${extra.item3 ?? `At [09:10] the tutor asked an open question about why the researchers studied rich countries, and built on the answer.`}`,
     `4. Student Participation: The student answered in full sentences and gave an unprompted opinion at 09:25.`,
-    `5. Error Correction: ${extra.item5 ?? `A missed correction: the student said "${SPONTANEOUS_ERROR}" and the tutor moved on without a correction.`}`,
-    `6. Questioning & Interaction: A mix of open and closed questions. The tutor asked "Do you think the heat will be gone in September?" to start a comparison.`,
+    `5. Error Correction: ${extra.item5 ?? `A missed correction: at [10:20] the student used the present tense for an event in the past and the tutor moved on without a correction.`}`,
+    `6. Questioning & Interaction: A mix of open and closed questions. At [00:45] the tutor asked whether the heat would be gone in September, to start a comparison.`,
     `7. Lesson Structure: Clear order from warm-up to reading to discussion.`,
     `8. Strengths:\n   - Friendly rapport\n   - Good follow-up questions`,
     `9. Areas for Improvement:\n   - Correct recurring past-tense slips in the moment`,
@@ -534,7 +541,7 @@ const GOOD_QC = qcLines();
 // ── 11. a month mentioned in the real transcript is legitimate ────────────────
 {
   assert(validateEvaluationOutput({ studentFeedback: GOOD_FEEDBACK, teacherQc: GOOD_QC }, CTX).ok, `11. the complete good sample passes every validator (issues: ${validateEvaluationOutput({ studentFeedback: GOOD_FEEDBACK, teacherQc: GOOD_QC }, CTX).issues.join(" | ")})`);
-  assert(GOOD_QC.includes("in September?"), "11. (setup) the good QC quotes the teacher's September question");
+  assert(GOOD_QC.includes("in September") && !/["“”]/.test(GOOD_QC), "11. (setup) the good QC mentions the teacher's September question without quoting it");
   const paraphrase = qcLines({ item3: `The tutor asked whether the heat would be gone by September, a natural comparison question.` });
   assert(validateEvaluationOutput({ studentFeedback: GOOD_FEEDBACK, teacherQc: paraphrase }, CTX).ok, "11. a paraphrase that mentions September is allowed because the transcript contains it");
   const january = qcLines({ item3: `The student mentioned a trip in January that never appears in the lesson.` });
@@ -693,6 +700,181 @@ async function main() {
     assert(classLengthProfile(25) === "25" && classLengthProfile(10) === "25" && classLengthProfile(37) === "25" && classLengthProfile(38) === "50" && classLengthProfile(50) === "50", "14. class length selects the skill's 25-minute or 50-minute structure");
     assert(buildProjectRules({ lessonDurationMinutes: 50, speakerCount: 2 }).includes('"50-minute class" structure'), "14. a 50-minute lesson selects the 50-minute structure");
     assert(buildProjectRules({ lessonDurationMinutes: 25, speakerCount: 3 }).includes("LOW confidence"), "14. more than two speakers lowers the mapping confidence in the prompt");
+  }
+
+  // ── 16. regressions from the Production-like E2E on a real recording (synthetic reproductions) ───────────────
+  // Findings: a CORRECT sentence listed as a tense error, clear learner errors skipped, a tutor question cited at the student's answer,
+  // and Output 2 full of quotations although its instruction says "NO quotation marks" (the validator did not enforce it).
+  {
+    const U2 = LEARNER_ERROR_LESSON;
+    const T2 = guessTeacherSpeakerLabel(U2)!;
+    const TALK2 = computeTalkTime(U2, T2);
+    const ROLES2 = toRoleUtterances(U2, T2);
+    const CTX2: ValidationContext = { roles: ROLES2, lessonDateISO: "2026-10-02", lessonDurationMinutes: 25, ageBand: "teen", talkTime: TALK2 };
+    const tsIssues2 = (qc: string) => checkTutorStudentTimestamps(qc, ROLES2);
+
+    // 16a. the detector: the four unmistakable errors are found, nothing else is
+    const found = detectLearnerErrors(ROLES2);
+    const byRule = (rule: string) => found.filter((c) => c.rule === rule);
+    assert(byRule("every/each + plural noun").length === 1 && byRule("every/each + plural noun")[0].ts === "01:05" && byRule("every/each + plural noun")[0].phrase === "every boys", "16a. 'almost Every boys have pixie' is found at [01:05]");
+    assert(byRule("there-be + plural").length === 1 && byRule("there-be + plural")[0].ts === "01:55" && byRule("there-be + plural")[0].phrase === "there was two", "16a. 'there was two boys' is found at [01:55]");
+    assert(byRule("did not + past form").length === 1 && byRule("did not + past form")[0].ts === "02:20" && byRule("did not + past form")[0].phrase === "didn't actually had", "16a. 'I didn't actually had a headache' is found at [02:20]");
+    assert(byRule("is there + plural").length === 1 && byRule("is there + plural")[0].ts === "04:25", "16a. 'is there two ways' is found at [04:25]");
+    assert(found.length === 4, `16a. exactly those four are found (the reading-aloud turn, the Tutor's own 'There was two choices' and the turn split by the speaker labels are skipped; found ${found.map((c) => c.ts).join(",")})`);
+    assert(found.every((c) => c.ts !== "01:40"), "16a. \"It's not safe.\" is correct English and is never a candidate");
+    const solo = (text: string) =>
+      detectLearnerErrors(
+        toRoleUtterances(
+          [
+            { speaker: "A", start: 0, end: 2000, text: "Tell me more." },
+            { speaker: "B", start: 3000, end: 9000, text },
+          ],
+          "A",
+        ),
+      ).length;
+    for (const ok of ["It's not safe.", "I didn't need it.", "I don't know.", "She doesn't like it.", "Every day I walk to school.", "Every business is closed.", "There was a boy and two girls.", "People are happy.", "Everyone has a pen.", "I didn't feed the dog.", "He doesn't miss it."]) {
+      assert(solo(ok) === 0, `16a. a correct sentence is not flagged: ${ok}`);
+    }
+    for (const bad of ["Every students have a pen.", "I didn't went there.", "She doesn't likes it.", "He don't know.", "I'm agree with you.", "People is happy.", "Everyone have a pen.", "There is many reasons."]) {
+      assert(solo(bad) === 1, `16a. a textbook error is flagged: ${bad}`);
+    }
+    const block = formatLearnerErrorBlock(found);
+    assert(block.includes("[01:05]") && block.includes("every boys") && /At least one ❌ item must be one of these/.test(block) && formatLearnerErrorBlock([]) === "", "16a. the prompt block lists the candidates with their [mm:ss] and is empty when there are none");
+
+    // 16b. the ✅ corrections: a correct sentence offered as an error is rejected
+    const item = (n: string, title: string, wrong: string, right: string) => `${n} ${title}\n❌ ${wrong}\n✅ ${right}\nWhy this happened:\nA short explanation of the rule.`;
+    const polishOnly = (items: string[]) => `✅ A Few Things to Polish\nEvery learner works on small things like these.\n\n${items.join("\n\n")}\n\n🌟 What the Student Really Nailed Today\nx`;
+    assert(has(checkPolishItems(polishOnly([item("①", "Verb tense consistency", "It's not safe.", '"It\'s not always safe" or "It can be dangerous."')])), /only adds a qualifier \(always\)/), "16b. \"It's not safe.\" → \"It's not always safe\" is rejected (the sentence is already correct)");
+    assert(has(checkPolishItems(polishOnly([item("①", "Hedging", "It's not safe.", "It's not really safe.")])), /only adds a qualifier \(really\)/), "16b. a different qualifier is rejected too");
+    assert(has(checkPolishItems(polishOnly([item("①", "Hedging", "I can think of one reason.", "I can think of one reason so far.")])), /only adds a qualifier \(so far\)/), "16b. 'so far' is a qualifier");
+    assert(has(checkPolishItems(polishOnly([item("①", "Nothing", "It's not safe.", "It's not safe!")])), /identical to its ❌ sentence/), "16b. a ✅ identical to the ❌ sentence is rejected");
+    assert(checkPolishItems(polishOnly([item("①", "Past form after didn't", "I didn't actually had a headache.", "I didn't actually have a headache.")])).length === 0, "16b. a real fix (had → have) is accepted");
+    assert(checkPolishItems(polishOnly([item("①", "Article", "I have headache.", "I have a headache.")])).length === 0, "16b. adding a missing article is a real fix, not a qualifier");
+    assert(checkPolishItems(polishOnly([item("①", "Word order", "I only can think of one reason.", "I can only think of one reason.")])).length === 0, "16b. a word-order fix is accepted");
+    assert(checkPolishItems(polishOnly([item("①", "Plural", "almost Every boys have pixie", "almost every boy has one")])).length === 0, "16b. replacing words is accepted");
+
+    // 16c. clear errors must not go unmentioned
+    const GOOD_POLISH2 = [
+      item("①", "Past form after didn't", "I didn't actually had a headache but I was very scared.", "I didn't actually have a headache, but I was very scared."),
+      item("②", "Singular noun after every", "No, because it looks really expensive and almost Every boys have pixie at school.", "No, because it looks really expensive and almost every boy has one at school."),
+    ];
+    const feedback2 = (polishItems: string[]) =>
+      [
+        `📘 October 2, 2026 Today's Class Feedback — Scooters, safety and the weather`,
+        "",
+        "The student talked about getting to school, why a scooter feels risky and the weather, then read a short paragraph aloud and described the evening before.",
+        "",
+        "📝 Today's Lesson Content\n- Conversation about school, scooters and road safety\n- Reading a short paragraph\n- Talking about the evening before",
+        "",
+        `💬 Key Expressions Covered\n- Regular headaches — headaches that happen often\n  Example: "It is hot and I was sweating this morning."\n  The student used this sentence to describe the weather in a full sentence.`,
+        "",
+        `✅ A Few Things to Polish\nEvery learner works on small things like these.\n\n${polishItems.join("\n\n")}`,
+        "",
+        `🌟 What the Student Really Nailed Today\nThe student explained a worry in a complete sentence: "it looks really expensive". The idea is clear and the attempt matters more than the small slips. A short daily practice of five minutes retelling the day would help.`,
+      ].join("\n");
+    const GOOD_FEEDBACK2 = feedback2(GOOD_POLISH2);
+    const v2 = validateStudentFeedback(GOOD_FEEDBACK2, CTX2);
+    assert(v2.ok, `16c. (setup) the good report for the error-rich lesson passes every validator (issues: ${v2.issues.join(" | ")})`);
+    const hedgeItem = item("③", "Verb tense consistency in narrative sequences", "It's not safe.", '"It\'s not always safe" or "It can be dangerous."');
+    const hedgeOnly = feedback2([...GOOD_POLISH2, hedgeItem]);
+    const vh = validateStudentFeedback(hedgeOnly, CTX2);
+    assert(!vh.ok && has(vh.issues, /only adds a qualifier \(always\)/) && vh.issues.length === 1, `16c. the rehearsal failure (a correct sentence offered as a tense error) is the only thing rejected (${vh.issues.join(" | ")})`);
+    const weakOnly = feedback2([item("①", "Past tense", "Yesterday I go to the academy and I eat dinner at seven.", "Yesterday I went to the academy and I ate dinner at seven.")]);
+    const vw = validateStudentFeedback(weakOnly, CTX2);
+    assert(!vw.ok && has(vw.issues, /clear learner errors that no ✅ correction addresses \(\[01:05\] "\.\.\.every boys\.\.\."/), `16c. a report that skips every clear error is rejected and the retry is told where they are (${vw.issues.join(" | ")})`);
+    assert(has(validateStudentFeedback(feedback2([]), CTX2).issues, /clear learner errors/), "16c. an empty ✅ section is rejected while clear errors exist");
+    assert(validateStudentFeedback(GOOD_FEEDBACK, CTX).ok && detectLearnerErrors(ROLES).length === 0, "16c. a lesson without a clear learner error is not forced to contain one");
+    for (const [label, wrong] of [
+      ["every", "No, because it looks really expensive and almost Every boys have pixie at school."],
+      ["there was", "Because there was two boys on the road and a car came very fast."],
+      ["didn't", "I didn't actually had a headache but I was very scared."],
+      ["is there", "Is there two ways to answer?"],
+    ] as const) {
+      assert(!has(checkClearErrorsAddressed(feedback2([item("①", "Rule", wrong, "A fixed sentence that is different.")]), ROLES2), /clear learner errors/), `16c. choosing the '${label}' error satisfies the rule`);
+    }
+
+    // 16d. Output 2 may not quote (one policy: instruction and validator agree)
+    const qc2 = (over: { item3?: string; item4?: string; item6?: string } = {}) =>
+      [
+        "Tutor Evaluation — October 2, 2026 — Tutor",
+        "",
+        `1. Talk Time Ratio: Teacher ${TALK2.teacherTalkPercentage}% / Student ${TALK2.studentTalkPercentage}%`,
+        "2. Pacing & Engagement: Pass. This was a 25-minute lesson that moved from a warm-up to a short reading. The speaker roles come from an unverified heuristic.",
+        "3. Teaching Quality: 4 / 5",
+        `   - Rationale: ${over.item3 ?? "At [00:45] the tutor asked whether the student rode a scooter to school, and at [01:30] a safety question opened a longer answer."}`,
+        `4. Student Participation: ${over.item4 ?? "The student answered in full sentences and described an accident at [01:55]."}`,
+        "5. Error Correction: A missed correction: at [02:20] the student used a past form after didn't and the tutor moved on without a correction.",
+        `6. Questioning & Interaction: ${over.item6 ?? "A mix of open and closed questions. At [02:40] the tutor asked about the weather to change the topic."}`,
+        "7. Lesson Structure: Clear order from warm-up to reading to a short closing.",
+        "8. Strengths:\n   - Friendly rapport\n   - Good follow-up questions",
+        "9. Areas for Improvement:\n   - Correct recurring past-tense slips in the moment",
+        "10. Recommended Follow-up Actions:\n   - Practise past-tense sentences for 5 minutes at the start of the next lesson",
+      ].join("\n");
+    const GOOD_QC2 = qc2();
+    assert(validateTeacherQc(GOOD_QC2, CTX2).ok, `16d. (setup) a quote-free QC passes every validator (issues: ${validateTeacherQc(GOOD_QC2, CTX2).issues.join(" | ")})`);
+    assert(checkTeacherQcNoQuotations(GOOD_QC2).length === 0 && checkTeacherQcNoQuotations("The student's answer didn't change.").length === 0 && checkTeacherQcNoQuotations("Tutor Evaluation — it’s fine").length === 0, "16d. apostrophes (didn't, student's, it’s) are not quotation marks");
+    const quoted = qc2({ item3: 'At [00:45] the tutor asked "Do you ride one to school?" and the student answered.' });
+    assert(has(validateTeacherQc(quoted, CTX2).issues, /contains 2 quotation marks/), "16d. a quotation that IS in the transcript is rejected anyway (the policy is 'no quotation marks', not 'grounded quotations')");
+    assert(has(validateTeacherQc(qc2({ item4: "The student said “It's not safe.” at [01:40]." }), CTX2).issues, /quotation mark/), "16d. curly quotation marks are rejected");
+    assert(has(validateTeacherQc(qc2({ item3: "The tutor asked a «question» at [00:45]." }), CTX2).issues, /quotation mark/), "16d. guillemets are rejected");
+    const oneWord = validateTeacherQc(qc2({ item6: 'At [02:40] the tutor asked about the word "weather" to change the topic.' }), CTX2).issues.find((m) => /quotation mark/.test(m)) ?? "";
+    assert(/contains 2 quotation marks — still in the text: "weather"./.test(oneWord) && /not put even a single word in quotation marks/.test(oneWord), "16d. a quoted SINGLE word is rejected and the notice shows what is still quoted (the re-run kept one through two retries without that)");
+    // the wrong attributions of the rehearsal run, in the quoting forms the model used, are all rejected now
+    const sixQuoted = [
+      '(e.g., at [02:50], "how is the weather now?" was somewhat abrupt after the story)',
+      'At [02:20], when the student said "I didn\'t actually had", the tutor moved on',
+      'At [02:50], when the student mentioned the heat, the tutor said "how is the weather now?"',
+      'At [02:50], the tutor asked "how is the weather now?" and the student replied',
+      'Open-ended examples include [00:45] ("Do you ride one to school?") and [02:50] ("how is the weather now?")',
+      'At [02:40], the student said "it is hot" and the tutor rephrased "how is the weather now?"',
+    ];
+    for (const [i, s] of sixQuoted.entries()) assert(has(validateTeacherQc(qc2({ item6: s }), CTX2).issues, /quotation mark/), `16d. rehearsal form ${i + 1} (quotation + timestamp) is rejected`);
+
+    // 16e. the speaker named in a sentence must be the speaker of the line it cites — natural forms, no quotation needed
+    assert(tsIssues2("(e.g., at [02:50], the tutor's weather question was somewhat abrupt after the story)").length === 1, "16e. 'at [ts], the tutor's ... question' at a Student line is rejected (the rehearsal form with the quotation removed)");
+    assert(tsIssues2("The follow-up question about the road came at [01:55].").length === 0, "16e. a sentence that names no speaker for the label is not guessed at");
+    assert(tsIssues2("The tutor's answer to the question was clear at [02:50].").length === 1, "16e. 'tutor ... answer ... at [student line]' is rejected");
+    assert(tsIssues2("The student's reply at [02:40] was short.").length === 1, "16e. 'the student's reply at [tutor line]' is rejected");
+    assert(tsIssues2("The student's reply at [02:50] was short.").length === 0, "16e. 'the student's reply at [student line]' is accepted");
+    assert(tsIssues2("(e.g., at [02:40], the tutor's weather question was a natural change of topic)").length === 0, "16e. the same sentence at the tutor's own line is accepted");
+    assert(tsIssues2("At [02:50] the tutor asked the student a follow-up question.").length === 1, "16e. the direct form (existing check) still rejects a tutor action at a Student line");
+    assert(tsIssues2("The tutor asked the student a follow-up question at [01:55].").length === 0, "16e. a sentence naming both roles is ambiguous and left alone");
+    assert(tsIssues2("During the reading (starting at [03:12]), the tutor confirmed each answer.").length === 0, "16e. a label that opens a stretch ('starting at') may point at any line inside it");
+    assert(tsIssues2("The tutor moved on at [01:55].").length === 0, "16e. a sentence without a speech act is not a claim about who spoke");
+    assert(tsIssues2("At [09:59], the tutor's question was late.").length === 0, "16e. a label that matches no line is left to the time-grounding check");
+    assert(has(validateTeacherQc(qc2({ item6: "A mix of open and closed questions. The tutor's weather question at [02:50] changed the topic." }), CTX2).issues, /\[02:50\] is a line where the Student speaks/), "16e. the full QC validator reports it so the retry can fix the label");
+    // WHO ASKED is judged by the line that STARTS at the cited second (the earlier leniency for other acts, test 3f, stays)
+    const boundary = toRoleUtterances(
+      [
+        { speaker: "A", start: 3000, end: 12000, text: "Good evening! How was school today?" },
+        { speaker: "B", start: 20000, end: 31600, text: "It was fine, and I met my friends after class." },
+        { speaker: "A", start: 31800, end: 36000, text: "Is it an electric bike or something?" },
+      ],
+      "A",
+    );
+    assert(checkTutorStudentTimestamps("The student asked a clarifying question at [00:31].", boundary).length === 1, "16e. 'the student asked ... at [00:31]' is rejected: the question that STARTS at 00:31 is the tutor's, although the student's turn still covers that second");
+    assert(checkTutorStudentTimestamps("The tutor asked a follow-up question at [00:31].", boundary).length === 0, "16e. the same label is accepted for the tutor's question");
+    assert(checkTutorStudentTimestamps("The student answered in full sentences at [00:31].", boundary).length === 0, "16e. other acts keep the boundary leniency (the student's turn covers that second)");
+    assert(checkTutorStudentTimestamps("The student asked a question at [00:20].", boundary).length === 0, "16e. a student line that starts at the label is accepted for the student");
+
+    // 16f. generation: the first attempts carry the new instructions, the failures are fed back, and the retry succeeds
+    const f = fakeCreate({ student: [feedback2([...GOOD_POLISH2, hedgeItem]), GOOD_FEEDBACK2], teacher: [quoted, GOOD_QC2] });
+    const r = await generateAIEvaluationDraft({ utterances: U2, teacherSpeakerLabel: T2, talkTime: TALK2, lessonContext: LESSON, createMessage: f.fn });
+    assert(r?.attempts?.studentFeedback === 2 && r.attempts.teacherQc === 2 && f.calls.length === 4, "16f. one rejected attempt per report, then a passing one: exactly four requests");
+    assert(r?.studentFeedback === GOOD_FEEDBACK2 && r.teacherQc === GOOD_QC2, "16f. the passing attempts are the ones saved");
+    const s1 = userText(f.of("student")[0]);
+    const s2 = userText(f.of("student")[1]);
+    const t1 = userText(f.of("teacher")[0]);
+    const t2 = userText(f.of("teacher")[1]);
+    assert(s1.includes("CLEAR LEARNER ERRORS FOUND BY FIXED GRAMMAR PATTERNS") && s1.includes('[01:05] "...every boys..."') && s1.includes("at least one ❌ item must be one of those errors"), "16f. the first student request lists the clear learner errors and makes one of them mandatory");
+    assert(s1.includes("do NOT list it") && /already correct English/.test(s1) && /fewer corrections is better than a doubtful one/.test(s1), "16f. the student checklist forbids listing a correct sentence and invented corrections");
+    assert(!t1.includes("CLEAR LEARNER ERRORS") && /NO quotation marks at all/.test(t1) && /a sentence about the tutor cites a Tutor line/.test(t1), "16f. the QC request has no learner-error list but states the no-quotation and timestamp-owner rules");
+    assert(/only adds a qualifier \(always\)/.test(s2) && /VALIDATION FAILED/.test(s2), "16f. the retry of the student report carries the exact reason");
+    assert(/contains 2 quotation marks/.test(t2) && /VALIDATION FAILED/.test(t2), "16f. the retry of the QC carries the exact reason");
+    const none = fakeCreate({ student: [GOOD_FEEDBACK], teacher: [GOOD_QC] });
+    await generateAIEvaluationDraft(params(none.fn));
+    assert(!userText(none.of("student")[0]).includes("CLEAR LEARNER ERRORS") && !userText(none.of("student")[0]).includes("must be one of those errors"), "16f. a lesson without a detected error has no list and no mandatory line");
+    assert(buildProjectRules({ lessonDurationMinutes: 25, speakerCount: 2 }).includes("8. CORRECTION QUALITY") && buildProjectRules({ lessonDurationMinutes: 25, speakerCount: 2 }).includes("Output 2 contains NO quotation marks"), "16f. the project rules carry the correction-quality section and the single quotation policy");
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);
