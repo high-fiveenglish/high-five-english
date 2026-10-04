@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { parseRouteId } from "@/lib/routeId";
 import { DEFAULT_SITE_ID, HIGHFIVE_AGENT_CODE } from "@/lib/constants";
 import { PriceCell } from "./PriceCell";
 import { ensureAgentPricing } from "./actions";
@@ -33,7 +35,10 @@ export default async function PricingPage({
   // 본다/고친다.
   const isAgentActor = actor.role === "AGENT";
   const isHighfiveTab = !isAgentActor && !agentIdRaw;
-  const selectedAgentId = isAgentActor ? actor.agentId : agentIdRaw ? Number(agentIdRaw) : null;
+  // AGENT는 쿼리스트링을 무시하므로(위) 형식 검사도 직원 계정에만 적용한다.
+  const requestedAgentId = agentIdRaw ? parseRouteId(agentIdRaw) : null;
+  if (!isAgentActor && agentIdRaw && requestedAgentId === null) notFound();
+  const selectedAgentId = isAgentActor ? actor.agentId : requestedAgentId;
 
   // 협력사 탭이면(직영 제외) 가격표가 아직 없을 때 본사 기준으로 한 번 초기화해둔다.
   if (selectedAgentId) {

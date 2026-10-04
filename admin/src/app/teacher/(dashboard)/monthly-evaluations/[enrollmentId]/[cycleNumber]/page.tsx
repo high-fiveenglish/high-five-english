@@ -7,6 +7,7 @@ import { sessionsPerCycleFor, computeCompletedCycles } from "@/lib/monthlyEvalua
 import { formatAppDate } from "@/lib/appTime";
 import { studentDisplayName } from "@/lib/teacherPortalLabels";
 import { MonthlyEvaluationForm } from "./MonthlyEvaluationForm";
+import { parseRouteId } from "@/lib/routeId";
 
 export default async function TeacherMonthlyEvaluationPage({
   params,
@@ -16,8 +17,10 @@ export default async function TeacherMonthlyEvaluationPage({
   const teacher = await requireTeacher();
   const { enrollmentId, cycleNumber } = await params;
 
+  const enrollmentIdValue = parseRouteId(enrollmentId);
+  if (enrollmentIdValue === null) notFound();
   const enrollment = await prisma.enrollment.findUnique({
-    where: { id: Number(enrollmentId) },
+    where: { id: enrollmentIdValue },
     include: { student: true },
   });
   if (!enrollment || enrollment.teacherId !== teacher.id) notFound();

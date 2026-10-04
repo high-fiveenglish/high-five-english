@@ -7,6 +7,7 @@ import { EvaluationForm } from "./EvaluationForm";
 import { ClassRecordingPanel } from "./ClassRecordingPanel";
 import { safeRecordingFailureMessage } from "@/lib/recordingWorkflow";
 import { parseStoredUtterances, speakerChoicesFor } from "@/lib/speakerConfirmation";
+import { parseRouteId } from "@/lib/routeId";
 
 const fmtDateTime = formatAppDateTime;
 
@@ -18,8 +19,11 @@ export default async function SessionEvaluationPage({
   const teacher = await requireTeacher();
   const { id } = await params;
 
+  const routeId = parseRouteId(id);
+  if (routeId === null) notFound();
+
   const session = await prisma.classSession.findUnique({
-    where: { id: Number(id) },
+    where: { id: routeId },
     include: {
       student: true,
       evaluation: true,

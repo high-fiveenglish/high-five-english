@@ -5,6 +5,7 @@ import { StudentEditForm } from "./StudentEditForm";
 import { ConsultationNotes } from "./ConsultationNotes";
 import { formatAppDateTime } from "@/lib/appTime";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { parseRouteId } from "@/lib/routeId";
 
 const fmtDateTime = formatAppDateTime;
 
@@ -15,7 +16,8 @@ export default async function EditStudentPage({
 }) {
   const actor = await requireBackofficeActor();
   const { id } = await params;
-  const studentId = Number(id);
+  const studentId = parseRouteId(id);
+  if (studentId === null) notFound();
 
   const [student, notes, agents] = await Promise.all([
     prisma.student.findUnique({ where: { id: studentId } }),

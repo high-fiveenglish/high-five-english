@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { corsHeaders, corsOptionsResponse } from "@/lib/cors";
 import { actorFromAdminApiToken } from "@/lib/adminApiToken";
 import { requirePermission, logAudit, ForbiddenError } from "@/lib/rbac";
+import { parseRouteId } from "@/lib/routeId";
 
 export async function OPTIONS(request: Request) {
   return corsOptionsResponse(request);
@@ -13,8 +14,8 @@ export async function OPTIONS(request: Request) {
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const headers = corsHeaders(request.headers.get("origin"));
   const { id } = await params;
-  const noticeId = Number(id);
-  if (!Number.isInteger(noticeId)) return NextResponse.json({ error: "not_found" }, { status: 404, headers });
+  const noticeId = parseRouteId(id);
+  if (noticeId === null) return NextResponse.json({ error: "not_found" }, { status: 404, headers });
 
   const existing = await prisma.homeNotice.findUnique({ where: { id: noticeId } });
   if (!existing || !existing.published) {
@@ -41,8 +42,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const headers = corsHeaders(request.headers.get("origin"));
   const { id } = await params;
-  const noticeId = Number(id);
-
   const actor = await actorFromAdminApiToken(request);
   if (!actor) return NextResponse.json({ error: "login_required" }, { status: 401, headers });
   try {
@@ -51,6 +50,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (err instanceof ForbiddenError) return NextResponse.json({ error: "forbidden" }, { status: 403, headers });
     throw err;
   }
+
+  // 인증/권한 검사 뒤에 id 형식을 확인한다(잘못된 id가 Prisma까지 가서 500이 되지 않게).
+  const noticeId = parseRouteId(id);
+  if (noticeId === null) return NextResponse.json({ error: "not_found" }, { status: 404, headers });
 
   const existing = await prisma.homeNotice.findUnique({ where: { id: noticeId } });
   if (!existing) return NextResponse.json({ error: "not_found" }, { status: 404, headers });
@@ -78,8 +81,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const headers = corsHeaders(request.headers.get("origin"));
   const { id } = await params;
-  const noticeId = Number(id);
-
   const actor = await actorFromAdminApiToken(request);
   if (!actor) return NextResponse.json({ error: "login_required" }, { status: 401, headers });
   try {
@@ -88,6 +89,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     if (err instanceof ForbiddenError) return NextResponse.json({ error: "forbidden" }, { status: 403, headers });
     throw err;
   }
+
+  const noticeId = parseRouteId(id);
+  if (noticeId === null) return NextResponse.json({ error: "not_found" }, { status: 404, headers });
 
   const existing = await prisma.homeNotice.findUnique({ where: { id: noticeId } });
   if (existing) {

@@ -8,11 +8,13 @@ import { EnrollmentCreateForm } from "../../new/EnrollmentCreateForm";
 import { parseScheduleDaysLabel } from "../../scheduleUtils";
 import { PaymentForm } from "./PaymentForm";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { parseRouteId } from "@/lib/routeId";
 
 export default async function EditEnrollmentPage({ params }: { params: Promise<{ id: string }> }) {
   const actor = await requireBackofficeActor();
   const { id } = await params;
-  const enrollmentId = Number(id);
+  const enrollmentId = parseRouteId(id);
+  if (enrollmentId === null) notFound();
 
   const [enrollment, teachers] = await Promise.all([
     prisma.enrollment.findUnique({ where: { id: enrollmentId }, include: { student: true } }),

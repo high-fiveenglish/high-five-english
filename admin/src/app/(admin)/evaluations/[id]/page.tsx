@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { EvaluationAdminForm } from "./EvaluationAdminForm";
 import { formatAppDateTime } from "@/lib/appTime";
+import { parseRouteId } from "@/lib/routeId";
 
 const fmtDateTime = formatAppDateTime;
 
@@ -14,8 +15,11 @@ export default async function EvaluationDetailPage({
 }) {
   const { id } = await params;
 
+  const routeId = parseRouteId(id);
+  if (routeId === null) notFound();
+
   const session = await prisma.classSession.findUnique({
-    where: { id: Number(id) },
+    where: { id: routeId },
     include: { student: true, teacher: { select: TEACHER_SUMMARY_SELECT }, evaluation: true, enrollment: true },
   });
 

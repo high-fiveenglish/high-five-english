@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { corsHeaders, corsOptionsResponse } from "@/lib/cors";
+import { isInt4 } from "@/lib/routeId";
 
 // 강사소개 카드를 클릭해서 상세 모달을 열 때만 그 한 명의 음성을 지연 조회하는
 // 전용 엔드포인트 — /api/public/teachers 목록 응답에서 voiceUrl을 뺀 것과 짝을
@@ -14,7 +15,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const headers = corsHeaders(request.headers.get("origin"));
   const { id } = await params;
   const teacherId = Number(id);
-  if (!Number.isInteger(teacherId)) {
+  // 숫자가 아니거나 DB 정수(int4) 범위를 넘는 값은 Prisma까지 가면 500이 되므로 여기서 400으로 끝낸다.
+  if (!isInt4(teacherId)) {
     return NextResponse.json({ error: "invalid_id" }, { status: 400, headers });
   }
 

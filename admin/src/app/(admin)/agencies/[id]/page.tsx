@@ -2,10 +2,12 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AgentBrandingForm } from "./AgentBrandingForm";
 import { AgentConsultChannelField } from "./AgentConsultChannelField";
+import { parseRouteId } from "@/lib/routeId";
 
 export default async function EditAgencyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const agentId = Number(id);
+  const agentId = parseRouteId(id);
+  if (agentId === null) notFound();
 
   const [agent, channels] = await Promise.all([
     prisma.agent.findUnique({ where: { id: agentId } }),

@@ -5,6 +5,7 @@ import { requireStudent } from "@/lib/studentAuth";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { labelForLangCode } from "@/lib/levelTestTranslation";
 import { LessonEvaluationReportToggle } from "@/components/LessonEvaluationReportToggle";
+import { parseRouteId } from "@/lib/routeId";
 
 export default async function StudentMonthlyEvaluationDetailPage({
   params,
@@ -14,9 +15,12 @@ export default async function StudentMonthlyEvaluationDetailPage({
   const student = await requireStudent();
   const { id } = await params;
 
+  const routeId = parseRouteId(id);
+  if (routeId === null) notFound();
+
   // studentId를 where절에 직접 걸어 소유권을 검사한다.
   const evaluation = await prisma.monthlyEvaluation.findFirst({
-    where: { id: Number(id), studentId: student.id },
+    where: { id: routeId, studentId: student.id },
     include: { teacher: { select: TEACHER_SUMMARY_SELECT } },
   });
 

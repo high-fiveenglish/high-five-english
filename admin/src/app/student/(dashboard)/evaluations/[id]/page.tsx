@@ -6,6 +6,7 @@ import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { formatAppDate, formatAppTime } from "@/lib/appTime";
 import { labelForLangCode } from "@/lib/levelTestTranslation";
 import { LessonEvaluationReportToggle } from "@/components/LessonEvaluationReportToggle";
+import { parseRouteId } from "@/lib/routeId";
 
 const fmtDate = formatAppDate;
 const fmtTime = formatAppTime;
@@ -18,10 +19,13 @@ export default async function StudentEvaluationDetailPage({
   const student = await requireStudent();
   const { id } = await params;
 
+  const routeId = parseRouteId(id);
+  if (routeId === null) notFound();
+
   // classSession.studentId를 where절에 직접 걸어 소유권을 검사한다 — 다른 학생의
   // evaluation id를 넣으면 결과가 아예 없어(null) notFound()로 이어진다.
   const evaluation = await prisma.lessonEvaluation.findFirst({
-    where: { id: Number(id), classSession: { studentId: student.id } },
+    where: { id: routeId, classSession: { studentId: student.id } },
     include: { classSession: { include: { teacher: { select: TEACHER_SUMMARY_SELECT }, enrollment: true } } },
   });
 
