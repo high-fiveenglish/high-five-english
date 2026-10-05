@@ -11,6 +11,7 @@ import { WEEKDAYS } from "@/lib/weekdays";
 import { syncTeacherScheduleToGoogleSheet } from "@/lib/teacherScheduleSheet";
 import { findRecurringScheduleConflicts, resolveScheduleTime } from "./scheduleUtils";
 import { isWithinAvailableHours, timeStringToMinuteOfDay } from "@/lib/timeSlots";
+import { countSessionsBlockingDeletion, deletionBlockedMessage } from "@/lib/enrollmentDeletion";
 import { Prisma, type EnrollmentStatus, type EnrollmentRequestStatus, type PaymentStatus } from "@/generated/prisma/client";
 import type { Actor } from "@/lib/rbac";
 
@@ -405,11 +406,15 @@ export async function updateEnrollmentPrice(
 // 기존 스케줄을 기본값으로 채운 등록 폼을 보여주고, 관리자가 검토·수정 후 저장을 눌러야
 // createEnrollment로 실제 생성된다(그 화면의 renewedFromId가 감사 로그에 원본 건을 남김).
 
-export async function deleteEnrollment(id: number) {
+export async function deleteEnrollment(id: number): Promise<{ error?: string }> {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "enrollments.delete");
+  // 수업(ClassSession)이 있으면 삭제를 막고 안내한다 — 어차피 FK(RESTRICT)로 실패하므로 오류 화면 대신 메시지를 돌려준다.
+  const blocking = await countSessionsBlockingDeletion(prisma, id);
+  if (blocking > 0) return { error: deletionBlockedMessage(blocking) };
   await prisma.enrollment.delete({ where: { id } });
   await logAudit({ actor, action: "DELETE", targetType: "Enrollment", targetId: id });
   revalidatePath("/enrollments");
   syncTeacherScheduleToGoogleSheet().catch(() => {});
+  return {};
 }

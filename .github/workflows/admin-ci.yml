@@ -18,6 +18,22 @@ jobs:
     env:
       DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
+    # 수업 생성(unique 제약/트랜잭션/동시성/롤백) 통합 테스트용 실제 PostgreSQL — 빌드/픽스처 테스트는 이 DB를 쓰지 않는다.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: dummy
+          POSTGRES_PASSWORD: dummy
+          POSTGRES_DB: hifive_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dummy -d hifive_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -49,8 +65,22 @@ jobs:
         working-directory: admin
         run: |
           set -euo pipefail
-          for f in             scripts/test-talkTime.ts             scripts/test-assemblyaiParsing.ts             scripts/test-recordingWorkflow.ts             scripts/test-recordingProcessing.ts             scripts/test-teacherQcVisibility.ts             scripts/test-aiEvaluationDraft.ts             scripts/test-evaluationFormatPreservation.ts             scripts/test-evaluationTranslation.ts             scripts/test-evaluationQuality.ts             scripts/test-recordingWebhook.ts             scripts/test-recordingPublish.ts             scripts/test-speakerRoles.ts             scripts/test-speakerConfirmation.ts             scripts/test-netlifyFunctionBundle.ts             scripts/test-proxyMatcher.ts             scripts/test-studentEvaluationApi.ts             scripts/test-routeId.ts             scripts/test-sessionPlan.ts
+          for f in             scripts/test-talkTime.ts             scripts/test-assemblyaiParsing.ts             scripts/test-recordingWorkflow.ts             scripts/test-recordingProcessing.ts             scripts/test-teacherQcVisibility.ts             scripts/test-aiEvaluationDraft.ts             scripts/test-evaluationFormatPreservation.ts             scripts/test-evaluationTranslation.ts             scripts/test-evaluationQuality.ts             scripts/test-recordingWebhook.ts             scripts/test-recordingPublish.ts             scripts/test-speakerRoles.ts             scripts/test-speakerConfirmation.ts             scripts/test-netlifyFunctionBundle.ts             scripts/test-proxyMatcher.ts             scripts/test-studentEvaluationApi.ts             scripts/test-routeId.ts             scripts/test-sessionPlan.ts             scripts/test-sessionGeneration.ts
           do
             echo "===== $f ====="
             npx tsx "$f"
           done
+
+      # 기존 마이그레이션 이력은 빈 DB에서 처음부터 재생되지 않는다(slot_reservations를 만드는 마이그레이션이 없음 — production은 이미 적용된 상태).
+      # 그래서 테스트 DB는 현재 schema.prisma를 db push로 만들고, 새 마이그레이션 SQL은 "적용 직전 스키마"에 적용해 따로 검증한다.
+      - name: Postgres integration tests (session generation)
+        working-directory: admin
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/hifive_test"
+          TEST_DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/hifive_test"
+          REQUIRE_INTEGRATION: "1"
+        run: |
+          set -euo pipefail
+          npx prisma db push
+          npx tsx scripts/test-sessionGeneration.integration.ts
+          npx tsx scripts/test-sessionGenerationMigration.ts

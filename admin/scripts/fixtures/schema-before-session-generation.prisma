@@ -606,15 +606,6 @@ model ClassSession {
   // deletedAt만 채운다. 전체일정표/충돌감지 등 나머지 조회는 전부 deletedAt: null만 본다.
   deletedAt DateTime?
 
-  // 수강 일정(Enrollment)으로부터 "수업 생성 배치"(lib/sessionGeneration.ts)가 만든 세션에만 채워진다 —
-  // 수동 생성/보충수업은 둘 다 null이다. generationKey는 "<enrollmentId>:<YYYY-MM-DD(KST)>" 형식의
-  // 멱등성 키로, 생성 시점의 날짜를 그대로 박제한다(홀드 해제로 scheduledAt이 밀려도 키는 바뀌지 않는다 —
-  // 그래서 unique 제약이 홀드 해제 반복문과 부딪히지 않고, 삭제/이동된 세션의 원래 날짜는 다시 채워지지 않는다).
-  // nullable unique라 키가 없는 수동/보충 세션은 서로 무제한 공존한다.
-  generationKey     String?                 @unique
-  generationBatchId String?
-  generationBatch   SessionGenerationBatch? @relation(fields: [generationBatchId], references: [id], onDelete: Restrict)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -626,106 +617,7 @@ model ClassSession {
   @@index([scheduledAt])
   @@index([teacherId])
   @@index([studentId])
-  @@index([generationBatchId])
   @@map("class_sessions")
-}
-
-// ---------------------------------------------------------------------------
-// 수업 생성 배치 — Enrollment 일정으로부터 ClassSession을 만드는 "실행 1회"의 기록.
-// 쓰기는 lib/sessionGeneration.ts(CLI scripts/generate-sessions.ts)만 한다.
-// ---------------------------------------------------------------------------
-
-enum SessionGenerationMode {
-  PILOT
-  FULL
-}
-
-enum SessionGenerationStatus {
-  RUNNING
-  SUCCEEDED
-  PARTIAL // 일부 수강만 생성되고 중단/오류/롤백 일부 실패
-  FAILED
-  ROLLED_BACK
-}
-
-enum SessionGenerationItemOutcome {
-  GENERATED
-  CONFLICT // 같은 강사 시간 충돌 — 생성 보류
-  INACTIVE_TEACHER // 강사 비활성/미승인
-  TIME_UNVERIFIED // 다요일 수강인데 요일별 시각(classTimes)이 확인되지 않음
-  ALREADY_GENERATED
-  EXISTING_SESSIONS // 남은 수업일에 이미 세션이 있음
-  EXCLUDED // 그 외 제외(상태, 요일/시각 없음, 만들 수업일 없음 등)
-  STALE // 계획 이후 데이터가 바뀌어 생성하지 않음
-  ERROR
-}
-
-model SessionGenerationBatch {
-  id     String                  @id @default(uuid())
-  mode   SessionGenerationMode
-  status SessionGenerationStatus @default(RUNNING)
-  // 실행 중에는 'SESSION_GENERATION', 끝나면 null — unique라 동시에 두 배치가 RUNNING일 수 없다.
-  activeLock String? @unique
-  // 임대(lease) + 펜싱: 실행기마다 임의 토큰(leaseOwner)을 갖고, 모든 쓰기 트랜잭션은 먼저
-  // "id·leaseOwner·RUNNING·activeLock이 그대로인지"를 조건으로 heartbeatAt을 갱신(행 잠금)한 뒤에만 쓴다.
-  // 잠금 해제(release-lock)는 heartbeatAt이 오래된 경우에만 같은 행을 조건부로 바꾸므로, 해제 이후의 옛 실행기 쓰기는
-  // 전부 거부되고, 실행 중인 트랜잭션이 있으면 해제가 그 커밋을 기다린 뒤 갱신된 heartbeat를 보고 포기한다.
-  leaseOwner  String?
-  heartbeatAt DateTime @default(now())
-
-  asOf           DateTime // 계획 기준 시각(이 이후 시각의 수업만 생성)
-  asOfKstDate    String // "YYYY-MM-DD"
-  plannerVersion String
-  planHash       String
-  expectedSessions Int
-  requestedEnrollmentIds Int[]
-
-  plannedEnrollments         Int @default(0)
-  plannedSessions            Int @default(0)
-  createdSessions            Int @default(0)
-  skippedPast                Int @default(0)
-  skippedStartedToday        Int @default(0)
-  skippedExisting            Int @default(0)
-  skippedClosure             Int @default(0)
-  withheldByConflict         Int @default(0)
-  conflictEnrollments        Int @default(0)
-  inactiveTeacherEnrollments Int @default(0)
-  timeUnverifiedEnrollments  Int @default(0)
-  errorCount                 Int @default(0)
-
-  failureReason     String? @db.Text
-  populationSummary Json?
-  actorLabel        String
-  actorAdminId      Int?
-
-  startedAt    DateTime  @default(now())
-  finishedAt   DateTime?
-  rolledBackAt DateTime?
-
-  items    SessionGenerationBatchItem[]
-  sessions ClassSession[]
-
-  @@index([startedAt])
-  @@map("session_generation_batches")
-}
-
-// 허용 목록(allow-list)에 든 수강 1건 = 1행. 충돌/비활성/제외도 조용히 건너뛰지 않고 여기에 사유와 함께 남긴다.
-// 수강 이력이 지워져도 남도록 Enrollment FK는 걸지 않는다.
-model SessionGenerationBatchItem {
-  id           Int                          @id @default(autoincrement())
-  batchId      String
-  batch        SessionGenerationBatch       @relation(fields: [batchId], references: [id])
-  enrollmentId Int
-  outcome      SessionGenerationItemOutcome
-  reasons      String[]
-  plannedCount Int                          @default(0)
-  createdCount Int                          @default(0)
-  detail       Json?
-  createdAt    DateTime                     @default(now())
-
-  @@unique([batchId, enrollmentId])
-  @@index([enrollmentId])
-  @@map("session_generation_batch_items")
 }
 
 // 일일평가서 — 수업 1회당 1개, 강사가 수업 직후 작성. 2000자 제한은 DB(VarChar(2000))와
