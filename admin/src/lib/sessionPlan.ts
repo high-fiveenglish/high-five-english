@@ -6,6 +6,7 @@
 //
 // 확정된 설계 원칙(이 파일이 구현하는 것):
 //  1) 과거 세션 생성 금지 — 오늘(KST) 이전 날짜는 생성 대상이 아니다. 과거 수업을 COMPLETED로 소급하지 않는다.
+//     오늘 수업이라도 scheduledAt <= asOf(이미 시작했거나 지금 시작하는 수업)이면 만들지 않는다 — asOf 이후 슬롯만 남는다.
 //  2) 계산 범위 — max(오늘 KST, startDate) ~ endDate(포함). scheduleDays 요일만, 요일별 시각은 classTimes 오버라이드가
 //     있으면 그것을, 없으면 classTime을 쓴다. 길이는 classDurationMin. scheduledAt은 KST(+09:00) 기준 절대 순간.
 //  3) 휴강/홀드 의미는 건드리지 않는다 — 이 파일은 leaveApply/holdApply/createAcademyClosure를 import하지 않는다.
@@ -13,8 +14,11 @@
 //     제외(CONFLICT)하고 결과에 표시한다. 강제로 만들지 않으며, 그룹수업/데이터 오류 여부는 추측하지 않는다.
 //  5) 중복 — 현재 DB에는 (enrollmentId, scheduledAt) unique 제약이 없다. 그래서 같은 수강 건·같은 KST 날짜에
 //     (soft-delete 되지 않은, 보충수업이 아닌) 세션이 이미 있으면 그 날짜는 만들지 않는다. 실제 생성 단계는 별도 승인 후
-//     advisory lock + partial unique index + generationBatchId(아직 없음)로 구현한다 — PlannedSession.key가 그
-//     멱등성 키(`enrollmentId:YYYY-MM-DD`)이고, PlannedSession의 나머지 필드는 createMany 행에 그대로 쓸 수 있는 형태다.
+//     advisory lock + ClassSession.generationKey(unique) + generationBatchId로 구현했다(lib/sessionGeneration.ts) —
+//     PlannedSession.key가 그 멱등성 키(`enrollmentId:YYYY-MM-DD`)이고, 나머지 필드는 createMany 행에 그대로 쓸 수 있는 형태다.
+//  6) 휴강일(AcademyClosure)에는 만들지 않는다(종료일은 연장하지 않는다 — 휴강/endDate 정책은 그대로).
+//  7) 다요일 수강은 요일별 시각(classTimes)이 모든 요일에 명시된 경우에만 "시각 검증됨"으로 본다. 아니면 계산은 하되
+//     generationEligible=false — 실제 생성 대상이 아니다(단일 요일 수강은 시각이 하나뿐이라 검증된 것으로 본다).
 //
 // 날짜 관례: Enrollment.startDate/endDate는 "날짜만" 쓰는 UTC 자정 값이다(요일은 getUTCDay로 판정). 반면 ClassSession.
 // scheduledAt은 절대 순간이라 KST 날짜는 formatAppDate로 구한다 — 두 관례를 섞지 않는다.
@@ -22,6 +26,10 @@
 import { parseScheduleDaysLabel, WEEKDAYS } from "./weekdays";
 import { formatAppDate, formatAppTime, parseAppDateTime } from "./appTime";
 import { isWithinAvailableHours, timeStringToMinuteOfDay } from "./timeSlots";
+import { createHash } from "node:crypto";
+
+/** 계획기 버전 — 계획 해시와 배치 기록에 남는다(규칙이 바뀌면 올린다). */
+export const PLANNER_VERSION = "session-plan/2";
 
 export type PlanEnrollmentStatus = "APPLIED" | "PAID" | "ACTIVE" | "HOLDING" | "COMPLETED";
 export type PlanSessionStatus = "SCHEDULED" | "COMPLETED" | "CANCELLED" | "MAKEUP_NEEDED" | "LEAVE" | "HOLD";
@@ -43,6 +51,10 @@ export interface PlanEnrollmentInput {
   startDate: Date;
   endDate: Date;
   totalSessions: number;
+  /** 휴강(AcademyClosure)의 협력사 범위 판정용 — 학생의 협력사(createAcademyClosure와 같은 기준). */
+  studentAgentId?: number | null;
+  /** 생성 시점 stale 검사용(계획 이후 수강이 바뀌었는지). */
+  updatedAt?: Date;
 }
 
 export interface PlanExistingSessionInput {
@@ -54,6 +66,13 @@ export interface PlanExistingSessionInput {
   status: PlanSessionStatus;
   isSupplement: boolean;
   deletedAt: Date | null;
+  generationBatchId?: string | null;
+}
+
+/** 휴강(AcademyClosure) — date는 KST 자정 순간이고, agentId가 null이면 전체(본사) 휴강이다. */
+export interface PlanClosureInput {
+  date: Date;
+  agentId: number | null;
 }
 
 /** 수업이 아닌 다른 일정(레벨테스트 등)이 강사 시간을 점유하는 경우. */
@@ -70,6 +89,9 @@ export interface PlanInput {
   enrollments: PlanEnrollmentInput[];
   existingSessions: PlanExistingSessionInput[];
   teacherBusy?: PlanTeacherBusyInput[];
+  closures?: PlanClosureInput[];
+  /** 이미 생성 배치로 만들어진 적이 있는 수강(삭제된 세션 포함) — 다시 생성하지 않는다. */
+  alreadyGeneratedEnrollmentIds?: number[];
 }
 
 export type ExclusionReason =
@@ -81,7 +103,8 @@ export type ExclusionReason =
   | "NO_SCHEDULE_DAYS"
   | "NO_CLASS_TIME"
   | "NO_FUTURE_SLOTS"
-  | "ALL_SLOTS_ALREADY_EXIST";
+  | "ALL_SLOTS_ALREADY_EXIST"
+  | "ALREADY_GENERATED";
 
 export type PlanErrorCode =
   | "INVALID_DATE_RANGE"
@@ -94,7 +117,6 @@ export type PlanErrorCode =
 export type PlanWarningCode =
   | "TEACHER_NO_AVAILABLE_HOURS"
   | "SLOT_OUTSIDE_TEACHER_HOURS"
-  | "FIRST_SLOT_TODAY_ALREADY_STARTED"
   | "END_DATE_NOT_CLASS_DAY"
   | "UNUSUAL_DURATION"
   | "PLANNED_EXCEEDS_TOTAL_SESSIONS"
@@ -110,6 +132,7 @@ export const EXCLUSION_REASON_LABEL: Record<ExclusionReason, string> = {
   NO_CLASS_TIME: "수업 시각 없음",
   NO_FUTURE_SLOTS: "오늘 이후 생성할 수업일 없음",
   ALL_SLOTS_ALREADY_EXIST: "남은 수업일에 이미 세션이 있음",
+  ALREADY_GENERATED: "이미 생성 배치로 세션이 만들어진 수강",
 };
 
 export const PLAN_ERROR_LABEL: Record<PlanErrorCode, string> = {
@@ -124,7 +147,6 @@ export const PLAN_ERROR_LABEL: Record<PlanErrorCode, string> = {
 export const PLAN_WARNING_LABEL: Record<PlanWarningCode, string> = {
   TEACHER_NO_AVAILABLE_HOURS: "강사의 근무가능 시간이 등록되어 있지 않음",
   SLOT_OUTSIDE_TEACHER_HOURS: "일부 수업이 강사의 근무가능 시간 밖",
-  FIRST_SLOT_TODAY_ALREADY_STARTED: "오늘 수업 시각이 이미 지남(날짜 기준으로는 대상)",
   END_DATE_NOT_CLASS_DAY: "종료일이 수업 요일이 아님",
   UNUSUAL_DURATION: "수업 시간이 25/50분이 아님",
   PLANNED_EXCEEDS_TOTAL_SESSIONS: "생성 예정 수가 총 회차보다 많음",
@@ -146,8 +168,6 @@ export interface PlannedSession {
   durationMin: number;
   status: "SCHEDULED";
   isSupplement: false;
-  /** 오늘 수업인데 시각이 asOf보다 이미 지난 경우(날짜 기준으로는 대상이라 포함하되 표시). */
-  startedAlready: boolean;
 }
 
 export interface ExistingSessionView {
@@ -200,10 +220,22 @@ export interface EnrollmentPlanRow {
   willCreateCount: number;
   withheldCount: number;
   skippedPastDates: string[];
+  /** 오늘 수업이지만 scheduledAt <= asOf라 만들지 않은 슬롯(KST 날짜). */
+  skippedStartedToday: string[];
+  /** 휴강일이라 만들지 않은 슬롯(KST 날짜). */
+  skippedClosure: string[];
   skippedExisting: { date: string; sessionId: number; status: PlanSessionStatus }[];
   alreadyExisting: ExistingSessionView[];
   conflicts: ConflictGroup[];
+  /** 요일별 시각이 검증되었는지: 단일 요일=SINGLE_WEEKDAY, 모든 요일에 classTimes 명시=CLASS_TIMES_EXPLICIT, 아니면 UNVERIFIED. */
+  timeVerification: TimeVerification;
+  /** 실제 생성 대상인지 = outcome ELIGIBLE && 시각 검증됨. */
+  generationEligible: boolean;
+  /** 계획 시점의 수강 updatedAt(ISO) — 생성 시점 stale 검사용. */
+  enrollmentUpdatedAt: string | null;
 }
+
+export type TimeVerification = "SINGLE_WEEKDAY" | "CLASS_TIMES_EXPLICIT" | "UNVERIFIED" | "NOT_APPLICABLE";
 
 export interface PlanSummary {
   asOfIso: string;
@@ -218,7 +250,21 @@ export interface PlanSummary {
   /** ACTIVE가 아니어서 계산하지 않고 제외한 입력 건수(COMPLETED/HOLDING/APPLIED/PAID). */
   nonActiveExcluded: number;
   sessionsWouldBeCreated: number;
-  sessionsSkipped: { pastDates: number; alreadyExisting: number; withheldByConflict: number; total: number };
+  sessionsSkipped: {
+    pastDates: number;
+    startedToday: number;
+    closure: number;
+    alreadyExisting: number;
+    withheldByConflict: number;
+    total: number;
+  };
+  /** 실제 생성 대상(ELIGIBLE이면서 시각 검증됨) 수강/세션 수 — 시각 미검증 다요일 수강은 제외. */
+  generationEligible: number;
+  generationSessions: number;
+  /** ELIGIBLE이지만 다요일 + 요일별 시각 미검증이라 생성 대상에서 보류된 수강/세션 수. */
+  timeUnverifiedEnrollments: number;
+  timeUnverifiedSessions: number;
+  plannerVersion: string;
   conflictEnrollments: number;
   conflictPairs: number;
   conflictSlots: number;
@@ -289,9 +335,14 @@ function emptyRow(e: PlanEnrollmentInput): EnrollmentPlanRow {
     willCreateCount: 0,
     withheldCount: 0,
     skippedPastDates: [],
+    skippedStartedToday: [],
+    skippedClosure: [],
     skippedExisting: [],
     alreadyExisting: [],
     conflicts: [],
+    timeVerification: "NOT_APPLICABLE",
+    generationEligible: false,
+    enrollmentUpdatedAt: e.updatedAt ? e.updatedAt.toISOString() : null,
   };
 }
 
@@ -316,6 +367,9 @@ export function planClassSessions(input: PlanInput): PlanResult {
     list.push(s);
     existingByEnrollment.set(s.enrollmentId, list);
   }
+
+  const alreadyGenerated = new Set(input.alreadyGeneratedEnrollmentIds ?? []);
+  const closureList = (input.closures ?? []).map((c) => ({ kstDate: formatAppDate(c.date), agentId: c.agentId }));
 
   const rows: EnrollmentPlanRow[] = [];
   const candidates: Candidate[] = [];
@@ -377,7 +431,16 @@ export function planClassSessions(input: PlanInput): PlanResult {
 
     // 정당한 사유로 자동 생성하지 않는 경우(EXCLUDED).
     const weekdays = [...new Set(parseScheduleDaysLabel(e.scheduleDays))].sort((a, b) => a - b);
+    row.timeVerification =
+      weekdays.length === 0
+        ? "NOT_APPLICABLE"
+        : weekdays.length === 1
+          ? "SINGLE_WEEKDAY"
+          : weekdays.every((d) => overrides?.[String(d)] !== undefined)
+            ? "CLASS_TIMES_EXPLICIT"
+            : "UNVERIFIED";
     if (weekdays.length === 0) row.reasons.push("NO_SCHEDULE_DAYS");
+    if (alreadyGenerated.has(e.id)) row.reasons.push("ALREADY_GENERATED");
     if (e.teacherId === null) row.reasons.push("NO_TEACHER");
     else if (e.teacherAccountStatus !== "ACTIVE" || e.teacherApprovalStatus !== "APPROVED") row.reasons.push("TEACHER_INACTIVE");
 
@@ -410,6 +473,10 @@ export function planClassSessions(input: PlanInput): PlanResult {
     const blockingByDate = new Map<string, ExistingSessionView>();
     for (const v of existingViews) if (v.blocksDate && !blockingByDate.has(v.date)) blockingByDate.set(v.date, v);
 
+    const closureDates = new Set(
+      closureList.filter((c) => c.agentId === null || c.agentId === (e.studentAgentId ?? null)).map((c) => c.kstDate),
+    );
+
     const planned: PlannedSession[] = [];
     for (const iso of windowDays) {
       const blocker = blockingByDate.get(iso);
@@ -417,9 +484,18 @@ export function planClassSessions(input: PlanInput): PlanResult {
         row.skippedExisting.push({ date: iso, sessionId: blocker.id, status: blocker.status });
         continue;
       }
+      if (closureDates.has(iso)) {
+        row.skippedClosure.push(iso);
+        continue;
+      }
       const weekday = weekdayOfIso(iso);
       const time = timeOf(weekday)!;
       const scheduledAt = parseAppDateTime(`${iso}T${time}`);
+      // 오늘 이미 시작했거나 지금 시작하는 수업은 만들지 않는다(생성 시각 이후 슬롯만).
+      if (scheduledAt.getTime() <= asOfMs) {
+        row.skippedStartedToday.push(iso);
+        continue;
+      }
       planned.push({
         key: `${e.id}:${iso}`,
         enrollmentId: e.id,
@@ -432,17 +508,15 @@ export function planClassSessions(input: PlanInput): PlanResult {
         durationMin: e.classDurationMin,
         status: "SCHEDULED",
         isSupplement: false,
-        startedAlready: iso === todayKst && scheduledAt.getTime() < asOfMs,
       });
     }
 
     if (planned.length === 0) {
-      row.reasons.push(windowDays.length === 0 ? "NO_FUTURE_SLOTS" : "ALL_SLOTS_ALREADY_EXIST");
+      row.reasons.push(windowDays.length > 0 && row.skippedExisting.length === windowDays.length ? "ALL_SLOTS_ALREADY_EXIST" : "NO_FUTURE_SLOTS");
       continue;
     }
 
     // 경고(생성을 막지는 않는다).
-    if (planned.some((p) => p.startedAlready)) row.warnings.push("FIRST_SLOT_TODAY_ALREADY_STARTED");
     if (planned.length > e.totalSessions) row.warnings.push("PLANNED_EXCEEDS_TOTAL_SESSIONS");
     const hours = e.teacherAvailableHours;
     if (hours !== null) {
@@ -585,6 +659,7 @@ export function planClassSessions(input: PlanInput): PlanResult {
     } else {
       row.outcome = "ELIGIBLE";
       row.willCreateCount = row.plannedSessions.length;
+      row.generationEligible = row.timeVerification === "SINGLE_WEEKDAY" || row.timeVerification === "CLASS_TIMES_EXPLICIT";
     }
   }
 
@@ -600,7 +675,12 @@ export function planClassSessions(input: PlanInput): PlanResult {
     errors: active.filter((r) => r.outcome === "ERROR").length,
     nonActiveExcluded: rows.length - active.length,
     sessionsWouldBeCreated: active.reduce((n, r) => n + r.willCreateCount, 0),
-    sessionsSkipped: { pastDates: 0, alreadyExisting: 0, withheldByConflict: 0, total: 0 },
+    sessionsSkipped: { pastDates: 0, startedToday: 0, closure: 0, alreadyExisting: 0, withheldByConflict: 0, total: 0 },
+    generationEligible: active.filter((r) => r.generationEligible).length,
+    generationSessions: active.filter((r) => r.generationEligible).reduce((n, r) => n + r.willCreateCount, 0),
+    timeUnverifiedEnrollments: active.filter((r) => r.outcome === "ELIGIBLE" && !r.generationEligible).length,
+    timeUnverifiedSessions: active.filter((r) => r.outcome === "ELIGIBLE" && !r.generationEligible).reduce((n, r) => n + r.willCreateCount, 0),
+    plannerVersion: PLANNER_VERSION,
     conflictEnrollments: active.filter((r) => r.outcome === "CONFLICT").length,
     conflictPairs: conflictPairKeys.size,
     conflictSlots,
@@ -609,13 +689,37 @@ export function planClassSessions(input: PlanInput): PlanResult {
   };
   for (const r of active) {
     summary.sessionsSkipped.pastDates += r.skippedPastDates.length;
+    summary.sessionsSkipped.startedToday += r.skippedStartedToday.length;
+    summary.sessionsSkipped.closure += r.skippedClosure.length;
     summary.sessionsSkipped.alreadyExisting += r.skippedExisting.length;
     summary.sessionsSkipped.withheldByConflict += r.withheldCount;
     if (r.outcome === "EXCLUDED") for (const reason of r.reasons) summary.excludedByReason[reason] = (summary.excludedByReason[reason] ?? 0) + 1;
     for (const w of r.warnings) summary.warningsByCode[w] = (summary.warningsByCode[w] ?? 0) + 1;
   }
   const sk = summary.sessionsSkipped;
-  sk.total = sk.pastDates + sk.alreadyExisting + sk.withheldByConflict;
+  sk.total = sk.pastDates + sk.startedToday + sk.closure + sk.alreadyExisting + sk.withheldByConflict;
 
   return { rows, summary };
+}
+
+/**
+ * 승인된 계획의 지문. 같은 입력(같은 asOf, 같은 데이터)이면 항상 같은 값이고, 수강의 결과(outcome/시각 검증/updatedAt)나
+ * 생성될 세션(key, 시각, 길이, 강사, 학생)이 하나라도 달라지면 바뀐다. 세션은 generationEligible인 수강의 것만 포함한다
+ * (보류된 후보는 결과 줄(E)로만 반영). 실행기는 --expect-plan-hash가 재계산 값과 다르면 어떤 것도 쓰지 않고 중단한다.
+ */
+export function computePlanHash(rows: EnrollmentPlanRow[]): string {
+  const lines: string[] = [`planner=${PLANNER_VERSION}`];
+  for (const r of [...rows].sort((a, b) => a.enrollmentId - b.enrollmentId)) {
+    lines.push(`E|${r.enrollmentId}|${r.outcome}|${r.generationEligible ? 1 : 0}|${r.timeVerification}|${r.enrollmentUpdatedAt ?? "-"}`);
+    if (!r.generationEligible) continue;
+    for (const p of r.plannedSessions) {
+      lines.push(`S|${p.key}|${p.scheduledAt.toISOString()}|${p.durationMin}|${p.teacherId}|${p.studentId}`);
+    }
+  }
+  return createHash("sha256").update(lines.join("\n")).digest("hex");
+}
+
+/** 실제 생성 대상 세션 수(= --expect-sessions와 비교하는 값). */
+export function countGenerationSessions(rows: EnrollmentPlanRow[]): number {
+  return rows.filter((r) => r.generationEligible).reduce((n, r) => n + r.plannedSessions.length, 0);
 }

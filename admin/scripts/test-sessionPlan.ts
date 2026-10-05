@@ -136,7 +136,7 @@ for (const dur of [25, 50]) {
   const e = enr({ classTime: "19:00" });
   check("KST 19:00 → 10:00Z", row(plan([e]), e.id).plannedSessions[0].scheduledAt.toISOString() === "2026-10-05T10:00:00.000Z");
   const early = enr({ classTime: "00:30" });
-  const r = row(plan([early]), early.id).plannedSessions[0];
+  const r = row(plan([early], { asOf: new Date("2026-10-04T20:00:00+09:00") }), early.id).plannedSessions[0]; // 전날 저녁 기준(00:30 슬롯이 asOf 이후)
   check("KST 00:30은 UTC로는 전날(10-04T15:30Z)이지만 세션 날짜는 KST 기준 10/05", r.scheduledAt.toISOString() === "2026-10-04T15:30:00.000Z" && r.date === "2026-10-05" && r.weekday === 1);
   const late = enr({ classTime: "23:30" });
   check("KST 23:30 → 14:30Z, 같은 날짜", row(plan([late]), late.id).plannedSessions[0].scheduledAt.toISOString() === "2026-10-05T14:30:00.000Z");
@@ -150,7 +150,7 @@ for (const dur of [25, 50]) {
   const justBefore = row(plan([e], { asOf: new Date("2026-10-04T14:59:59Z") }), e.id); // 10/04 23:59:59 KST (일)
   check("KST 일요일 23:59:59: 오늘=10/04 → 10/05, 10/12 모두 대상", justBefore.plannedSessions.map((p) => p.date).join() === "2026-10-05,2026-10-12" && justBefore.skippedPastDates.length === 0);
   const midnight = row(plan([e], { asOf: new Date("2026-10-04T15:00:00Z") }), e.id); // 10/05 00:00 KST
-  check("KST 10/05 00:00: 오늘=10/05 → 10/05 포함(날짜 기준)", midnight.plannedSessions[0].date === "2026-10-05" && midnight.plannedSessions[0].startedAlready === false);
+  check("KST 10/05 00:00: 오늘=10/05 → 10/05 포함(날짜 기준)", midnight.plannedSessions[0].date === "2026-10-05");
   const after = row(plan([e], { asOf: new Date("2026-10-05T15:00:00Z") }), e.id); // 10/06 00:00 KST
   check("KST 10/06 00:00: 10/05는 과거로 제외, 10/12만 남음", after.skippedPastDates.join() === "2026-10-05" && after.plannedSessions.map((p) => p.date).join() === "2026-10-12");
 }
@@ -162,8 +162,12 @@ for (const dur of [25, 50]) {
   check("과거 + 미래 = 기간 내 전체 수업일(9/1~10/30 월수금 = 26일)", r.skippedPastDates.length + r.plannedSessions.length === 26, `${r.skippedPastDates.length}+${r.plannedSessions.length}`);
   check("과거 수업을 COMPLETED로 소급하지 않음(모든 계획 세션이 SCHEDULED)", r.plannedSessions.every((p) => p.status === "SCHEDULED"));
   const late = row(plan([e], { asOf: new Date("2026-10-05T21:00:00+09:00") }), e.id);
-  check("오늘 수업 시각이 이미 지났으면 대상에 남기되 startedAlready 표시 + 경고", late.plannedSessions[0].date === "2026-10-05" && late.plannedSessions[0].startedAlready === true && late.warnings.includes("FIRST_SLOT_TODAY_ALREADY_STARTED"));
-  check("오늘 수업 시각 전이면 startedAlready=false", r.plannedSessions[0].startedAlready === false && !r.warnings.includes("FIRST_SLOT_TODAY_ALREADY_STARTED"));
+  check("오늘 수업 시각이 이미 지났으면 만들지 않음(skippedStartedToday에 기록), 다음 수업일부터", late.plannedSessions[0].date === "2026-10-07" && late.skippedStartedToday.join() === "2026-10-05", JSON.stringify([late.plannedSessions[0]?.date, late.skippedStartedToday]));
+  check("오늘 수업 시각 전이면 오늘 슬롯도 대상", r.plannedSessions[0].date === "2026-10-05" && r.skippedStartedToday.length === 0);
+  const exactlyNow = row(plan([e], { asOf: new Date("2026-10-05T19:00:00+09:00") }), e.id);
+  check("asOf와 정확히 같은 시각의 슬롯(scheduledAt <= asOf)은 만들지 않음", exactlyNow.skippedStartedToday.join() === "2026-10-05" && exactlyNow.plannedSessions[0].date === "2026-10-07");
+  const oneMinuteBefore = row(plan([e], { asOf: new Date("2026-10-05T18:59:00+09:00") }), e.id);
+  check("시작 1분 전에는 오늘 슬롯도 대상", oneMinuteBefore.plannedSessions[0].date === "2026-10-05");
 }
 {
   const e = enr({ startDate: d("2026-11-02"), endDate: d("2026-12-28"), totalSessions: 9 });
@@ -347,7 +351,7 @@ for (const dur of [25, 50]) {
   ]);
   const sm = mixed.summary;
   check("요약 불변식: eligible + conflict + excluded + errors = totalActive", sm.eligible + sm.conflict + sm.excluded + sm.errors === sm.totalActive && sm.totalActive === 5 && sm.nonActiveExcluded === 1);
-  check("요약 불변식: sessionsSkipped.total = past + existing + withheld", sm.sessionsSkipped.total === sm.sessionsSkipped.pastDates + sm.sessionsSkipped.alreadyExisting + sm.sessionsSkipped.withheldByConflict);
+  check("요약 불변식: sessionsSkipped.total = past + startedToday + closure + existing + withheld", sm.sessionsSkipped.total === sm.sessionsSkipped.pastDates + sm.sessionsSkipped.startedToday + sm.sessionsSkipped.closure + sm.sessionsSkipped.alreadyExisting + sm.sessionsSkipped.withheldByConflict);
   check("요약: 생성 예정 = ELIGIBLE 행의 plannedSessions 합", sm.sessionsWouldBeCreated === mixed.rows.filter((r) => r.outcome === "ELIGIBLE").reduce((n, r) => n + r.plannedSessions.length, 0));
   check("요약: todayKst가 asOf의 KST 날짜", sm.todayKst === "2026-10-05");
 }
@@ -355,13 +359,13 @@ for (const dur of [25, 50]) {
 // ---- 12. 정적 안전 검사 ---------------------------------------------------------------------------------------
 const adminRoot = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(adminRoot, rel), "utf8");
-const WRITE_CALL = /\.(create|createMany|createManyAndReturn|update|updateMany|upsert|delete|deleteMany)\s*\(|\$executeRaw|\$executeRawUnsafe|\$queryRawUnsafe|"use server"|revalidatePath|redirect\(/;
+const WRITE_CALL = /\.(create|createMany|createManyAndReturn|update|updateMany|upsert|delete|deleteMany)\s*\(\s*\{|\$executeRaw|\$executeRawUnsafe|\$queryRawUnsafe|"use server"|revalidatePath|redirect\(/;
 for (const rel of ["src/lib/sessionPlan.ts", "src/lib/sessionPlanData.ts", "src/app/(admin)/session-plan/page.tsx"]) {
-  const src = read(rel).replace(/\/\/.*$/gm, "");
+  const src = read(rel).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
   check(`dry-run 코드에 쓰기성 호출이 없음: ${rel}`, !WRITE_CALL.test(src), (src.match(WRITE_CALL) ?? [""])[0]);
 }
 {
-  const planSrc = read("src/lib/sessionPlan.ts").replace(/\/\/.*$/gm, "");
+  const planSrc = read("src/lib/sessionPlan.ts").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
   check("계획기는 순수 함수 — prisma/서버 모듈을 import하지 않음", !/from\s+["'][^"']*(prisma|backofficeAuth|next\/)[^"']*["']/.test(planSrc));
   check("계획기는 휴강/홀드/전체휴강 코드를 참조하지 않음", !/leaveApply|holdApply|createAcademyClosure|applyClassLeave|applyHold|releaseHold/.test(planSrc));
   const dataSrc = read("src/lib/sessionPlanData.ts");
@@ -385,8 +389,8 @@ for (const rel of ["src/lib/sessionPlan.ts", "src/lib/sessionPlanData.ts", "src/
   };
   walk(path.join(adminRoot, "src"));
   check(
-    "sessionPlan은 dry-run 로더/페이지에서만 import됨(자동 reconcile trigger 없음)",
-    eq(importers.sort(), ["src/app/(admin)/session-plan/page.tsx", "src/lib/sessionPlan.ts", "src/lib/sessionPlanData.ts"].sort()) || eq(importers.sort(), ["src/app/(admin)/session-plan/page.tsx", "src/lib/sessionPlanData.ts"].sort()),
+    "sessionPlan은 페이지/로더/생성 실행기에서만 import됨(수강 등록/수정/휴강/홀드 경로에 자동 trigger 없음)",
+    eq(importers.sort(), ["src/app/(admin)/session-plan/page.tsx", "src/lib/sessionGeneration.ts", "src/lib/sessionPlanData.ts"].sort()),
     importers.join(", "),
   );
 }
@@ -401,7 +405,14 @@ for (const rel of ["src/lib/sessionPlan.ts", "src/lib/sessionPlanData.ts", "src/
   const classroom = read("src/lib/studentClassroom.ts");
   check("remainingLessons: totalSessions - (COMPLETED|MAKEUP_NEEDED) 계산이 그대로", /enrollment\.totalSessions - sessions\.filter\(\(s\) => s\.status === "COMPLETED" \|\| s\.status === "MAKEUP_NEEDED"\)\.length/.test(classroom));
   const enrollActions = read("src/app/(admin)/enrollments/actions.ts");
-  check("deleteEnrollment: prisma.enrollment.delete 한 줄 그대로(세션 정리 없음)", /export async function deleteEnrollment\(id: number\)[\s\S]*?await prisma\.enrollment\.delete\(\{ where: \{ id \} \}\);/.test(enrollActions));
+  const deleteFn = enrollActions.slice(enrollActions.indexOf("export async function deleteEnrollment"));
+  check(
+    "deleteEnrollment: 수업이 있으면 막고(오류 메시지 반환), 삭제 자체는 prisma.enrollment.delete 한 줄 그대로(세션 정리 없음)",
+    /countSessionsBlockingDeletion\(prisma, id\)/.test(deleteFn) &&
+      /return \{ error: deletionBlockedMessage\(blocking\) \};/.test(deleteFn) &&
+      /await prisma\.enrollment\.delete\(\{ where: \{ id \} \}\);/.test(deleteFn) &&
+      !/classSession\.(delete|deleteMany|update)/.test(deleteFn),
+  );
   check("enrollments/actions.ts에는 classSession 생성이 추가되지 않았고 계획기와 연결되지 않음", !/classSession\.create/.test(enrollActions) && !/sessionPlan/.test(enrollActions));
 }
 

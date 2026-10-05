@@ -24,6 +24,15 @@ export default async function EditEnrollmentPage({ params }: { params: Promise<{
   if (!enrollment) notFound();
   if (actor.role === "AGENT" && enrollment.agentId !== actor.agentId) notFound();
 
+  // 수업 생성 배치로 이미 만들어진 수업이 있으면 안내한다 — 요일/시각/종료일을 바꿔도 그 수업들은 자동으로 바뀌지 않는다
+  // (강사/수업 시간 변경만 예정 수업에 반영된다. 자동 재동기화는 아직 없음).
+  let generatedSessionCount = 0;
+  try {
+    generatedSessionCount = await prisma.classSession.count({ where: { enrollmentId, generationBatchId: { not: null }, deletedAt: null } });
+  } catch {
+    generatedSessionCount = 0; // 마이그레이션 적용 전에는 컬럼이 없다 — 수정 화면은 계속 열려야 한다.
+  }
+
   const weekdayCount = parseScheduleDaysLabel(enrollment.scheduleDays).length;
   const basePriceKRW = await computeBasePriceKRW(enrollment.packageMonths, weekdayCount, enrollment.classDurationMin);
 
@@ -40,6 +49,13 @@ export default async function EditEnrollmentPage({ params }: { params: Promise<{
         ← 수강내역관리로
       </Link>
       <h1 className="mb-6 text-xl font-bold text-slate-900">수강내역 수정 — {enrollment.student.name}</h1>
+
+      {generatedSessionCount > 0 && (
+        <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          이 수강에는 일정으로부터 자동 생성된 수업이 {generatedSessionCount}건 있습니다. 수업 요일·시각·시작일·종료일을 바꿔도 이미 생성된 수업은
+          자동으로 바뀌지 않습니다(강사와 수업 시간 변경만 예정 수업에 반영됩니다). 일정 변경이 필요하면 수업 관리에서 개별 수업을 확인해 주세요.
+        </p>
+      )}
 
       <EnrollmentCreateForm
         mode="edit"
