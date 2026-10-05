@@ -10,6 +10,7 @@ import { createGenerationClient, parseDbUrl } from "./lib/generationClient";
 import {
   ACTIVE_LOCK_VALUE,
   GenerationGateError,
+  GenerationLeaseLostError,
   executeGeneration,
   previewGeneration,
   releaseStaleBatchLock,
@@ -437,18 +438,137 @@ test("롤백: 미리보기는 지우지 않고, 수정/홀드/삭제된 세션�
   check("지난 수업(과거 시각)은 롤백하지 않음", (await rollbackGeneration(db, { batchId: r3.batchId, apply: false, actorLabel: "itest", now: new Date("2027-01-01T00:00:00Z") })).deletable === 0);
 });
 
-test("비정상 종료 복구: RUNNING 배치가 있으면 새 실행 거부, 10분 지난 뒤 잠금 해제하면 실행 가능", async () => {
+test("비정상 종료 복구: RUNNING 배치가 있으면 새 실행 거부, heartbeat가 10분 멈춘 뒤 잠금 해제하면 실행 가능", async () => {
   await reset();
   const e = await mkSimple("화", "19:00");
+  const hb = new Date(NOW.getTime() - 60 * 60_000);
   const stale = await db.sessionGenerationBatch.create({
-    data: { mode: "FULL", status: "RUNNING", activeLock: ACTIVE_LOCK_VALUE, asOf: NOW, asOfKstDate: "2026-10-05", plannerVersion: "x", planHash: "h", expectedSessions: 0, actorLabel: "crashed", startedAt: new Date(NOW.getTime() - 60 * 60_000) },
+    data: { mode: "FULL", status: "RUNNING", activeLock: ACTIVE_LOCK_VALUE, leaseOwner: "crashed-owner", heartbeatAt: hb, asOf: NOW, asOfKstDate: "2026-10-05", plannerVersion: "x", planHash: "h", expectedSessions: 0, actorLabel: "crashed", startedAt: hb },
   });
   check("RUNNING 잠금이 남아 있으면 새 실행 거부", (await gateCode(() => run("PILOT", [e.id]))) === "ANOTHER_BATCH_RUNNING");
-  const tooSoon = await releaseStaleBatchLock(db, { batchId: stale.id, now: new Date(stale.startedAt.getTime() + 60_000) });
-  check("시작 후 10분이 안 지났으면 해제하지 않음", tooSoon.released === false);
+  const tooSoon = await releaseStaleBatchLock(db, { batchId: stale.id, now: new Date(hb.getTime() + 60_000) });
+  check("마지막 heartbeat 후 10분이 안 지났으면 해제하지 않음", tooSoon.released === false);
   const rel = await releaseStaleBatchLock(db, { batchId: stale.id, now: NOW });
-  check("10분 지난 RUNNING은 해제(FAILED)", rel.released === true && (await db.sessionGenerationBatch.findUniqueOrThrow({ where: { id: stale.id } })).activeLock === null);
+  const after = await db.sessionGenerationBatch.findUniqueOrThrow({ where: { id: stale.id } });
+  check("heartbeat가 10분 넘게 멈춘 RUNNING은 해제(FAILED, 잠금/소유자 비움)", rel.released === true && after.activeLock === null && after.leaseOwner === null && after.status === "FAILED");
+  check("이미 해제된 배치는 다시 해제하지 않음", (await releaseStaleBatchLock(db, { batchId: stale.id, now: NOW })).released === false);
   check("해제 후에는 정상 실행", (await run("PILOT", [e.id])).status === "SUCCEEDED");
+});
+
+test("임대 펜싱: 살아 있는 실행기가 stale 임계값을 넘겨 멈춘 사이 잠금이 회수되면 새 실행은 진행되고, 옛 실행기는 이후 아무것도 쓰지 못함", async () => {
+  await reset();
+  const e1 = await mkSimple("화", "19:00");
+  const e2 = await mkSimple("목", "19:00");
+  const e3 = await mkSimple("금", "19:00");
+  const STALE_MS = 400;
+  let oldBatchId = "";
+  let markPaused!: () => void;
+  const paused = new Promise<void>((r) => (markPaused = r));
+  let resumeOld!: () => void;
+  const oldGate = new Promise<void>((r) => (resumeOld = r));
+  // 옛 실행기: e1을 만든 뒤 e2 트랜잭션 직전에 멈춘다(살아 있지만 heartbeat가 갱신되지 않는 상태 — 긴 GC/일시정지/네트워크 정체 등).
+  const oldOutcome = run("FULL", [e1.id, e2.id], {
+    hooks: {
+      afterBatchCreated: (id) => {
+        oldBatchId = id;
+      },
+      beforeEnrollmentTx: async (id) => {
+        if (id === e2.id) {
+          markPaused();
+          await oldGate;
+        }
+      },
+    },
+  }).then(
+    (r) => ({ ok: true as const, r }),
+    (e: unknown) => ({ ok: false as const, e }),
+  );
+  await paused;
+  check("(전제) 옛 실행기가 e1 4건을 만들고 RUNNING 잠금을 보유", (await db.classSession.count({ where: { enrollmentId: e1.id } })) === 4 && (await db.sessionGenerationBatch.findUniqueOrThrow({ where: { id: oldBatchId } })).status === "RUNNING");
+  check("임계값 전에는 회수하지 않음", (await releaseStaleBatchLock(dbB, { batchId: oldBatchId, minAgeMs: 60_000 })).released === false);
+  check("회수 전에는 새 실행이 거부됨(ANOTHER_BATCH_RUNNING)", (await gateCode(() => run("FULL", [e3.id]))) === "ANOTHER_BATCH_RUNNING");
+
+  await sleep(STALE_MS + 400);
+  const rel = await releaseStaleBatchLock(dbB, { batchId: oldBatchId, minAgeMs: STALE_MS });
+  const relBatch = await db.sessionGenerationBatch.findUniqueOrThrow({ where: { id: oldBatchId } });
+  check("heartbeat가 임계값을 넘기면 회수: PARTIAL, 생성 4건 집계, 잠금/소유자 비움", rel.released === true && relBatch.status === "PARTIAL" && relBatch.createdSessions === 4 && relBatch.activeLock === null && relBatch.leaseOwner === null, JSON.stringify([rel, relBatch.status, relBatch.createdSessions]));
+
+  // 새 실행이 잠금을 쥔 채 멈춰 있는 동안(동시 실행 구간) 옛 실행기를 깨운다.
+  let markNewHeld!: () => void;
+  const newHeld = new Promise<void>((r) => (markNewHeld = r));
+  let releaseNew!: () => void;
+  const newGate = new Promise<void>((r) => (releaseNew = r));
+  let newBatchId = "";
+  const newRun = run("FULL", [e3.id], {
+    hooks: {
+      afterBatchCreated: async (id) => {
+        newBatchId = id;
+        markNewHeld();
+        await newGate;
+      },
+    },
+  });
+  await newHeld;
+  check("회수 후 새 배치가 잠금을 획득(RUNNING 1건 = 새 배치)", (await db.sessionGenerationBatch.findMany({ where: { activeLock: ACTIVE_LOCK_VALUE } })).map((b) => b.id).join() === newBatchId);
+  resumeOld();
+  const o = await oldOutcome;
+  check(
+    "옛 실행기는 GenerationLeaseLostError로 중단(회수 전 생성 4건 보고)",
+    !o.ok && o.e instanceof GenerationLeaseLostError && o.e.batchId === oldBatchId && o.e.createdSessions === 4,
+    o.ok ? JSON.stringify(o.r.status) : String((o.e as Error)?.message),
+  );
+  check("옛 실행기는 회수 이후 세션을 하나도 만들지 않음(e2 0건)", (await db.classSession.count({ where: { enrollmentId: e2.id } })) === 0);
+  const oldAfter = await db.sessionGenerationBatch.findUniqueOrThrow({ where: { id: oldBatchId }, include: { items: true } });
+  check(
+    "옛 배치 기록은 회수 시점 그대로(상태/생성 수/사유 덮어쓰기 없음, 항목은 e1 GENERATED 1건, 감사 로그 없음)",
+    oldAfter.status === "PARTIAL" && oldAfter.createdSessions === 4 && (oldAfter.failureReason ?? "").includes("heartbeat") && oldAfter.items.length === 1 && oldAfter.items[0].enrollmentId === e1.id && (await db.auditLog.count({ where: { targetId: oldBatchId } })) === 0,
+    JSON.stringify([oldAfter.status, oldAfter.createdSessions, oldAfter.items.map((i) => [i.enrollmentId, i.outcome])]),
+  );
+  releaseNew();
+  const nr = await newRun;
+  check("새 실행은 정상 완료(e3 4건)", nr.status === "SUCCEEDED" && nr.createdSessions === 4 && (await db.classSession.count({ where: { enrollmentId: e3.id } })) === 4);
+  check("전체 세션 8건(e1 4 + e3 4), RUNNING 배치 없음", (await db.classSession.count()) === 8 && (await db.sessionGenerationBatch.count({ where: { status: "RUNNING" } })) === 0);
+  check("e2는 이후 정상 실행으로 생성 가능", (await run("FULL", [e2.id])).items[0]?.outcome === "GENERATED");
+});
+
+test("임대 펜싱: 실행기 트랜잭션이 진행 중이면 회수는 그 커밋을 기다리고, 커밋 때 갱신된 heartbeat를 보고 포기", async () => {
+  await reset();
+  const e1 = await mkSimple("화", "19:00");
+  const e2 = await mkSimple("목", "19:00");
+  let batchId = "";
+  let markInTx!: () => void;
+  const inTx = new Promise<void>((r) => (markInTx = r));
+  let go!: () => void;
+  const goGate = new Promise<void>((r) => (go = r));
+  const runP = run("FULL", [e1.id, e2.id], {
+    hooks: {
+      afterBatchCreated: (id) => {
+        batchId = id;
+      },
+      insideEnrollmentTx: async (id) => {
+        if (id === e1.id) {
+          markInTx();
+          await goGate;
+        }
+      },
+    },
+  });
+  await inTx;
+  await sleep(700); // 트랜잭션 시작 때 갱신한 heartbeat가 임계값(300ms)보다 오래됨
+  let relDone = false;
+  const relP = releaseStaleBatchLock(dbB, { batchId, minAgeMs: 300 }).then((x) => {
+    relDone = true;
+    return x;
+  });
+  await sleep(600);
+  check("회수는 실행기 트랜잭션(배치 행 잠금)이 끝날 때까지 대기", !relDone);
+  go();
+  const rel = await relP;
+  check("커밋 시 갱신된 heartbeat를 보고 회수하지 않음", rel.released === false, rel.reason);
+  const res = await runP;
+  check("실행기는 끝까지 정상 완료(8건)", res.status === "SUCCEEDED" && res.createdSessions === 8, JSON.stringify([res.status, res.createdSessions]));
+  const b = await db.sessionGenerationBatch.findUniqueOrThrow({ where: { id: batchId } });
+  check("배치는 실행기가 마무리(SUCCEEDED, 잠금/소유자 비움)", b.status === "SUCCEEDED" && b.activeLock === null && b.leaseOwner === null);
 });
 
 test("수강 삭제 가드: 소프트 삭제된 세션 포함 세션이 있으면 개수를 알려주고, FK(RESTRICT)로도 막혀 있음", async () => {

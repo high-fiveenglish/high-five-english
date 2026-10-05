@@ -17,6 +17,8 @@ CREATE TABLE "session_generation_batches" (
     "mode" "SessionGenerationMode" NOT NULL,
     "status" "SessionGenerationStatus" NOT NULL DEFAULT 'RUNNING',
     "activeLock" TEXT,
+    "leaseOwner" TEXT,
+    "heartbeatAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "asOf" TIMESTAMP(3) NOT NULL,
     "asOfKstDate" TEXT NOT NULL,
     "plannerVersion" TEXT NOT NULL,

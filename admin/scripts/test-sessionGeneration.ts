@@ -229,6 +229,16 @@ const strip = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\
   check("실행기: 게이트(asOf 나이/날짜, planHash, 예상 세션 수, 슬롯이 지금 이후)", ["ASOF_TOO_OLD", "ASOF_DATE_MISMATCH", "PLAN_HASH_MISMATCH", "EXPECTED_SESSIONS_MISMATCH", "SLOT_NOT_AFTER_NOW", "PILOT_REQUIRES_ELIGIBLE"].every((c) => gen.includes(c)));
   check("실행기: 충돌/비활성/시각 미검증/제외/stale을 항목으로 기록", ["CONFLICT", "INACTIVE_TEACHER", "TIME_UNVERIFIED", "EXCLUDED", "STALE", "ALREADY_GENERATED", "EXISTING_SESSIONS"].every((c) => gen.includes(`"${c}"`)));
   check("실행기는 휴강/홀드/수강 수정 로직을 import하지 않음", !/leaveApply|holdApply|createAcademyClosure|enrollments\/actions/.test(gen));
+  {
+    // 펜싱: 실행기의 모든 쓰기 트랜잭션은 assertLease로 시작하고, 수강 트랜잭션에서는 advisory lock보다 먼저다.
+    const genTx = gen.slice(gen.indexOf("async function generateOneEnrollment"), gen.indexOf("export async function releaseStaleBatchLock"));
+    check(
+      "펜싱: 수강 트랜잭션은 임대 확인(assertLease) → advisory lock 순서, 항목 기록/배치 마무리도 임대 확인 후",
+      genTx.indexOf("await assertLease(tx, batchId, leaseOwner)") >= 0 && genTx.indexOf("await assertLease(tx, batchId, leaseOwner)") < genTx.indexOf("pg_advisory_xact_lock") && (gen.match(/await assertLease\(tx, batchId, leaseOwner\)/g) ?? []).length === 3,
+    );
+    const rel = gen.slice(gen.indexOf("export async function releaseStaleBatchLock"), gen.indexOf("export async function rollbackGeneration"));
+    check("잠금 해제는 시작 시각이 아니라 heartbeat 기준 조건부 갱신(RUNNING + heartbeatAt < cutoff)", /heartbeatAt: \{ lt: cutoff \}/.test(rel) && !/startedAt/.test(rel));
+  }
   check("롤백은 SCHEDULED + 미래 + 연결 없음 + 배치 이후 미수정 세션만 삭제", /status: "SCHEDULED", deletedAt: null/.test(gen) && ["HAS_EVALUATION", "HAS_LEAVE_REQUEST", "HAS_RECORDING", "MODIFIED_AFTER_BATCH", "NOT_IN_FUTURE"].every((c) => gen.includes(c)));
 
   const cli = strip(read("scripts/generate-sessions.ts"));

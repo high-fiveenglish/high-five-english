@@ -666,6 +666,12 @@ model SessionGenerationBatch {
   status SessionGenerationStatus @default(RUNNING)
   // 실행 중에는 'SESSION_GENERATION', 끝나면 null — unique라 동시에 두 배치가 RUNNING일 수 없다.
   activeLock String? @unique
+  // 임대(lease) + 펜싱: 실행기마다 임의 토큰(leaseOwner)을 갖고, 모든 쓰기 트랜잭션은 먼저
+  // "id·leaseOwner·RUNNING·activeLock이 그대로인지"를 조건으로 heartbeatAt을 갱신(행 잠금)한 뒤에만 쓴다.
+  // 잠금 해제(release-lock)는 heartbeatAt이 오래된 경우에만 같은 행을 조건부로 바꾸므로, 해제 이후의 옛 실행기 쓰기는
+  // 전부 거부되고, 실행 중인 트랜잭션이 있으면 해제가 그 커밋을 기다린 뒤 갱신된 heartbeat를 보고 포기한다.
+  leaseOwner  String?
+  heartbeatAt DateTime @default(now())
 
   asOf           DateTime // 계획 기준 시각(이 이후 시각의 수업만 생성)
   asOfKstDate    String // "YYYY-MM-DD"

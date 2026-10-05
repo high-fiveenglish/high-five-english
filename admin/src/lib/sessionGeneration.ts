@@ -9,10 +9,14 @@
 //  - 계획 지문 게이트: 검토한 계획(planHash, 세션 수)이 실행 시점 재계산과 다르면 어떤 것도 쓰지 않고 중단한다.
 //  - 기준 시각(asOf): 실행 시각 30분 이내여야 하고, 만들 세션은 전부 "지금" 이후여야 한다(과거/이미 시작한 수업 금지).
 //  - 배치 single-flight: activeLock unique라 동시에 두 배치가 RUNNING일 수 없다.
+//  - 임대(lease) + 펜싱: 실행기마다 leaseOwner 토큰을 갖고, 모든 쓰기 트랜잭션은 먼저 배치 행을 잠그며 소유권(leaseOwner·RUNNING·
+//    activeLock)을 확인하고 heartbeatAt을 갱신한다. release-lock은 heartbeat가 오래된 배치만 같은 행을 조건부로 바꾸므로,
+//    오래 멈춰 있던 "살아 있는" 실행기가 잠금을 빼앗긴 뒤에는 어떤 쓰기도 하지 못한다(GenerationLeaseLostError로 중단).
 //  - 수강 단위 트랜잭션 + advisory lock(강사 → 수강 순서 고정) + 락 안에서의 재계획(stale 검사) + 생성 건수 검증.
 //  - DB unique(ClassSession.generationKey)가 최후 방어선이다. createMany는 skipDuplicates를 쓰지 않는다 —
 //    예상 밖의 중복은 조용히 성공하지 않고 해당 수강의 트랜잭션을 롤백한 뒤 ERROR 항목으로 기록한다.
 //  - 충돌/비활성 강사/시각 미검증/제외는 조용히 건너뛰지 않고 배치 항목(Item)에 사유와 함께 남긴다.
+import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { formatAppDate } from "@/lib/appTime";
@@ -31,6 +35,8 @@ export const FULL_MAX_ENROLLMENTS = 500;
 /** 계획 기준 시각(asOf)이 실행 시각보다 이만큼 이상 오래되면 계획을 다시 보게 한다. */
 export const MAX_ASOF_AGE_MS = 30 * 60 * 1000;
 export const ACTIVE_LOCK_VALUE = "SESSION_GENERATION";
+/** heartbeat가 이만큼 이상 갱신되지 않은 RUNNING 배치만 release-lock으로 정리할 수 있다. */
+export const STALE_LEASE_MS = 10 * 60 * 1000;
 
 // pg_advisory_xact_lock(int, int)의 첫 번째 인자(네임스페이스) — 다른 용도의 락과 섞이지 않게 고정값을 쓴다.
 const LOCK_NS_ENROLLMENT = 7001;
@@ -65,6 +71,22 @@ export class GenerationGateError extends Error {
     this.name = "GenerationGateError";
   }
 }
+
+/**
+ * 실행 도중 이 실행기의 배치 임대(lease)가 회수됨(release-lock) — 회수 이후에는 아무것도 쓰지 않고 중단한다.
+ * 배치의 최종 상태/생성 수는 회수한 쪽이 이미 기록했다(이 실행기는 덮어쓰지 않는다).
+ */
+export class GenerationLeaseLostError extends Error {
+  constructor(
+    public readonly batchId: string,
+    public readonly createdSessions = 0,
+  ) {
+    super(`배치 ${batchId}의 실행 잠금(lease)을 잃었습니다 — release-lock으로 정리된 배치입니다. 이 실행기는 그 이후 아무것도 쓰지 않고 중단했습니다.`);
+    this.name = "GenerationLeaseLostError";
+  }
+}
+
+class LeaseStillLive extends Error {}
 
 class CountMismatchError extends Error {
   constructor(
@@ -144,7 +166,36 @@ export interface ExecuteRequest {
   /** 테스트용 시계. */
   now?: () => Date;
   /** 테스트 전용 훅(동시성/stale 시나리오 재현). 운영 CLI는 사용하지 않는다. */
-  hooks?: { afterBatchCreated?: (batchId: string) => Promise<void> | void; beforeEnrollmentTx?: (enrollmentId: number) => Promise<void> | void };
+  hooks?: {
+    afterBatchCreated?: (batchId: string) => Promise<void> | void;
+    beforeEnrollmentTx?: (enrollmentId: number) => Promise<void> | void;
+    /** 수강 트랜잭션 안, 임대 확인(배치 행 잠금) 직후. */
+    insideEnrollmentTx?: (enrollmentId: number) => Promise<void> | void;
+  };
+}
+
+type LeaseClient = Pick<PrismaClient, "sessionGenerationBatch" | "$queryRaw">;
+
+/** DB 시계(clock_timestamp) — heartbeat 기록과 stale 판정이 같은 시계를 쓰게 해서 실행 머신 간 시계 차이를 없앤다. */
+async function dbNow(client: Pick<PrismaClient, "$queryRaw">): Promise<Date> {
+  const rows = await client.$queryRaw<{ now: Date | string }[]>`SELECT clock_timestamp() AS now`;
+  return new Date(rows[0].now);
+}
+
+/**
+ * 펜싱: 쓰기 트랜잭션의 맨 처음에 호출한다. 배치 행을 UPDATE로 잠근 뒤(트랜잭션 끝까지 유지) 갱신된 최신 행으로 소유권을 확인한다.
+ * 이미 회수된 배치면 GenerationLeaseLostError를 던져 트랜잭션 전체(이 heartbeat 갱신 포함)를 롤백한다. 행을 잠그고 있으므로
+ * 이 트랜잭션이 끝날 때까지 release-lock은 기다려야 한다.
+ */
+async function assertLease(tx: LeaseClient, batchId: string, leaseOwner: string): Promise<void> {
+  const row = await tx.sessionGenerationBatch.update({
+    where: { id: batchId },
+    data: { heartbeatAt: await dbNow(tx) },
+    select: { status: true, activeLock: true, leaseOwner: true },
+  });
+  if (row.status !== "RUNNING" || row.activeLock !== ACTIVE_LOCK_VALUE || row.leaseOwner !== leaseOwner) {
+    throw new GenerationLeaseLostError(batchId);
+  }
 }
 
 export type ItemOutcome =
@@ -266,12 +317,15 @@ export async function executeGeneration(db: PrismaClient, req: ExecuteRequest): 
     { past: 0, startedToday: 0, existing: 0, closure: 0, conflict: 0 },
   );
   let batchId: string;
+  const leaseOwner = randomUUID();
   try {
     const batch = await db.sessionGenerationBatch.create({
       data: {
         mode: req.mode,
         status: "RUNNING",
         activeLock: ACTIVE_LOCK_VALUE,
+        leaseOwner,
+        heartbeatAt: await dbNow(db),
         asOf: req.asOf,
         asOfKstDate: formatAppDate(req.asOf),
         plannerVersion: PLANNER_VERSION,
@@ -307,21 +361,25 @@ export async function executeGeneration(db: PrismaClient, req: ExecuteRequest): 
   let created = 0;
 
   const recordItem = async (it: ExecuteItem, detail?: unknown) => {
-    await db.sessionGenerationBatchItem.create({
-      data: {
-        batchId,
-        enrollmentId: it.enrollmentId,
-        outcome: it.outcome,
-        reasons: it.reasons,
-        plannedCount: it.plannedCount,
-        createdCount: it.createdCount,
-        detail: detail === undefined ? undefined : JSON.parse(JSON.stringify(detail)),
-      },
+    await db.$transaction(async (tx) => {
+      await assertLease(tx, batchId, leaseOwner);
+      await tx.sessionGenerationBatchItem.create({
+        data: {
+          batchId,
+          enrollmentId: it.enrollmentId,
+          outcome: it.outcome,
+          reasons: it.reasons,
+          plannedCount: it.plannedCount,
+          createdCount: it.createdCount,
+          detail: detail === undefined ? undefined : JSON.parse(JSON.stringify(detail)),
+        },
+      });
     });
     items.push(it);
   };
 
   let fatal: unknown = null;
+  let leaseLost = false;
   try {
     for (const row of preview.scopeRows) {
       const notGenerated = classifyNotGenerated(row);
@@ -339,25 +397,39 @@ export async function executeGeneration(db: PrismaClient, req: ExecuteRequest): 
 
       try {
         await req.hooks?.beforeEnrollmentTx?.(row.enrollmentId);
-        const result = await generateOneEnrollment(db, { batchId, row, asOf: req.asOf });
+        const result = await generateOneEnrollment(db, { batchId, leaseOwner, row, asOf: req.asOf, insideTx: req.hooks?.insideEnrollmentTx });
         items.push(result);
         created += result.createdCount;
       } catch (e) {
+        if (e instanceof GenerationLeaseLostError) {
+          leaseLost = true;
+          break;
+        }
         const it: ExecuteItem = { enrollmentId: row.enrollmentId, outcome: "ERROR", reasons: errorReasons(e), plannedCount: row.plannedSessions.length, createdCount: 0 };
         failures.push(`#${row.enrollmentId}: ${it.reasons.join(",")} — ${safeMessage(e)}`);
         try {
           await recordItem(it, { message: safeMessage(e) });
-        } catch {
+        } catch (re) {
+          if (re instanceof GenerationLeaseLostError) {
+            leaseLost = true;
+            break;
+          }
           items.push(it);
         }
         if (stopOnError) break;
       }
     }
   } catch (e) {
-    // 항목 기록 자체가 실패하는 등 예상 밖의 오류 — 잠금을 남기지 않도록 아래에서 배치를 마무리한 뒤 다시 던진다.
-    fatal = e;
-    failures.push(`FATAL: ${safeMessage(e)}`);
+    if (e instanceof GenerationLeaseLostError) {
+      leaseLost = true;
+    } else {
+      // 항목 기록 자체가 실패하는 등 예상 밖의 오류 — 잠금을 남기지 않도록 아래에서 배치를 마무리한 뒤 다시 던진다.
+      fatal = e;
+      failures.push(`FATAL: ${safeMessage(e)}`);
+    }
   }
+  // 임대를 잃었으면 배치 마무리/감사 로그도 쓰지 않는다 — 회수한 쪽(release-lock)이 이미 최종 상태를 기록했다.
+  if (leaseLost) throw new GenerationLeaseLostError(batchId, created);
 
   // ---- 마무리 ------------------------------------------------------------------------------------------------------
   const countOf = (o: ItemOutcome) => items.filter((i) => i.outcome === o).length;
@@ -377,31 +449,40 @@ export async function executeGeneration(db: PrismaClient, req: ExecuteRequest): 
     if (!ok && !failureReason) failureReason = stale > 0 ? `계획이 바뀌어 건너뛴 수강 ${stale}건(STALE) — 생성 ${created}/${preview.expectedSessions}건` : `생성 ${created}/${preview.expectedSessions}건`;
   }
 
-  await db.sessionGenerationBatch.update({
-    where: { id: batchId },
-    data: {
-      status,
-      activeLock: null,
-      finishedAt: new Date(),
-      createdSessions: created,
-      conflictEnrollments: countOf("CONFLICT"),
-      inactiveTeacherEnrollments: countOf("INACTIVE_TEACHER"),
-      timeUnverifiedEnrollments: countOf("TIME_UNVERIFIED"),
-      errorCount,
-      failureReason,
-    },
-  });
-  await db.auditLog.create({
-    data: {
-      actorRole: "ADMIN",
-      actorId: req.actorAdminId ?? null,
-      actorName: req.actorLabel,
-      action: "SCHEDULE_CREATED",
-      targetType: "SessionGenerationBatch",
-      targetId: batchId,
-      description: `수업 생성 배치 ${req.mode} ${status}: 대상 ${ids.length}건, 생성 ${created}/${preview.expectedSessions}건, 충돌 ${countOf("CONFLICT")}, 비활성 강사 ${countOf("INACTIVE_TEACHER")}, 시각 미검증 ${countOf("TIME_UNVERIFIED")}, 오류 ${errorCount}`,
-    },
-  });
+  try {
+    await db.$transaction(async (tx) => {
+      await assertLease(tx, batchId, leaseOwner);
+      await tx.sessionGenerationBatch.update({
+        where: { id: batchId },
+        data: {
+          status,
+          activeLock: null,
+          leaseOwner: null,
+          finishedAt: new Date(),
+          createdSessions: created,
+          conflictEnrollments: countOf("CONFLICT"),
+          inactiveTeacherEnrollments: countOf("INACTIVE_TEACHER"),
+          timeUnverifiedEnrollments: countOf("TIME_UNVERIFIED"),
+          errorCount,
+          failureReason,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorRole: "ADMIN",
+          actorId: req.actorAdminId ?? null,
+          actorName: req.actorLabel,
+          action: "SCHEDULE_CREATED",
+          targetType: "SessionGenerationBatch",
+          targetId: batchId,
+          description: `수업 생성 배치 ${req.mode} ${status}: 대상 ${ids.length}건, 생성 ${created}/${preview.expectedSessions}건, 충돌 ${countOf("CONFLICT")}, 비활성 강사 ${countOf("INACTIVE_TEACHER")}, 시각 미검증 ${countOf("TIME_UNVERIFIED")}, 오류 ${errorCount}`,
+        },
+      });
+    });
+  } catch (e) {
+    if (e instanceof GenerationLeaseLostError) throw new GenerationLeaseLostError(batchId, created);
+    throw e;
+  }
 
   if (fatal) throw fatal;
   return { batchId, mode: req.mode, status, planHash: preview.planHash, expectedSessions: preview.expectedSessions, createdSessions: created, items, failureReason };
@@ -409,12 +490,15 @@ export async function executeGeneration(db: PrismaClient, req: ExecuteRequest): 
 
 async function generateOneEnrollment(
   db: PrismaClient,
-  args: { batchId: string; row: EnrollmentPlanRow; asOf: Date },
+  args: { batchId: string; leaseOwner: string; row: EnrollmentPlanRow; asOf: Date; insideTx?: (enrollmentId: number) => Promise<void> | void },
 ): Promise<ExecuteItem> {
-  const { batchId, row, asOf } = args;
+  const { batchId, leaseOwner, row, asOf } = args;
   const teacherId = row.teacherId!;
   return db.$transaction(
     async (tx) => {
+      // 펜싱이 가장 먼저: 임대를 잃었으면 아무것도 쓰지 않는다. 배치 행 잠금 → 강사 → 수강 순서는 항상 같다.
+      await assertLease(tx, batchId, leaseOwner);
+      await args.insideTx?.(row.enrollmentId);
       // 락: 강사 → 수강 순서로 항상 같은 순서로 잡는다(교착 방지). 트랜잭션 단위 락이라 PgBouncer 풀링에서도 유효하다.
       await tx.$queryRaw`SELECT 1 AS ok FROM (SELECT pg_advisory_xact_lock(${LOCK_NS_TEACHER}::int, ${teacherId}::int)) AS t`;
       await tx.$queryRaw`SELECT 1 AS ok FROM (SELECT pg_advisory_xact_lock(${LOCK_NS_ENROLLMENT}::int, ${row.enrollmentId}::int)) AS t`;
@@ -435,6 +519,7 @@ async function generateOneEnrollment(
             detail: JSON.parse(JSON.stringify({ nowOutcome: freshRow?.outcome ?? "MISSING", nowReasons: freshRow?.reasons ?? [], nowGenerationEligible: freshRow?.generationEligible ?? false })),
           },
         });
+        await tx.sessionGenerationBatch.update({ where: { id: batchId }, data: { heartbeatAt: await dbNow(tx) } });
         return it;
       }
 
@@ -457,29 +542,62 @@ async function generateOneEnrollment(
       await tx.sessionGenerationBatchItem.create({
         data: { batchId, enrollmentId: row.enrollmentId, outcome: "GENERATED", reasons: [], plannedCount: data.length, createdCount: res.count },
       });
+      // 커밋 시점의 heartbeat — 이 트랜잭션을 기다린 release-lock이 "방금까지 살아 있었음"을 보고 포기하게 한다.
+      await tx.sessionGenerationBatch.update({ where: { id: batchId }, data: { heartbeatAt: await dbNow(tx) } });
       return { enrollmentId: row.enrollmentId, outcome: "GENERATED", reasons: [], plannedCount: data.length, createdCount: res.count } as ExecuteItem;
     },
     { timeout: 120_000, maxWait: 30_000 },
   );
 }
 
-/** 비정상 종료로 남은 RUNNING 배치의 잠금을 사람이 풀 때 쓴다(10분 이상 지난 RUNNING만). */
+/**
+ * 비정상 종료로 남은 RUNNING 배치의 잠금을 사람이 풀 때 쓴다 — heartbeat가 minAgeMs(기본 10분) 이상 멈춘 배치만.
+ * 시작 시각이 아니라 heartbeat로 판단하므로 오래 걸리지만 계속 진행 중인 실행은 회수되지 않는다. 회수는 배치 행에 대한
+ * 조건부 갱신(RUNNING + heartbeat 오래됨)이라 실행기의 쓰기 트랜잭션(같은 행을 잠금)과 직렬화된다:
+ *  - 실행기 트랜잭션이 진행 중이면 그 커밋을 기다리고, 갱신된 heartbeat를 보면 회수하지 않는다.
+ *  - 회수가 먼저 커밋되면 실행기의 다음 트랜잭션은 펜싱(assertLease)에서 거부된다 — 회수 이후 옛 실행기의 쓰기는 없다.
+ * 그래서 여기서 세는 생성 세션 수가 그 배치의 최종 값이다.
+ */
 export async function releaseStaleBatchLock(
   db: PrismaClient,
   args: { batchId: string; now?: Date; minAgeMs?: number },
 ): Promise<{ released: boolean; reason: string }> {
-  const now = args.now ?? new Date();
-  const minAge = args.minAgeMs ?? 10 * 60 * 1000;
+  const minAge = args.minAgeMs ?? STALE_LEASE_MS;
   const batch = await db.sessionGenerationBatch.findUnique({ where: { id: args.batchId } });
   if (!batch) throw new GenerationGateError("BATCH_NOT_FOUND", "배치를 찾을 수 없습니다.");
   if (batch.status !== "RUNNING") return { released: false, reason: `상태가 ${batch.status}라 풀 잠금이 없습니다.` };
-  if (now.getTime() - batch.startedAt.getTime() < minAge) return { released: false, reason: "시작 후 10분이 지나지 않았습니다(아직 실행 중일 수 있음)." };
-  const created = await db.classSession.count({ where: { generationBatchId: batch.id } });
-  await db.sessionGenerationBatch.update({
-    where: { id: batch.id },
-    data: { status: created > 0 ? "PARTIAL" : "FAILED", activeLock: null, finishedAt: now, createdSessions: created, failureReason: "비정상 종료 — 잠금을 수동으로 해제함" },
-  });
-  return { released: true, reason: `잠금 해제(생성된 세션 ${created}건 확인)` };
+  const notStale = { released: false, reason: `마지막 heartbeat 후 ${Math.round(minAge / 60000)}분이 지나지 않았습니다(아직 실행 중일 수 있음).` };
+
+  let created: number | null;
+  try {
+    created = await db.$transaction(
+      async (tx) => {
+        const now = args.now ?? (await dbNow(tx));
+        const cutoff = new Date(now.getTime() - minAge);
+        // 조건부 갱신: 실행기 트랜잭션이 이 행을 잠그고 있으면 커밋까지 기다린 뒤 최신 행으로 조건을 다시 본다.
+        const claimed = await tx.sessionGenerationBatch.updateMany({
+          where: { id: batch.id, status: "RUNNING", heartbeatAt: { lt: cutoff } },
+          data: { status: "FAILED", activeLock: null, leaseOwner: null, finishedAt: now, failureReason: "비정상 종료 — 잠금을 수동으로 해제함(heartbeat 중단)" },
+        });
+        if (claimed.count !== 1) return null;
+        // 행 잠금을 잡은 뒤의 최신 값으로 한 번 더 확인 — 그 사이 실행기가 heartbeat를 갱신했다면 되돌린다.
+        const after = await tx.sessionGenerationBatch.findUniqueOrThrow({ where: { id: batch.id }, select: { heartbeatAt: true } });
+        if (after.heartbeatAt.getTime() >= cutoff.getTime()) throw new LeaseStillLive();
+        const n = await tx.classSession.count({ where: { generationBatchId: batch.id } });
+        if (n > 0) await tx.sessionGenerationBatch.update({ where: { id: batch.id }, data: { status: "PARTIAL", createdSessions: n } });
+        return n;
+      },
+      { timeout: 150_000, maxWait: 30_000 },
+    );
+  } catch (e) {
+    if (e instanceof LeaseStillLive) return notStale;
+    throw e;
+  }
+  if (created === null) {
+    const now = await db.sessionGenerationBatch.findUnique({ where: { id: batch.id }, select: { status: true } });
+    return now?.status === "RUNNING" ? notStale : { released: false, reason: `상태가 ${now?.status ?? "알 수 없음"}라 풀 잠금이 없습니다.` };
+  }
+  return { released: true, reason: `잠금 해제(생성된 세션 ${created}건 확인 — 옛 실행기는 이후 쓰기가 거부됨)` };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

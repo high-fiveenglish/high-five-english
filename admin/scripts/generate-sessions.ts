@@ -13,6 +13,7 @@
 import fs from "node:fs";
 import {
   GenerationGateError,
+  GenerationLeaseLostError,
   executeGeneration,
   previewGeneration,
   releaseStaleBatchLock,
@@ -113,6 +114,10 @@ async function main(): Promise<number> {
     if (e instanceof GenerationGateError) {
       console.error(`중단(${e.code}): ${e.message}  — 아무것도 쓰지 않았습니다.`);
       return 2;
+    }
+    if (e instanceof GenerationLeaseLostError) {
+      console.error(`중단(LEASE_LOST): ${e.message} 이 실행기가 회수 전에 만든 세션 ${e.createdSessions}건은 배치 기록에 집계되어 있습니다.`);
+      return 1;
     }
     console.error(`오류: ${(e instanceof Error ? e.message : String(e)).replace(/postgres(ql)?:\/\/\S+/gi, "<url>")}`);
     return 1;
