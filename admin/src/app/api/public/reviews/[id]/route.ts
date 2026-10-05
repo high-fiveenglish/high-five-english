@@ -4,6 +4,7 @@ import { corsHeaders, corsOptionsResponse } from "@/lib/cors";
 import { studentIdFromAuthHeader } from "@/lib/studentApiToken";
 import { actorFromAdminApiToken } from "@/lib/adminApiToken";
 import { logAudit } from "@/lib/rbac";
+import { parseRouteId } from "@/lib/routeId";
 
 export async function OPTIONS(request: Request) {
   return corsOptionsResponse(request);
@@ -14,11 +15,14 @@ export async function OPTIONS(request: Request) {
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const headers = corsHeaders(request.headers.get("origin"));
   const { id } = await params;
-  const postId = Number(id);
 
   const studentId = studentIdFromAuthHeader(request);
   const admin = studentId ? null : await actorFromAdminApiToken(request);
   if (!studentId && !admin) return NextResponse.json({ error: "login_required" }, { status: 401, headers });
+
+  // 인증 뒤에 id 형식을 확인한다(잘못된 id가 Prisma까지 가서 500이 되거나 "1.5" 같은 값이 다른 글과 맞아떨어지지 않게).
+  const postId = parseRouteId(id);
+  if (postId === null) return NextResponse.json({ error: "not_found" }, { status: 404, headers });
 
   const existing = await prisma.reviewPost.findUnique({ where: { id: postId } });
   if (!existing) return NextResponse.json({ error: "not_found" }, { status: 404, headers });
@@ -46,11 +50,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const headers = corsHeaders(request.headers.get("origin"));
   const { id } = await params;
-  const postId = Number(id);
 
   const studentId = studentIdFromAuthHeader(request);
   const admin = studentId ? null : await actorFromAdminApiToken(request);
   if (!studentId && !admin) return NextResponse.json({ error: "login_required" }, { status: 401, headers });
+
+  const postId = parseRouteId(id);
+  if (postId === null) return NextResponse.json({ error: "not_found" }, { status: 404, headers });
 
   const existing = await prisma.reviewPost.findUnique({ where: { id: postId } });
   if (!existing) return NextResponse.json({ error: "not_found" }, { status: 404, headers });
@@ -81,11 +87,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const headers = corsHeaders(request.headers.get("origin"));
   const { id } = await params;
-  const postId = Number(id);
 
   const studentId = studentIdFromAuthHeader(request);
   const admin = studentId ? null : await actorFromAdminApiToken(request);
   if (!studentId && !admin) return NextResponse.json({ error: "login_required" }, { status: 401, headers });
+
+  const postId = parseRouteId(id);
+  if (postId === null) return NextResponse.json({ error: "not_found" }, { status: 404, headers });
 
   const existing = await prisma.reviewPost.findUnique({ where: { id: postId } });
   if (!existing) return NextResponse.json({ error: "not_found" }, { status: 404, headers });

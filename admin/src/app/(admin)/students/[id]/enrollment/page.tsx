@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { EnrollmentCreateForm } from "../../../enrollments/new/EnrollmentCreateForm";
+import { parseRouteId } from "@/lib/routeId";
 
 export default async function StudentEnrollmentPage({
   params,
@@ -11,7 +12,8 @@ export default async function StudentEnrollmentPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const studentId = Number(id);
+  const studentId = parseRouteId(id);
+  if (studentId === null) notFound();
 
   const [student, teachers] = await Promise.all([
     prisma.student.findUnique({ where: { id: studentId } }),

@@ -6,6 +6,7 @@ import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { formatAppDate } from "@/lib/appTime";
 import { labelForLangCode } from "@/lib/levelTestTranslation";
 import { LevelTestResultView } from "@/components/LevelTestResultView";
+import { parseRouteId } from "@/lib/routeId";
 
 // 관리자가 "확인"을 눌렀을 때 보는 화면 — 학생이 /student/level-tests/[id]에서 보는
 // 화면과 동일한 레이아웃/서식으로 결과를 보여준다(읽기 전용). 내용을 고치려면 "수정"
@@ -17,7 +18,8 @@ export default async function LevelTestResultPreviewPage({
 }) {
   await requireBackofficeActor();
   const { id } = await params;
-  const levelTestId = Number(id);
+  const levelTestId = parseRouteId(id);
+  if (levelTestId === null) notFound();
 
   const levelTest = await prisma.levelTest.findUnique({
     where: { id: levelTestId },

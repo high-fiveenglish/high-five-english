@@ -7,6 +7,7 @@ import { formatAppDate } from "@/lib/appTime";
 import { DeleteButton } from "../../../DeleteButton";
 import { deleteMonthlyEvaluation } from "../../actions";
 import { MonthlyEvaluationForm } from "./MonthlyEvaluationForm";
+import { parseRouteId } from "@/lib/routeId";
 
 export default async function MonthlyEvaluationDetailPage({
   params,
@@ -15,8 +16,10 @@ export default async function MonthlyEvaluationDetailPage({
 }) {
   const { enrollmentId, cycleNumber } = await params;
 
+  const enrollmentIdValue = parseRouteId(enrollmentId);
+  if (enrollmentIdValue === null) notFound();
   const enrollment = await prisma.enrollment.findUnique({
-    where: { id: Number(enrollmentId) },
+    where: { id: enrollmentIdValue },
     include: { student: true, teacher: true },
   });
   if (!enrollment) notFound();

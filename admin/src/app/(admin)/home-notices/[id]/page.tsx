@@ -3,10 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { HomeNoticeForm } from "../HomeNoticeForm";
 import { updateHomeNotice } from "../actions";
+import { parseRouteId } from "@/lib/routeId";
 
 export default async function EditHomeNoticePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const noticeId = Number(id);
+  const noticeId = parseRouteId(id);
+  if (noticeId === null) notFound();
 
   const notice = await prisma.homeNotice.findUnique({ where: { id: noticeId } });
   if (!notice || notice.siteId !== DEFAULT_SITE_ID) notFound();

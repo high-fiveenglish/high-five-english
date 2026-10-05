@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { TeacherEditForm } from "./TeacherEditForm";
+import { parseRouteId } from "@/lib/routeId";
 
 export default async function EditTeacherPage({
   params,
@@ -10,7 +11,8 @@ export default async function EditTeacherPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const teacherId = Number(id);
+  const teacherId = parseRouteId(id);
+  if (teacherId === null) notFound();
 
   const [teacher, teamLeaderCandidates] = await Promise.all([
     prisma.teacher.findUnique({

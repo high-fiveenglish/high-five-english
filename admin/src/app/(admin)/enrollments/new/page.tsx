@@ -1,4 +1,6 @@
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { parseRouteId } from "@/lib/routeId";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { parseScheduleDaysLabel } from "../scheduleUtils";
@@ -42,25 +44,31 @@ export default async function NewEnrollmentPage({
   const scopeAgentId = actor.role === "AGENT" ? actor.agentId : undefined;
   const { studentId, fromRequest, renewFrom, fromReservation } = await searchParams;
 
+  // 값이 있는데 형식이 잘못된 id는 "없는 항목"으로 처리한다(Prisma까지 가서 오류 화면이 되지 않게). 비어 있으면 기존대로 무시.
+  const fromRequestId = fromRequest ? parseRouteId(fromRequest) : undefined;
+  const renewFromId = renewFrom ? parseRouteId(renewFrom) : undefined;
+  const legacyReservationId = fromReservation && /^\d+$/.test(fromReservation) ? parseRouteId(fromReservation) : undefined;
+  if (fromRequestId === null || renewFromId === null || legacyReservationId === null) notFound();
+
   const [students, teachers, request, renewSource, reservationRows] = await Promise.all([
     prisma.student.findMany({
       where: { siteId: DEFAULT_SITE_ID, ...(scopeAgentId ? { agentId: scopeAgentId } : {}), deletedAt: null },
       orderBy: { name: "asc" },
     }),
     prisma.teacher.findMany({ where: { siteId: DEFAULT_SITE_ID }, orderBy: { realName: "asc" }, select: TEACHER_SUMMARY_SELECT }),
-    fromRequest
-      ? prisma.enrollmentRequest.findUnique({ where: { id: Number(fromRequest) }, include: { student: true } })
+    fromRequestId
+      ? prisma.enrollmentRequest.findUnique({ where: { id: fromRequestId }, include: { student: true } })
       : null,
-    renewFrom
-      ? prisma.enrollment.findUnique({ where: { id: Number(renewFrom) }, include: { student: true } })
+    renewFromId
+      ? prisma.enrollment.findUnique({ where: { id: renewFromId }, include: { student: true } })
       : null,
     // fromReservation 값은 순수 숫자(legacy: groupId 도입 전 행의 id)이거나 UUID
     // 문자열(신규: groupId)이다 — 형태만으로 명확히 구분해서 서로 섞이지 않게 한다
     // (reservations/actions.ts의 cancelReservation과 동일한 판별 방식).
     fromReservation
-      ? /^\d+$/.test(fromReservation)
+      ? legacyReservationId !== undefined
         ? prisma.slotReservation.findMany({
-            where: { id: Number(fromReservation), groupId: null },
+            where: { id: legacyReservationId, groupId: null },
             include: { teacher: true },
           })
         : prisma.slotReservation.findMany({ where: { groupId: fromReservation }, include: { teacher: true } })

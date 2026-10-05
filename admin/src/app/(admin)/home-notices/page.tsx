@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { parseRouteId } from "@/lib/routeId";
 import { DEFAULT_SITE_ID, HIGHFIVE_AGENT_CODE } from "@/lib/constants";
 import { DeleteButton } from "../DeleteButton";
 import { deleteHomeNotice } from "./actions";
@@ -11,7 +13,8 @@ export default async function HomeNoticesPage({
   searchParams: Promise<{ agentId?: string }>;
 }) {
   const { agentId: agentIdRaw } = await searchParams;
-  const selectedAgentId = agentIdRaw ? Number(agentIdRaw) : null;
+  const selectedAgentId = agentIdRaw ? parseRouteId(agentIdRaw) : null;
+  if (agentIdRaw && selectedAgentId === null) notFound();
 
   const [agents, notices] = await Promise.all([
     prisma.agent.findMany({ where: { siteId: DEFAULT_SITE_ID }, orderBy: { name: "asc" } }),

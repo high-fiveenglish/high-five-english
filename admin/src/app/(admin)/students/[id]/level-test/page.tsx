@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { LevelTestForm } from "./LevelTestForm";
+import { parseRouteId } from "@/lib/routeId";
 
 export default async function StudentLevelTestPage({
   params,
@@ -9,7 +10,8 @@ export default async function StudentLevelTestPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const studentId = Number(id);
+  const studentId = parseRouteId(id);
+  if (studentId === null) notFound();
 
   const [student, previousLevelTest] = await Promise.all([
     prisma.student.findUnique({ where: { id: studentId } }),

@@ -4,6 +4,7 @@ import { corsHeaders, corsOptionsResponse } from "@/lib/cors";
 import { studentIdFromAuthHeader } from "@/lib/studentApiToken";
 import { applyStudentRequestedLeave, getStudentClassroomSnapshot } from "@/lib/studentClassroom";
 import { logAudit } from "@/lib/rbac";
+import { isInt4 } from "@/lib/routeId";
 
 // 마케팅 사이트의 "수업 연기" 버튼(RescheduleConfirmModal)이 부르는 공개 엔드포인트 —
 // admin 자체 학생 화면(student/(dashboard)/sessions)의 "연기 신청"과 완전히 같은 처리
@@ -32,7 +33,8 @@ export async function POST(request: Request) {
   const lessonId = Number(b.lessonId);
   const reason = String(b.reason ?? "");
 
-  if (!Number.isInteger(lessonId)) {
+  // 정수가 아니거나 DB 정수(int4) 범위를 넘는 값은 Prisma까지 가면 500이 되므로 여기서 400으로 끝낸다.
+  if (!isInt4(lessonId)) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400, headers });
   }
 

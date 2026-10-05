@@ -6,6 +6,7 @@ import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { formatAppDate } from "@/lib/appTime";
 import { labelForLangCode } from "@/lib/levelTestTranslation";
 import { LevelTestResultView } from "@/components/LevelTestResultView";
+import { parseRouteId } from "@/lib/routeId";
 
 export default async function StudentLevelTestResultPage({
   params,
@@ -15,10 +16,13 @@ export default async function StudentLevelTestResultPage({
   const student = await requireStudent();
   const { id } = await params;
 
+  const routeId = parseRouteId(id);
+  if (routeId === null) notFound();
+
   // studentId를 where절에 직접 걸어 소유권을 검사한다 — 다른 학생의 레벨테스트 id를
   // 넣으면 결과가 아예 없어(null) notFound()로 이어진다.
   const levelTest = await prisma.levelTest.findFirst({
-    where: { id: Number(id), studentId: student.id },
+    where: { id: routeId, studentId: student.id },
     include: { teacher: { select: TEACHER_SUMMARY_SELECT } },
   });
 

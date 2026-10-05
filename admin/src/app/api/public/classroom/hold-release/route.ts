@@ -5,6 +5,7 @@ import { studentIdFromAuthHeader } from "@/lib/studentApiToken";
 import { getStudentClassroomSnapshot } from "@/lib/studentClassroom";
 import { releaseHold } from "@/lib/holdApply";
 import { logAudit } from "@/lib/rbac";
+import { isInt4 } from "@/lib/routeId";
 
 // 마케팅 사이트의 "홀드 해제 요청" 버튼이 부르는 공개 엔드포인트 — admin 자체 학생
 // 화면(student/(dashboard)의 HoldReleaseButton)과 완전히 같은 처리(holdApply.releaseHold)를
@@ -28,7 +29,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_json" }, { status: 400, headers });
   }
   const enrollmentId = Number((body as Record<string, unknown>).enrollmentId);
-  if (!Number.isInteger(enrollmentId)) {
+  // 정수가 아니거나 DB 정수(int4) 범위를 넘는 값은 Prisma까지 가면 500이 되므로 여기서 400으로 끝낸다.
+  if (!isInt4(enrollmentId)) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400, headers });
   }
 

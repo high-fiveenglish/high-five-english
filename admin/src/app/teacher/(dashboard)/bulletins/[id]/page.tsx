@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireTeacher } from "@/lib/teacherAuth";
 import { formatAppDateTime } from "@/lib/appTime";
+import { parseRouteId } from "@/lib/routeId";
 
 const fmtDateTime = formatAppDateTime;
 
@@ -9,7 +10,10 @@ export default async function TeacherBulletinDetailPage({ params }: { params: Pr
   const teacher = await requireTeacher();
   const { id } = await params;
 
-  const bulletin = await prisma.bulletin.findUnique({ where: { id: Number(id) } });
+  const routeId = parseRouteId(id);
+  if (routeId === null) notFound();
+
+  const bulletin = await prisma.bulletin.findUnique({ where: { id: routeId } });
   // URL의 id만 믿지 않고, 강사 본인의 site 범위가 아니면 접근을 막는다.
   if (!bulletin || bulletin.siteId !== teacher.siteId) notFound();
 
