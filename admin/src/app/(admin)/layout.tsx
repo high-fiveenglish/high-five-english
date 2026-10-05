@@ -100,6 +100,7 @@ const ADMIN_ONLY_GROUP = {
     { href: "/accounts", label: "계정 관리" },
     { href: "/permissions", label: "권한 관리" },
     { href: "/audit-log", label: "Audit Log" },
+    { href: "/session-plan", label: "수업 생성 Dry-run" },
   ],
 } as const;
 
