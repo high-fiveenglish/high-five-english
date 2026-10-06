@@ -6,7 +6,13 @@
 // 타임스탬프가 붙은 실제 발화 + (4) application이 측정한 Talk Time을 조립해 호출한다.
 //
 // 학생용 보고서(Output 1)와 강사 QC(Output 2)는 따로 호출한다: 각 출력이 짧아져 중복·환각이 줄고, 검증에
-// 실패한 쪽만 이유를 알려 다시 생성한다(최대 MAX_ATTEMPTS번). 끝내 통과하지 못하면 throw → ANALYSIS_FAILED.
+// 실패한 쪽만 이유를 알려 다시 생성한다(최대 MAX_ATTEMPTS번).
+//   · 학생용 보고서가 끝내 통과하지 못하면 throw → ANALYSIS_FAILED (전달할 초안이 없다).
+//   · 학생용 보고서는 통과했는데 강사 QC가 MAX_ATTEMPTS번 안에 검증을 통과하지 못했을 때만(EvaluationNotAcceptedError) throw하지 않는다:
+//     학생용 초안은 그대로 돌려주고 teacherQc는 null이다(QC는 강사 내부 자료라서, 그것 때문에 통과한 초안까지 버리지 않는다).
+//   · 그 밖의 QC 오류(Anthropic API 오류, 네트워크, 키/설정 오류, SDK 예외 등)는 부분 성공으로 흡수하지 않는다: 기존처럼 throw → ANALYSIS_FAILED.
+//     인프라 문제가 "QC 없는 검토 대기"로 보이면 안 된다.
+// 실패 이유는 범주와 건수로만 남긴다(evaluationDiagnostics.ts) — 검증 문장에는 전사 속 학생 발화가 인용돼 있어 로그/DB에 둘 수 없다.
 import Anthropic from "@anthropic-ai/sdk";
 import { ONLINE_ENGLISH_FEEDBACK_SKILL } from "./skill/onlineEnglishFeedbackSkill";
 import {
@@ -26,6 +32,7 @@ import {
   toRoleUtterances,
 } from "./speakerTranscript";
 import type { TalkTimeResult, Utterance } from "./talkTime";
+import { EvaluationNotAcceptedError, recordAttempt, type AttemptRecord, type GenerationDiagnostics } from "./evaluationDiagnostics";
 
 const MODEL = "claude-haiku-4-5";
 // 보고서 하나당 약 1.5~3천 토큰이므로 넉넉하다. stop_reason이 max_tokens면 실패로 처리한다.
@@ -64,10 +71,15 @@ export interface LessonContext {
 export interface AIEvaluationResult {
   /** Output 1 — 학생/학부모용, 영어 canonical draft. AudioRecording.aiDraft에 저장. */
   studentFeedback: string;
-  /** Output 2 — 강사 QC, 항상 영어. AudioRecording.teacherQcDraft에 저장, 학생에게 노출 안 함. */
-  teacherQc: string;
-  /** 각 보고서가 검증을 통과하기까지의 생성 시도 횟수. */
+  /** Output 2 — 강사 QC, 항상 영어. AudioRecording.teacherQcDraft에 저장, 학생에게 노출 안 함.
+   * null: 학생용 보고서는 통과했지만 QC가 허용된 시도 안에 검증을 통과하지 못했다(teacherQcFailure에 범주별 요약). */
+  teacherQc: string | null;
+  /** teacherQc가 null일 때만: 범주와 건수로만 쓴 이유(전사·보고서 문장 없음). 강사 내부 기록용 — 학생에게 노출하지 않는다. */
+  teacherQcFailure?: string;
+  /** 각 보고서가 검증을 통과하기까지(또는 포기하기까지)의 생성 시도 횟수. */
   attempts?: { studentFeedback: number; teacherQc: number };
+  /** 시도별 실패 범주 기록(범주와 건수만). */
+  diagnostics?: GenerationDiagnostics;
 }
 
 export interface MessageLike {
@@ -86,6 +98,8 @@ export interface GenerateAIEvaluationParams {
   lessonContext: LessonContext;
   /** 테스트용 주입점. 기본값은 실제 Anthropic 클라이언트. */
   createMessage?: CreateMessageFn;
+  /** 생성이 끝났을 때(성공이든 실패든) 한 번 호출된다. 범주와 건수만 담긴 시도 기록을 받는다 — 로그용. 예외는 무시된다. */
+  onDiagnostics?: (diagnostics: GenerationDiagnostics) => void;
 }
 
 type OutputKind = "student" | "teacher";
@@ -235,14 +249,16 @@ export async function generateAIEvaluationDraft(params: GenerateAIEvaluationPara
     talkTime: params.talkTime,
   };
 
-  async function generateOne(kind: OutputKind): Promise<{ text: string; attempts: number }> {
+  async function generateOne(kind: OutputKind): Promise<{ text: string; attempts: number; records: AttemptRecord[] }> {
     const spec = OUTPUTS[kind];
     let issues: string[] = [];
     let previousReport: string | null = null;
+    const records: AttemptRecord[] = [];
     const startedAt = Date.now();
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       if (attempt > 1 && Date.now() - startedAt > ATTEMPT_DEADLINE_MS) {
-        throw new Error(`${spec.label} not accepted within the time budget after ${attempt - 1} attempts — ${issues.join("; ")}`);
+        records.push(recordAttempt(attempt, null, "time_budget"));
+        throw new EvaluationNotAcceptedError(spec.label, records);
       }
       const userMessage = [
         baseUserMessage,
@@ -276,6 +292,7 @@ export async function generateAIEvaluationDraft(params: GenerateAIEvaluationPara
       if (message.stop_reason === "max_tokens") {
         issues = [`the output was cut off at the token limit (${MAX_TOKENS}); keep the report within the skill's length for this class`];
         previousReport = null;
+        records.push(recordAttempt(attempt, null, "response_cut_off"));
         continue;
       }
       const toolUse = message.content.find((b) => b.type === "tool_use" && b.name === spec.tool);
@@ -283,24 +300,57 @@ export async function generateAIEvaluationDraft(params: GenerateAIEvaluationPara
       if (!text) {
         issues = ["the response did not contain the report as non-empty text"];
         previousReport = null;
+        records.push(recordAttempt(attempt, null, "response_empty"));
         continue;
       }
       const validation = kind === "student" ? validateStudentFeedback(text, validationContext) : validateTeacherQc(text, validationContext);
-      if (validation.ok) return { text, attempts: attempt };
+      records.push(recordAttempt(attempt, validation.issues));
+      if (validation.ok) return { text, attempts: attempt, records };
+      // the validators' sentences go back to Claude (that is how it learns what to fix) but are NOT kept: only the categories are (records)
       issues = validation.issues;
       previousReport = text;
     }
-    throw new Error(`${spec.label} rejected after ${MAX_ATTEMPTS} attempts — ${issues.join("; ")}`);
+    throw new EvaluationNotAcceptedError(spec.label, records);
   }
 
   const [student, teacher] = await Promise.allSettled([generateOne("student"), generateOne("teacher")]);
-  if (student.status === "rejected" || teacher.status === "rejected") {
+
+  const recordsOf = (r: PromiseSettledResult<{ records: AttemptRecord[] }>): AttemptRecord[] =>
+    r.status === "fulfilled" ? r.value.records : r.reason instanceof EvaluationNotAcceptedError ? r.reason.records : [];
+  const diagnostics: GenerationDiagnostics = { student: recordsOf(student), teacherQc: recordsOf(teacher) };
+  try {
+    params.onDiagnostics?.(diagnostics); // categories and counts only; a failing logger must never fail the evaluation
+  } catch {
+    /* ignore */
+  }
+
+  // The whole analysis fails (ANALYSIS_FAILED), exactly as before, when
+  //  - the student report failed: it is the deliverable, without it there is nothing to review; or
+  //  - the QC failed for any reason OTHER than "did not pass validation in the allowed attempts" (an API error, a network error, a missing key,
+  //    an SDK exception, a bug ...): that is an infrastructure or code problem and must show up as a failure, not as a draft without a QC.
+  const qcRejectedByValidation = teacher.status === "rejected" && teacher.reason instanceof EvaluationNotAcceptedError;
+  if (student.status === "rejected" || (teacher.status === "rejected" && !qcRejectedByValidation)) {
     const reasons = [student, teacher].flatMap((r) => (r.status === "rejected" ? [r.reason instanceof Error ? r.reason.message : String(r.reason)] : []));
     throw new Error(reasons.join(" | "));
+  }
+
+  // Only here: the student report passed and the teacher QC used up its attempts without passing validation. The QC is an internal report, so the
+  // passing student report is returned (teacherQc null) instead of being thrown away. The reason is a category summary (never report or transcript text).
+  if (teacher.status === "rejected") {
+    // every other rejection was thrown above; this keeps the type narrowing honest and fails safe if that ever changes
+    if (!(teacher.reason instanceof EvaluationNotAcceptedError)) throw teacher.reason;
+    return {
+      studentFeedback: student.value.text,
+      teacherQc: null,
+      teacherQcFailure: teacher.reason.message,
+      attempts: { studentFeedback: student.value.attempts, teacherQc: diagnostics.teacherQc.length },
+      diagnostics,
+    };
   }
   return {
     studentFeedback: student.value.text,
     teacherQc: teacher.value.text,
     attempts: { studentFeedback: student.value.attempts, teacherQc: teacher.value.attempts },
+    diagnostics,
   };
 }

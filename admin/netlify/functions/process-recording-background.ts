@@ -95,12 +95,18 @@ const prismaDeps: ProcessRecordingDeps = {
       data: {
         processingStatus: "NEEDS_REVIEW",
         aiDraft: result.studentFeedback,
+        // null when the student report passed but the teacher QC did not (the QC is an internal report: it must not take the student draft down
+        // with it). The reason is a category summary (no transcript or report text); it is internal and never reaches the browser.
         teacherQcDraft: result.teacherQc,
         analyzedAt: new Date(),
+        ...(result.teacherQcFailure ? { errorMessage: truncateErrorMessage(result.teacherQcFailure) } : {}),
       },
     });
+    // ids and counts only
+    console.log("ai-evaluation-saved", JSON.stringify({ recordingId: id, teacherQc: result.teacherQc === null ? "unavailable" : "saved", attempts: result.attempts }));
   },
-  generateDraft: generateAIEvaluationDraft,
+  // Per-attempt failure categories and counts (evaluationDiagnostics.ts) — never any transcript or report text.
+  generateDraft: (params) => generateAIEvaluationDraft({ ...params, onDiagnostics: (d) => console.log("ai-evaluation-attempts", JSON.stringify(d)) }),
 };
 
 export default async (req: Request) => handleProcessRecordingRequest(req, getRecordingProcessingSecret(), prismaDeps);

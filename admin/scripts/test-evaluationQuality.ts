@@ -4,7 +4,8 @@
 // duration, duplicated report, "you" in a teen report, a teacher quote that mentions a month) without any real data.
 import crypto from "node:crypto";
 import type Anthropic from "@anthropic-ai/sdk";
-import { generateAIEvaluationDraft, type CreateMessageFn } from "../src/lib/aiEvaluation";
+import { generateAIEvaluationDraft, type AIEvaluationResult, type CreateMessageFn } from "../src/lib/aiEvaluation";
+import { classifyIssue, summarizeAttempts, type GenerationDiagnostics, type IssueCategory } from "../src/lib/evaluationDiagnostics";
 import { processRecording, type ProcessRecordingDeps } from "../src/lib/recordingProcessing";
 import {
   buildProjectRules,
@@ -572,6 +573,8 @@ const userText = (c: Anthropic.MessageCreateParamsNonStreaming) => String(c.mess
 const LESSON = { lessonDate: "2026-10-02", lessonDurationMinutes: 25, studentAgeBand: "teen" as const, studentRegion: "KOREA", textbookName: null, classMethod: null };
 const DUP_S = `${GOOD_FEEDBACK}\n\n📘 October 2, 2026\n\n`;
 const DUP_Q = `${GOOD_QC}\n\n${GOOD_QC}`;
+// a QC that quotes the tutor and is valid in every other respect: it breaks only the "Output 2 has NO quotation marks" rule
+const QUOTED_QC = qcLines({ item3: `At [09:10] the tutor asked "Why do you think they studied rich countries?" and built on the answer.` });
 const params = (createMessage: CreateMessageFn) => ({ utterances: UTTS, teacherSpeakerLabel: TEACHER, talkTime: TALK, lessonContext: LESSON, createMessage });
 
 async function main() {
@@ -613,7 +616,7 @@ async function main() {
     } catch (e) {
       message = e instanceof Error ? e.message : String(e);
     }
-    assert(/Output 1 \(student feedback\) rejected after 4 attempts/.test(message) && /"📘" title markers/.test(message), "13. four failed attempts throw an error that lists the validation issues");
+    assert(/Output 1 \(student feedback\) rejected after 4 attempts — a1 structure×\d/.test(message) && !/📘/.test(message), "13. four failed attempts throw an error that lists the failed attempts by category (no validator sentences)");
     assert(f.of("student").length === 4, "13. never more than 4 attempts per report");
     const both = fakeCreate({ student: [DUP_S], teacher: [DUP_Q] });
     let both_msg = "";
@@ -662,6 +665,180 @@ async function main() {
     const empty: ProcessRecordingDeps = { ...deps, async fetchTranscript() { return { id: "tx-1", status: "completed", text: "", utterances: [], audio_duration: 0 }; } };
     marked.length = 0;
     assert((await processRecording(1, empty)) === "transcript_unavailable" && marked.length === 1, "13. a transcript with no utterances is a failure, not an evaluation of nothing");
+  }
+
+  // ── 14. A rejected teacher QC no longer discards the passing student report; failures are recorded as categories only ──────────────────
+  {
+    const leaked = (text: string) => UTTS.some((u) => text.toLowerCase().includes(u.text.slice(0, 18).toLowerCase())) || /rich countries|why do you think|weekend plans/i.test(text);
+    assert(checkTeacherQcNoQuotations(QUOTED_QC).length === 1, "14. the fixture really breaks the Output 2 quotation rule (the rule itself is unchanged)");
+
+    // student PASS + QC rejected 4 times
+    const diag: GenerationDiagnostics[] = [];
+    const f = fakeCreate({ student: [GOOD_FEEDBACK], teacher: [QUOTED_QC] });
+    const r = await generateAIEvaluationDraft({ ...params(f.fn), onDiagnostics: (d) => diag.push(d) });
+    assert(!!r && r.studentFeedback === GOOD_FEEDBACK && r.teacherQc === null, "14. student PASS + QC rejected 4 times: the student report is returned and teacherQc is null (no throw)");
+    assert(f.of("teacher").length === 4 && f.of("student").length === 1, "14. the QC is tried exactly 4 times, the passing student report is not regenerated");
+    assert(r?.attempts?.studentFeedback === 1 && r.attempts.teacherQc === 4, "14. attempts: student 1, QC 4");
+    assert(r?.teacherQcFailure === "Output 2 (teacher QC) rejected after 4 attempts — a1 quotation_marks×2; a2 quotation_marks×2; a3 quotation_marks×2; a4 quotation_marks×2", "14. the failure summary is categories and counts only");
+    assert(diag.length === 1 && diag[0].student.length === 1 && diag[0].student[0].ok && diag[0].teacherQc.length === 4 && diag[0].teacherQc.every((a) => !a.ok && a.categories.quotation_marks === 2), "14. diagnostics: one call, student passed first time, QC failed 4 times on quotation_marks");
+    assert(!leaked(JSON.stringify(diag)) && !leaked(r?.teacherQcFailure ?? ""), "14. neither the diagnostics nor the failure summary contain any transcript or report text");
+    assert(userText(f.of("teacher")[1]).includes("quotation marks") && userText(f.of("teacher")[1]).includes("rich countries"), "14. Claude still receives the full validation sentences in the retry notice (only what is KEPT changed)");
+    assert(/NO quotation marks at all/.test(userText(f.of("teacher")[0])) && !/VALIDATION FAILED/.test(userText(f.of("teacher")[0])), "14. the QC prompt and its checklist are unchanged");
+    assert(f.calls.every((c) => c.model === "claude-haiku-4-5" && c.temperature === 0.2), "14. model and temperature are unchanged");
+
+    // the same through the processing step: saved as a draft, not failed
+    const savedResults: AIEvaluationResult[] = [];
+    const marks: { from: string; msg: string }[] = [];
+    const base: ProcessRecordingDeps = {
+      async findRecording() {
+        return { id: 1, providerTranscriptId: "tx-1", processingStatus: "TRANSCRIBED", confirmedTeacherSpeaker: null, storedUtterances: null, lessonContext: LESSON };
+      },
+      async fetchTranscript() {
+        return { id: "tx-1", status: "completed", text: UTTS.map((u) => u.text).join(" "), utterances: UTTS, audio_duration: 1510 };
+      },
+      async claimForAnalysis() {
+        return true;
+      },
+      inferRoles: () => ({ confidence: "HIGH", teacherLabel: TEACHER, firstSpeaker: TEACHER, speakerCount: 2, minorSpeakers: [], votes: {}, reasons: [], features: [] }) as never,
+      async markNeedsSpeakerConfirmation() {
+        throw new Error("the gate must not stop this fixture");
+      },
+      async markFailed(_id, from, msg) {
+        marks.push({ from, msg });
+      },
+      async saveDraft(_id, result) {
+        savedResults.push(result);
+      },
+      generateDraft: (p) => generateAIEvaluationDraft({ ...p, createMessage: fakeCreate({ student: [GOOD_FEEDBACK], teacher: [QUOTED_QC] }).fn }),
+    };
+    assert((await processRecording(1, base)) === "ok" && marks.length === 0 && savedResults.length === 1, "14. processing: student PASS + QC rejected -> outcome ok, the draft is saved, the recording is NOT marked failed");
+    assert(savedResults[0].studentFeedback === GOOD_FEEDBACK && savedResults[0].teacherQc === null && /^Output 2 \(teacher QC\) rejected after 4 attempts — a1 quotation_marks×2/.test(savedResults[0].teacherQcFailure ?? ""), "14. processing: saveDraft receives the student report, teacherQc null and the category summary");
+
+    // student FAIL keeps the old behaviour
+    savedResults.length = 0;
+    const studentFail: ProcessRecordingDeps = { ...base, generateDraft: (p) => generateAIEvaluationDraft({ ...p, createMessage: fakeCreate({ student: [DUP_S], teacher: [GOOD_QC] }).fn }) };
+    assert((await processRecording(1, studentFail)) === "error" && marks.length === 1 && marks[0].from === "ANALYZING" && savedResults.length === 0, "14. processing: student FAIL -> ANALYSIS_FAILED as before, nothing saved (even though the QC passed)");
+    assert(/^Output 1 \(student feedback\) rejected after 4 attempts — a1 structure×\d/.test(marks[0].msg) && !leaked(marks[0].msg), "14. processing: the stored failure reason is a category summary");
+
+    // student PASS + QC PASS: unchanged
+    savedResults.length = 0;
+    const bothPass: ProcessRecordingDeps = { ...base, generateDraft: (p) => generateAIEvaluationDraft({ ...p, createMessage: fakeCreate({ student: [GOOD_FEEDBACK], teacher: [GOOD_QC] }).fn }) };
+    assert((await processRecording(1, bothPass)) === "ok" && savedResults[0].teacherQc === GOOD_QC && savedResults[0].teacherQcFailure === undefined, "14. student PASS + QC PASS behaves as before (QC saved, no failure text)");
+
+    // QC fixed on the second attempt
+    const ok2 = fakeCreate({ student: [GOOD_FEEDBACK], teacher: [QUOTED_QC, GOOD_QC] });
+    const dg2: GenerationDiagnostics[] = [];
+    const r2 = await generateAIEvaluationDraft({ ...params(ok2.fn), onDiagnostics: (d) => dg2.push(d) });
+    assert(r2?.teacherQc === GOOD_QC && r2.teacherQcFailure === undefined && r2.attempts?.teacherQc === 2, "14. a QC that passes on a later attempt is saved with no failure text");
+    assert(dg2[0].teacherQc.length === 2 && dg2[0].teacherQc[0].categories.quotation_marks === 2 && dg2[0].teacherQc[1].ok, "14. diagnostics record the failed attempt and the passing one");
+
+    // both fail: both reasons, categories only
+    const both = fakeCreate({ student: [DUP_S], teacher: [QUOTED_QC] });
+    let bothMsg = "";
+    try {
+      await generateAIEvaluationDraft(params(both.fn));
+    } catch (e) {
+      bothMsg = e instanceof Error ? e.message : String(e);
+    }
+    assert(/Output 1 \(student feedback\) rejected after 4 attempts — a1 structure/.test(bothMsg) && /Output 2 \(teacher QC\) rejected after 4 attempts — a1 quotation_marks×2/.test(bothMsg) && !leaked(bothMsg), "14. both fail: the whole analysis fails with both reasons as categories");
+
+    // An UNEXPECTED QC error is not absorbed as a partial success: the analysis fails exactly as before (ANALYSIS_FAILED) and nothing is saved.
+    // Only a QC that used up its attempts without passing VALIDATION (EvaluationNotAcceptedError) is a partial success.
+    class FakeApiError extends Error {
+      status = 529;
+    }
+    const studentOkReply = { content: [{ type: "tool_use", name: TOOL.student, input: { report: GOOD_FEEDBACK } }], stop_reason: "tool_use" };
+    const qcThrows =
+      (err: unknown): CreateMessageFn =>
+      async (body) => {
+        if ((body.tools?.[0] as { name: string }).name === TOOL.teacher) throw err;
+        return studentOkReply;
+      };
+    const qcErrors: [string, unknown][] = [
+      ["a plain Error", new Error("boom")],
+      ["an Anthropic-style API error (status 529)", new FakeApiError("overloaded")],
+      ["a network error", Object.assign(new Error("fetch failed"), { cause: { code: "ECONNRESET" } })],
+      ["a configuration error (401, bad key)", Object.assign(new Error("401 invalid x-api-key"), { status: 401 })],
+      ["a TypeError (SDK or code bug)", new TypeError("x is not a function")],
+      ["a thrown string", "weird"],
+    ];
+    for (const [label, err] of qcErrors) {
+      const diagErr: GenerationDiagnostics[] = [];
+      let rejected = false;
+      try {
+        await generateAIEvaluationDraft({ ...params(qcThrows(err)), onDiagnostics: (d) => diagErr.push(d) });
+      } catch {
+        rejected = true;
+      }
+      assert(rejected, `14. student PASS + QC ${label}: the evaluation throws (it is NOT absorbed as a partial success)`);
+      assert(diagErr.length === 1 && diagErr[0].student[0].ok, `14. student PASS + QC ${label}: diagnostics are still reported`);
+
+      savedResults.length = 0;
+      marks.length = 0;
+      const crash: ProcessRecordingDeps = { ...base, generateDraft: (p) => generateAIEvaluationDraft({ ...p, createMessage: qcThrows(err) }) };
+      assert((await processRecording(1, crash)) === "error" && marks.length === 1 && marks[0].from === "ANALYZING" && savedResults.length === 0, `14. processing: student PASS + QC ${label} -> ANALYSIS_FAILED (markFailed from ANALYZING), saveDraft is never called, no draft is saved`);
+    }
+    // an unexpected error AFTER an earlier validation failure is still not absorbed
+    let qcCalls = 0;
+    const lateBoom: CreateMessageFn = async (body) => {
+      if ((body.tools?.[0] as { name: string }).name !== TOOL.teacher) return studentOkReply;
+      qcCalls++;
+      if (qcCalls === 1) return { content: [{ type: "tool_use", name: TOOL.teacher, input: { report: QUOTED_QC } }], stop_reason: "tool_use" };
+      throw new FakeApiError("overloaded");
+    };
+    let lateRejected = false;
+    try {
+      await generateAIEvaluationDraft(params(lateBoom));
+    } catch {
+      lateRejected = true;
+    }
+    assert(lateRejected && qcCalls === 2, "14. a QC that fails validation once and then hits an API error fails the analysis (not a partial success)");
+    // and both a validation-rejected QC AND the unexpected one in the same run: still the failure path
+    const qcRejectedOnly = fakeCreate({ student: [GOOD_FEEDBACK], teacher: [QUOTED_QC] });
+    assert((await generateAIEvaluationDraft(params(qcRejectedOnly.fn)))?.teacherQc === null, "14. regression: student PASS + QC validation rejection x4 is still a partial success");
+
+    const studentBoom: CreateMessageFn = async (body) => {
+      if ((body.tools?.[0] as { name: string }).name === TOOL.student) throw new Error("api down");
+      return { content: [{ type: "tool_use", name: TOOL.teacher, input: { report: GOOD_QC } }], stop_reason: "tool_use" };
+    };
+    let studentBoomFailed = false;
+    try {
+      await generateAIEvaluationDraft(params(studentBoom));
+    } catch {
+      studentBoomFailed = true;
+    }
+    assert(studentBoomFailed, "14. an error while generating the STUDENT report still fails the analysis");
+
+    // a failing logger never fails the evaluation
+    const logged = await generateAIEvaluationDraft({
+      ...params(fakeCreate({ student: [GOOD_FEEDBACK], teacher: [GOOD_QC] }).fn),
+      onDiagnostics: () => {
+        throw new Error("logger down");
+      },
+    });
+    assert(logged?.teacherQc === GOOD_QC, "14. a throwing diagnostics callback does not affect the result");
+
+    // attempts without a report to validate
+    const cut = fakeCreate({ student: ["truncated", "empty", GOOD_FEEDBACK], teacher: [GOOD_QC] });
+    const dg3: GenerationDiagnostics[] = [];
+    await generateAIEvaluationDraft({ ...params(cut.fn), onDiagnostics: (d) => dg3.push(d) });
+    assert(dg3[0].student[0].stop === "response_cut_off" && dg3[0].student[1].stop === "response_empty" && dg3[0].student[2].ok, "14. a cut-off or empty response is recorded as such");
+    assert(summarizeAttempts(dg3[0].student) === "a1 response_cut_off; a2 response_empty; a3 ok", "14. summary text for attempts without a report");
+
+    // every real defect lands in a named category, not in "other"
+    const defects: [string, string, IssueCategory][] = [
+      ["a quotation of the tutor", QUOTED_QC, "quotation_marks"],
+      ["a quotation that is not in the transcript", qcLines({ item3: `At [09:10] the tutor said "Tell me about your weekend plans for tomorrow".` }), "quote_not_in_transcript"],
+      ["a timestamp on the other speaker's line", qcLines({ item3: `At [09:25] the tutor asked why the researchers studied rich countries.` }), "timestamp_mismatch"],
+      ["a duration that cannot be read from the timestamps", qcLines({ item3: `At [09:10] the tutor asked a question and then waited for 7 minutes.` }), "time_grounding"],
+      ["a percentage that is not the measured Talk Time", qcLines({ item3: `At [09:10] the tutor asked a question; the student spoke for 58% of the lesson.` }), "talk_time_figure"],
+      ["a month the lesson date does not give", qcLines({ item3: `At [09:10] the tutor asked a question, as the student had practised in March.` }), "historical_claim"],
+      ["a duplicated report", DUP_Q, "structure"],
+    ];
+    for (const [label, text, expected] of defects) {
+      const found = validateTeacherQc(text, CTX).issues.map((i) => classifyIssue(i).category);
+      assert(found.includes(expected) && !found.includes("other"), `14. ${label} -> ${expected} (found: ${[...new Set(found)].join(", ") || "none"})`);
+    }
   }
 
   // ── request composition ─────────────────────────────────────────────────────

@@ -140,9 +140,10 @@ async function main() {
       if (!draft) throw new Error("no draft (missing API key or no utterances)");
       const ctx = { roles, lessonDateISO: lessonDate, lessonDurationMinutes: lesson.lessonDurationMinutes, ageBand, talkTime };
       const s = validateStudentFeedback(draft.studentFeedback, ctx);
-      const q = validateTeacherQc(draft.teacherQc, ctx);
+      // teacherQc is null when only the student report passed validation: the QC is then reported as not generated (with the category summary)
+      const q = draft.teacherQc === null ? { ok: false, issues: [`teacher QC not generated: ${draft.teacherQcFailure ?? "unknown"}`] } : validateTeacherQc(draft.teacherQc, ctx);
       fs.writeFileSync(path.join(outDir, `run${n}_student_feedback.txt`), draft.studentFeedback);
-      fs.writeFileSync(path.join(outDir, `run${n}_teacher_qc.txt`), draft.teacherQc);
+      if (draft.teacherQc !== null) fs.writeFileSync(path.join(outDir, `run${n}_teacher_qc.txt`), draft.teacherQc);
       console.log(`attempts: student ${draft.attempts?.studentFeedback ?? "?"} / QC ${draft.attempts?.teacherQc ?? "?"} | re-validation: student ${s.ok ? "PASS" : "FAIL"} / QC ${q.ok ? "PASS" : "FAIL"}`);
       for (const issue of [...s.issues, ...q.issues]) console.log(`  - ${issue}`);
       console.log(`reports written to ${outDir} (run${n}_student_feedback.txt, run${n}_teacher_qc.txt)`);
