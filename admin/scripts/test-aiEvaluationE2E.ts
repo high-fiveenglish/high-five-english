@@ -102,7 +102,9 @@ async function main() {
   console.log("\n--- STUDENT FEEDBACK (Output 1) ---\n");
   console.log(result.studentFeedback);
   console.log("\n--- TEACHER QC (Output 2) ---\n");
-  console.log(result.teacherQc);
+  console.log(result.teacherQc ?? `(not generated: ${result.teacherQcFailure ?? "unknown"})`);
+  // teacherQc is null when only the student report passed validation (the QC is optional for the review); the checks below use the text if present
+  const teacherQcText = result.teacherQc ?? "";
 
   // 저장해서 이후 분석/보고에 쓸 수 있게 scratchpad에 남긴다(production 코드/DB와 무관).
   fs.writeFileSync(
@@ -113,16 +115,16 @@ async function main() {
   console.log("\n=== STRUCTURAL CHECKS ===");
   console.log("A. studentFeedback present:", !!result.studentFeedback);
   console.log("B. teacherQc present:", !!result.teacherQc);
-  console.log("E. Talk Time values appear verbatim in Output2:", result.teacherQc.includes("57.8") && result.teacherQc.includes("42.2"));
-  console.log("E2. Talk Time values NOT altered elsewhere oddly (spot check 780/570):", result.teacherQc.includes("780") || result.teacherQc.includes("57.8"));
+  console.log("E. Talk Time values appear verbatim in Output2:", teacherQcText.includes("57.8") && teacherQcText.includes("42.2"));
+  console.log("E2. Talk Time values NOT altered elsewhere oddly (spot check 780/570):", teacherQcText.includes("780") || teacherQcText.includes("57.8"));
 
   console.log("\n=== GROUNDING / HISTORICAL-CLAIM CHECK (explicit, double-confirms the adapter's internal guard) ===");
   const feedbackCheck = checkNoUngroundedHistoricalClaims(result.studentFeedback, LESSON_DATE, TRANSCRIPT);
-  const qcCheck = checkNoUngroundedHistoricalClaims(result.teacherQc, LESSON_DATE, TRANSCRIPT);
+  const qcCheck = checkNoUngroundedHistoricalClaims(teacherQcText, LESSON_DATE, TRANSCRIPT);
   console.log("Output 1 grounding check:", feedbackCheck.ok ? "PASS" : `FAIL — ${feedbackCheck.issues.join("; ")}`);
   console.log("Output 2 grounding check:", qcCheck.ok ? "PASS" : `FAIL — ${qcCheck.issues.join("; ")}`);
   console.log("Output 1 date mentions lessonDate's month (October):", /October/i.test(result.studentFeedback));
-  console.log("Output 2 date mentions lessonDate's month (October):", /October/i.test(result.teacherQc));
+  console.log("Output 2 date mentions lessonDate's month (October):", /October/i.test(teacherQcText));
 }
 
 main().catch((e) => {

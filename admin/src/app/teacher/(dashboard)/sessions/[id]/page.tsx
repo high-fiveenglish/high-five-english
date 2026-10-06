@@ -87,7 +87,12 @@ export default async function SessionEvaluationPage({
             sessionId={session.id}
             recording={
               session.audioRecording
-                ? { ...session.audioRecording, errorMessage: safeRecordingFailureMessage(session.audioRecording.processingStatus) }
+                ? {
+                    ...session.audioRecording,
+                    errorMessage: safeRecordingFailureMessage(session.audioRecording.processingStatus),
+                    // only a boolean about the QC reaches the browser — never the internal failure summary
+                    teacherQcUnavailable: session.audioRecording.processingStatus === "NEEDS_REVIEW" && session.audioRecording.teacherQcDraft === null,
+                  }
                 : null
             }
             hasExistingEvaluation={!!session.evaluation}

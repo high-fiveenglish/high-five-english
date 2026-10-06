@@ -16,6 +16,8 @@ export type RecordingSummary = {
   /** Output 2 — 강사 QC 전용, 항상 영어. 이 화면(강사 본인 세션)에서만 참고용으로
    * 보여주고, publishAIDraft는 이 값을 절대 건드리지 않는다(학생 노출 경로 없음). */
   teacherQcDraft: string | null;
+  /** The student draft is ready but the teacher QC could not be generated (derived on the server; no reason is sent to the browser). */
+  teacherQcUnavailable?: boolean;
   errorMessage: string | null;
 };
 
@@ -143,6 +145,13 @@ export function ClassRecordingPanel({
 
       {recording.processingStatus === "NEEDS_REVIEW" && recording.aiDraft && (
         <ReviewDraft sessionId={sessionId} draft={recording.aiDraft} hasExistingEvaluation={hasExistingEvaluation} />
+      )}
+
+      {recording.processingStatus === "NEEDS_REVIEW" && recording.teacherQcUnavailable && (
+        <p className="border-t border-slate-100 pt-3 text-xs text-slate-500">
+          The Teacher QC report could not be generated for this class. The student feedback draft above is not affected — you can review, edit and
+          publish it as usual.
+        </p>
       )}
 
       {recording.teacherQcDraft && (
