@@ -19,12 +19,12 @@ function assert(cond: boolean, label: string) {
 }
 
 const ENDPOINT = "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com";
-const GOOD = { R2_RECORDINGS_ENDPOINT: ENDPOINT, R2_RECORDINGS_ACCESS_KEY_ID: "AKIDEXAMPLE0000", R2_RECORDINGS_SECRET_ACCESS_KEY: "dummy-secret-not-real", R2_RECORDINGS_BUCKET_NAME: "hifive-recordings-private" };
+const GOOD = { R2_RECORDINGS_ENDPOINT: ENDPOINT, R2_RECORDINGS_ACCESS_KEY_ID: "AKIDEXAMPLE0000", R2_RECORDINGS_SECRET_ACCESS_KEY: "dummy-secret-not-real", R2_RECORDINGS_BUCKET_NAME: "test-recordings-bucket" };
 
 // ── configuration ─────────────────────────────────────────────────────────────────────────────────────────────────────
 {
   const cfg = readRecordingR2Config(GOOD);
-  assert(cfg?.bucket === "hifive-recordings-private" && cfg.endpoint === ENDPOINT, "config: the four R2_RECORDINGS_* variables are read");
+  assert(cfg?.bucket === "test-recordings-bucket" && cfg.endpoint === ENDPOINT, "config: the four R2_RECORDINGS_* variables are read");
   for (const missing of Object.keys(GOOD)) {
     const env: Record<string, string | undefined> = { ...GOOD };
     delete env[missing];
@@ -32,7 +32,7 @@ const GOOD = { R2_RECORDINGS_ENDPOINT: ENDPOINT, R2_RECORDINGS_ACCESS_KEY_ID: "A
   }
   assert(readRecordingR2Config({ ...GOOD, R2_RECORDINGS_BUCKET_NAME: "  " }) === null, "config: a blank value counts as missing");
   assert(readRecordingR2Config({ ...GOOD, R2_RECORDINGS_ENDPOINT: "http://x.r2.cloudflarestorage.com" }) === null, "config: the endpoint must be https");
-  assert(readRecordingR2Config({ ...GOOD, R2_RECORDINGS_ENDPOINT: `${ENDPOINT}/hifive-recordings-private` }) === null, "config: the endpoint is the account endpoint, without a bucket path");
+  assert(readRecordingR2Config({ ...GOOD, R2_RECORDINGS_ENDPOINT: `${ENDPOINT}/test-recordings-bucket` }) === null, "config: the endpoint is the account endpoint, without a bucket path");
   assert(readRecordingR2Config({ ...GOOD, R2_RECORDINGS_ENDPOINT: "not a url" }) === null, "config: a malformed endpoint is refused");
   assert(readRecordingR2Config({ ...GOOD, R2_RECORDINGS_ENDPOINT: `${ENDPOINT}/` })?.endpoint === ENDPOINT, "config: a trailing slash is tolerated");
   for (const bad of ["UPPER", "a", "has space", "-lead", "trail-", "a/b", "x".repeat(70)]) assert(readRecordingR2Config({ ...GOOD, R2_RECORDINGS_BUCKET_NAME: bad }) === null, `config: bucket name "${bad.slice(0, 12)}" is refused`);
@@ -56,7 +56,7 @@ const presignChecks = (async () => {
   const key = generateRecordingKey(10, "m4a");
   const put = new URL(await store.presignUpload(key, "audio/mp4", 600));
   assert(put.protocol === "https:" && put.hostname.endsWith("0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com"), "PUT URL: points at the account's R2 endpoint, nowhere else");
-  assert(`${put.hostname}${put.pathname}`.includes("hifive-recordings-private") && decodeURIComponent(put.pathname).endsWith(key), "PUT URL: names the recording bucket and exactly the generated key");
+  assert(`${put.hostname}${put.pathname}`.includes("test-recordings-bucket") && decodeURIComponent(put.pathname).endsWith(key), "PUT URL: names the recording bucket and exactly the generated key");
   assert(put.searchParams.get("X-Amz-Expires") === "600", "PUT URL: lives 10 minutes");
   assert((put.searchParams.get("X-Amz-SignedHeaders") ?? "").split(";").includes("content-type"), "PUT URL: the Content-Type is part of the signature");
   assert(![...put.searchParams.keys()].some((k) => /checksum/i.test(k)), "PUT URL: no checksum parameters (a browser PUT could not satisfy them on R2)");
