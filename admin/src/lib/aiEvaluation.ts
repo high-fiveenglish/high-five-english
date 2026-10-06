@@ -8,8 +8,10 @@
 // 학생용 보고서(Output 1)와 강사 QC(Output 2)는 따로 호출한다: 각 출력이 짧아져 중복·환각이 줄고, 검증에
 // 실패한 쪽만 이유를 알려 다시 생성한다(최대 MAX_ATTEMPTS번).
 //   · 학생용 보고서가 끝내 통과하지 못하면 throw → ANALYSIS_FAILED (전달할 초안이 없다).
-//   · 학생용 보고서는 통과했는데 강사 QC만 통과하지 못하면 throw하지 않는다: 학생용 초안은 그대로 돌려주고 teacherQc는 null이다
-//     (QC는 강사 내부 자료라서, 그것 때문에 통과한 학생용 초안까지 버리지 않는다).
+//   · 학생용 보고서는 통과했는데 강사 QC가 MAX_ATTEMPTS번 안에 검증을 통과하지 못했을 때만(EvaluationNotAcceptedError) throw하지 않는다:
+//     학생용 초안은 그대로 돌려주고 teacherQc는 null이다(QC는 강사 내부 자료라서, 그것 때문에 통과한 초안까지 버리지 않는다).
+//   · 그 밖의 QC 오류(Anthropic API 오류, 네트워크, 키/설정 오류, SDK 예외 등)는 부분 성공으로 흡수하지 않는다: 기존처럼 throw → ANALYSIS_FAILED.
+//     인프라 문제가 "QC 없는 검토 대기"로 보이면 안 된다.
 // 실패 이유는 범주와 건수로만 남긴다(evaluationDiagnostics.ts) — 검증 문장에는 전사 속 학생 발화가 인용돼 있어 로그/DB에 둘 수 없다.
 import Anthropic from "@anthropic-ai/sdk";
 import { ONLINE_ENGLISH_FEEDBACK_SKILL } from "./skill/onlineEnglishFeedbackSkill";
@@ -322,23 +324,25 @@ export async function generateAIEvaluationDraft(params: GenerateAIEvaluationPara
     /* ignore */
   }
 
-  // The student report is the deliverable: without it there is nothing to review, so the whole analysis fails (ANALYSIS_FAILED) as before.
-  if (student.status === "rejected") {
+  // The whole analysis fails (ANALYSIS_FAILED), exactly as before, when
+  //  - the student report failed: it is the deliverable, without it there is nothing to review; or
+  //  - the QC failed for any reason OTHER than "did not pass validation in the allowed attempts" (an API error, a network error, a missing key,
+  //    an SDK exception, a bug ...): that is an infrastructure or code problem and must show up as a failure, not as a draft without a QC.
+  const qcRejectedByValidation = teacher.status === "rejected" && teacher.reason instanceof EvaluationNotAcceptedError;
+  if (student.status === "rejected" || (teacher.status === "rejected" && !qcRejectedByValidation)) {
     const reasons = [student, teacher].flatMap((r) => (r.status === "rejected" ? [r.reason instanceof Error ? r.reason.message : String(r.reason)] : []));
     throw new Error(reasons.join(" | "));
   }
 
-  // The teacher QC is an internal report. If it could not be validated, the passing student report is still returned (teacherQc null) instead of
-  // being thrown away. The reason is a category summary (never report or transcript text); an unexpected error keeps only its type name.
+  // Only here: the student report passed and the teacher QC used up its attempts without passing validation. The QC is an internal report, so the
+  // passing student report is returned (teacherQc null) instead of being thrown away. The reason is a category summary (never report or transcript text).
   if (teacher.status === "rejected") {
-    const failure =
-      teacher.reason instanceof EvaluationNotAcceptedError
-        ? teacher.reason.message
-        : `${OUTPUTS.teacher.label} failed with an unexpected error (${teacher.reason instanceof Error ? teacher.reason.name : "unknown"})`;
+    // every other rejection was thrown above; this keeps the type narrowing honest and fails safe if that ever changes
+    if (!(teacher.reason instanceof EvaluationNotAcceptedError)) throw teacher.reason;
     return {
       studentFeedback: student.value.text,
       teacherQc: null,
-      teacherQcFailure: failure,
+      teacherQcFailure: teacher.reason.message,
       attempts: { studentFeedback: student.value.attempts, teacherQc: diagnostics.teacherQc.length },
       diagnostics,
     };

@@ -93,6 +93,10 @@ function walk(dir: string): string[] {
   assert(/checkTeacherQcNoQuotations\(teacherQc\)/.test(read("src/lib/evaluationValidation.ts")), "unchanged: validateTeacherQc still enforces checkTeacherQcNoQuotations");
   assert(read("src/lib/projectEvaluationRules.ts").includes("Output 2 contains NO quotation marks"), "unchanged: QUOTE GROUNDING rule text");
   assert(!/issues\.join/.test(strip(ai).slice(strip(ai).indexOf("async function generateOne"))), "aiEvaluation: no validator sentence is joined into an error message any more");
+  const tail = strip(ai).slice(strip(ai).indexOf("const [student, teacher] = await Promise.allSettled"));
+  assert(/const qcRejectedByValidation = teacher\.status === "rejected" && teacher\.reason instanceof EvaluationNotAcceptedError;/.test(tail), "partial success: only a QC that was rejected by validation (EvaluationNotAcceptedError) qualifies");
+  assert(/student\.status === "rejected" \|\| \(teacher\.status === "rejected" && !qcRejectedByValidation\)\) \{[\s\S]*throw new Error\(reasons\.join/.test(tail), "partial success: a failed student report or any other QC error takes the existing failure path (throw -> ANALYSIS_FAILED)");
+  assert(!/unexpected error/.test(tail), "partial success: no branch turns an unexpected exception into a draft");
 }
 
 {

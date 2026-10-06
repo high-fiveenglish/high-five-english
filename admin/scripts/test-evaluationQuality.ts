@@ -742,13 +742,61 @@ async function main() {
     }
     assert(/Output 1 \(student feedback\) rejected after 4 attempts — a1 structure/.test(bothMsg) && /Output 2 \(teacher QC\) rejected after 4 attempts — a1 quotation_marks×2/.test(bothMsg) && !leaked(bothMsg), "14. both fail: the whole analysis fails with both reasons as categories");
 
-    // an unexpected QC error keeps only its type name; a student error still fails everything
-    const flaky: CreateMessageFn = async (body) => {
-      if ((body.tools?.[0] as { name: string }).name === TOOL.teacher) throw new Error("boom: why do you think they studied rich countries");
-      return { content: [{ type: "tool_use", name: TOOL.student, input: { report: GOOD_FEEDBACK } }], stop_reason: "tool_use" };
+    // An UNEXPECTED QC error is not absorbed as a partial success: the analysis fails exactly as before (ANALYSIS_FAILED) and nothing is saved.
+    // Only a QC that used up its attempts without passing VALIDATION (EvaluationNotAcceptedError) is a partial success.
+    class FakeApiError extends Error {
+      status = 529;
+    }
+    const studentOkReply = { content: [{ type: "tool_use", name: TOOL.student, input: { report: GOOD_FEEDBACK } }], stop_reason: "tool_use" };
+    const qcThrows =
+      (err: unknown): CreateMessageFn =>
+      async (body) => {
+        if ((body.tools?.[0] as { name: string }).name === TOOL.teacher) throw err;
+        return studentOkReply;
+      };
+    const qcErrors: [string, unknown][] = [
+      ["a plain Error", new Error("boom")],
+      ["an Anthropic-style API error (status 529)", new FakeApiError("overloaded")],
+      ["a network error", Object.assign(new Error("fetch failed"), { cause: { code: "ECONNRESET" } })],
+      ["a configuration error (401, bad key)", Object.assign(new Error("401 invalid x-api-key"), { status: 401 })],
+      ["a TypeError (SDK or code bug)", new TypeError("x is not a function")],
+      ["a thrown string", "weird"],
+    ];
+    for (const [label, err] of qcErrors) {
+      const diagErr: GenerationDiagnostics[] = [];
+      let rejected = false;
+      try {
+        await generateAIEvaluationDraft({ ...params(qcThrows(err)), onDiagnostics: (d) => diagErr.push(d) });
+      } catch {
+        rejected = true;
+      }
+      assert(rejected, `14. student PASS + QC ${label}: the evaluation throws (it is NOT absorbed as a partial success)`);
+      assert(diagErr.length === 1 && diagErr[0].student[0].ok, `14. student PASS + QC ${label}: diagnostics are still reported`);
+
+      savedResults.length = 0;
+      marks.length = 0;
+      const crash: ProcessRecordingDeps = { ...base, generateDraft: (p) => generateAIEvaluationDraft({ ...p, createMessage: qcThrows(err) }) };
+      assert((await processRecording(1, crash)) === "error" && marks.length === 1 && marks[0].from === "ANALYZING" && savedResults.length === 0, `14. processing: student PASS + QC ${label} -> ANALYSIS_FAILED (markFailed from ANALYZING), saveDraft is never called, no draft is saved`);
+    }
+    // an unexpected error AFTER an earlier validation failure is still not absorbed
+    let qcCalls = 0;
+    const lateBoom: CreateMessageFn = async (body) => {
+      if ((body.tools?.[0] as { name: string }).name !== TOOL.teacher) return studentOkReply;
+      qcCalls++;
+      if (qcCalls === 1) return { content: [{ type: "tool_use", name: TOOL.teacher, input: { report: QUOTED_QC } }], stop_reason: "tool_use" };
+      throw new FakeApiError("overloaded");
     };
-    const rf = await generateAIEvaluationDraft(params(flaky));
-    assert(rf?.teacherQc === null && rf.teacherQcFailure === "Output 2 (teacher QC) failed with an unexpected error (Error)" && !leaked(rf.teacherQcFailure ?? ""), "14. an unexpected error while generating the QC: the student report is kept, the reason is the error type only");
+    let lateRejected = false;
+    try {
+      await generateAIEvaluationDraft(params(lateBoom));
+    } catch {
+      lateRejected = true;
+    }
+    assert(lateRejected && qcCalls === 2, "14. a QC that fails validation once and then hits an API error fails the analysis (not a partial success)");
+    // and both a validation-rejected QC AND the unexpected one in the same run: still the failure path
+    const qcRejectedOnly = fakeCreate({ student: [GOOD_FEEDBACK], teacher: [QUOTED_QC] });
+    assert((await generateAIEvaluationDraft(params(qcRejectedOnly.fn)))?.teacherQc === null, "14. regression: student PASS + QC validation rejection x4 is still a partial success");
+
     const studentBoom: CreateMessageFn = async (body) => {
       if ((body.tools?.[0] as { name: string }).name === TOOL.student) throw new Error("api down");
       return { content: [{ type: "tool_use", name: TOOL.teacher, input: { report: GOOD_QC } }], stop_reason: "tool_use" };
