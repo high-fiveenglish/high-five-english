@@ -54,6 +54,115 @@ export interface RecoveryReport {
   analysisAbandoned: number[];
 }
 
+// ── Recordings that are still WAITING for the transcript (UPLOADED / PUBLIC_READY / TRANSCRIBING) ─────────────────────────────────────
+// The webhook is the normal way out of these states. If it never arrives (lost delivery, or it came before the transcript id was saved and was
+// answered with "unknown id"), the record would wait forever. recoverStuckAwaitingRecordings asks AssemblyAI for the status of the ones that
+// have a transcript id, and gives up cleanly on the others. It NEVER submits anything to AssemblyAI (a second submission is a second paid
+// transcription): a record without a transcript id is only closed as UPLOAD_FAILED so the teacher can upload it again deliberately.
+
+/** An UPLOADED row that was never completed (the browser closed, the network dropped). The upload URL lives 10 minutes, so this is generous. */
+export const AWAITING_UPLOAD_STALE_MS = 2 * 60 * 60 * 1000;
+/** PUBLIC_READY lasts only for the moment between "claimed" and "AssemblyAI answered"; this long means the request died in between. */
+export const AWAITING_SUBMIT_STALE_MS = 15 * 60 * 1000;
+/** Normally the webhook arrives within minutes; only after this long is AssemblyAI asked. */
+export const TRANSCRIBING_POLL_AFTER_MS = 15 * 60 * 1000;
+/** Still not completed after this long -> TRANSCRIPTION_FAILED (the teacher can upload again). */
+export const TRANSCRIBING_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+/** AssemblyAI lookups per run (a scheduled function has about 30 seconds). */
+export const AWAITING_POLLS_PER_RUN = 3;
+
+export interface AwaitingRecording {
+  id: number;
+  processingStatus: string;
+  providerTranscriptId: string | null;
+  /** last state change */
+  updatedAt: Date;
+}
+
+export interface AwaitingRecoveryDeps {
+  /** processingStatus in (UPLOADED, PUBLIC_READY, TRANSCRIBING) and updatedAt < olderThan, oldest first. */
+  findAwaiting(olderThan: Date, limit: number): Promise<AwaitingRecording[]>;
+  /** The current AssemblyAI status of a transcript; null when it can not be read (network, key, unknown id). */
+  fetchTranscriptStatus(transcriptId: string): Promise<"queued" | "processing" | "completed" | "error" | null>;
+  /** The webhook's own conditional UPDATE: waiting state -> TRANSCRIBED. true only for the one caller that changed the row. */
+  markTranscribed(id: number): Promise<boolean>;
+  /** waiting state -> TRANSCRIPTION_FAILED, conditional. */
+  markTranscriptionFailed(id: number, message: string): Promise<boolean>;
+  /** one of `fromStatuses` -> UPLOAD_FAILED, conditional. */
+  markUploadFailed(id: number, fromStatuses: string[], message: string): Promise<boolean>;
+  /** the existing background trigger */
+  triggerProcessing(id: number): Promise<boolean>;
+}
+
+export interface AwaitingRecoveryReport {
+  completed: number[];
+  transcriptionFailed: number[];
+  stillProcessing: number[];
+  timedOut: number[];
+  uploadAbandoned: number[];
+  lookupFailed: number[];
+  skippedForBudget: number[];
+  triggerFailed: number[];
+}
+
+export async function recoverStuckAwaitingRecordings(
+  deps: AwaitingRecoveryDeps,
+  now: Date = new Date(),
+  options: { pollsPerRun?: number } = {},
+): Promise<AwaitingRecoveryReport> {
+  const report: AwaitingRecoveryReport = { completed: [], transcriptionFailed: [], stillProcessing: [], timedOut: [], uploadAbandoned: [], lookupFailed: [], skippedForBudget: [], triggerFailed: [] };
+  let budget = options.pollsPerRun ?? AWAITING_POLLS_PER_RUN;
+  const minAge = Math.min(AWAITING_SUBMIT_STALE_MS, TRANSCRIBING_POLL_AFTER_MS, AWAITING_UPLOAD_STALE_MS);
+  const rows = await deps.findAwaiting(new Date(now.getTime() - minAge), 50);
+
+  for (const rec of rows) {
+    const age = now.getTime() - rec.updatedAt.getTime();
+    if (!rec.providerTranscriptId) {
+      // Never submitted (or the submission result was lost). Never re-submit from here.
+      if (rec.processingStatus === "UPLOADED" && age >= AWAITING_UPLOAD_STALE_MS) {
+        if (await deps.markUploadFailed(rec.id, ["UPLOADED"], "Upload was never completed")) report.uploadAbandoned.push(rec.id);
+      } else if (rec.processingStatus === "PUBLIC_READY" && age >= AWAITING_SUBMIT_STALE_MS) {
+        if (await deps.markUploadFailed(rec.id, ["PUBLIC_READY"], "Submission to transcription did not finish")) report.uploadAbandoned.push(rec.id);
+      }
+      continue;
+    }
+    if (age < TRANSCRIBING_POLL_AFTER_MS) continue;
+    if (budget <= 0) {
+      report.skippedForBudget.push(rec.id);
+      continue;
+    }
+    budget -= 1;
+    let status: Awaited<ReturnType<AwaitingRecoveryDeps["fetchTranscriptStatus"]>> = null;
+    try {
+      status = await deps.fetchTranscriptStatus(rec.providerTranscriptId);
+    } catch {
+      status = null;
+    }
+    if (status === "completed") {
+      // The same conditional UPDATE the webhook uses: if the webhook (or another run) got there first this returns false and nothing is triggered twice.
+      if (await deps.markTranscribed(rec.id)) {
+        report.completed.push(rec.id);
+        let ok = false;
+        try {
+          ok = await deps.triggerProcessing(rec.id);
+        } catch {
+          ok = false;
+        }
+        if (!ok) report.triggerFailed.push(rec.id); // stays TRANSCRIBED: recoverStuckTranscribedRecordings re-triggers it
+      }
+    } else if (status === "error") {
+      if (await deps.markTranscriptionFailed(rec.id, "AssemblyAI reported status=error")) report.transcriptionFailed.push(rec.id);
+    } else {
+      // queued / processing / unreadable: wait, unless it has been waiting for too long
+      if (age >= TRANSCRIBING_MAX_AGE_MS) {
+        if (await deps.markTranscriptionFailed(rec.id, "Transcription did not complete in time")) report.timedOut.push(rec.id);
+      } else if (status === null) report.lookupFailed.push(rec.id);
+      else report.stillProcessing.push(rec.id);
+    }
+  }
+  return report;
+}
+
 export async function recoverStuckTranscribedRecordings(deps: RecoveryDeps, now: Date = new Date()): Promise<RecoveryReport> {
   const report: RecoveryReport = { retriggered: [], triggerFailed: [], exhausted: [], analysisAbandoned: [] };
   const stuck = await deps.findStuckTranscribed(new Date(now.getTime() - TRANSCRIBED_RECOVERY_GRACE_MS));

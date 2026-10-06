@@ -84,13 +84,13 @@ export interface AssemblyAITranscriptResult {
   error?: string;
 }
 
-export async function fetchTranscript(transcriptId: string): Promise<AssemblyAITranscriptResult | null> {
+export async function fetchTranscript(transcriptId: string, options: { timeoutMs?: number } = {}): Promise<AssemblyAITranscriptResult | null> {
   const apiKey = getApiKey();
   if (!apiKey) return null;
 
   const res = await fetch(`${ASSEMBLYAI_BASE}/transcript/${transcriptId}`, {
     headers: { Authorization: apiKey },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    signal: AbortSignal.timeout(options.timeoutMs ?? REQUEST_TIMEOUT_MS),
   });
   if (!res.ok) return null;
   return (await res.json()) as AssemblyAITranscriptResult;

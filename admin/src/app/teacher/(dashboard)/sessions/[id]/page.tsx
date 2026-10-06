@@ -6,6 +6,7 @@ import { SESSION_STATUS_LABEL_EN, studentDisplayName } from "@/lib/teacherPortal
 import { EvaluationForm } from "./EvaluationForm";
 import { ClassRecordingPanel } from "./ClassRecordingPanel";
 import { safeRecordingFailureMessage } from "@/lib/recordingWorkflow";
+import { isRecordingIntakeAvailable } from "@/lib/recordingIntakeConfig";
 import { parseStoredUtterances, speakerChoicesFor } from "@/lib/speakerConfirmation";
 import { parseRouteId } from "@/lib/routeId";
 
@@ -91,6 +92,7 @@ export default async function SessionEvaluationPage({
             }
             hasExistingEvaluation={!!session.evaluation}
             speakerChoices={speakerChoices}
+            uploadEnabled={isRecordingIntakeAvailable()}
           />
         </div>
       )}

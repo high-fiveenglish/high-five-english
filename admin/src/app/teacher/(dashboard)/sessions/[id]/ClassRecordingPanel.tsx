@@ -1,7 +1,9 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
 import { confirmTeacherSpeakerAction, publishAIDraft } from "./recordingActions";
+import { RecordingUploader } from "./RecordingUploader";
 import type { SpeakerChoice } from "@/lib/speakerConfirmation";
 
 export type RecordingSummary = {
@@ -34,28 +36,44 @@ const STATUS_LABEL: Record<string, string> = {
   SAVE_FAILED: "Save failed",
 };
 
-// Google Drive 연동 전이라 실제 업로드는 아직 연결하지 않는다(READ-ONLY 조사로
-// Shared Drive 사용이 막혀 있음을 이미 확인함) — 그 전까지 이 패널은 상태를 보여주는
-// 용도로만 쓰이고, "업로드" 버튼은 비활성 + 안내 문구로 그 사실을 명확히 드러낸다.
-// 실제로 업로드되는 것처럼 보이게 하지 않는다.
+// 녹음 업로드는 private R2로 브라우저가 직접 올린다(RecordingUploader.tsx) — 서버가 파일을 중계하지 않는다.
+// 서버 쪽 설정(R2·AssemblyAI)이 다 갖춰지지 않은 환경에서는 `uploadEnabled`가 false이고, 업로드 버튼은 비활성 +
+// 안내 문구로 그 사실을 그대로 보여 준다(실제로 업로드되는 것처럼 보이게 하지 않는다).
+const REUPLOAD_STATES = ["UPLOADED", "UPLOAD_FAILED", "TRANSCRIPTION_FAILED"];
+const WAITING_STATES = ["UPLOADED", "PUBLIC_READY", "TRANSCRIBING", "TRANSCRIBED", "ANALYZING", "TEACHER_SPEAKER_CONFIRMED"];
+
 export function ClassRecordingPanel({
   sessionId,
   recording,
   hasExistingEvaluation,
   speakerChoices,
+  uploadEnabled = false,
 }: {
   sessionId: number;
   recording: RecordingSummary | null;
   hasExistingEvaluation: boolean;
   speakerChoices?: SpeakerChoice[] | null;
+  uploadEnabled?: boolean;
 }) {
+  const router = useRouter();
   if (!recording) {
+    if (uploadEnabled) {
+      return (
+        <div className="flex max-w-2xl flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5">
+          <h2 className="text-sm font-bold text-slate-700">Class Recording</h2>
+          <p className="text-sm text-slate-500">
+            Upload the recording of this class to get an AI-generated evaluation draft. You review and edit it before anything is
+            published, and you can still write the evaluation manually above.
+          </p>
+          <RecordingUploader sessionId={sessionId} />
+        </div>
+      );
+    }
     return (
       <div className="flex max-w-2xl flex-col gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
         <h2 className="text-sm font-bold text-slate-700">Class Recording</h2>
         <p className="text-sm text-slate-500">
-          Automatic recording upload isn&apos;t connected yet (storage setup pending). You can still write today&apos;s
-          evaluation manually above.
+          Recording upload isn&apos;t available in this environment yet. You can still write today&apos;s evaluation manually above.
         </p>
         <button
           type="button"
@@ -99,6 +117,28 @@ export function ClassRecordingPanel({
         )
       ) : (
         recording.errorMessage && <p className="text-sm text-red-600">{recording.errorMessage}</p>
+      )}
+
+      {WAITING_STATES.includes(recording.processingStatus) && (
+        <div className="flex flex-col gap-2 border-t border-slate-100 pt-3">
+          <p className="text-xs text-slate-500">This can take several minutes. The page does not update by itself — use Refresh to check.</p>
+          <button
+            type="button"
+            onClick={() => router.refresh()}
+            className="w-fit rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Refresh status
+          </button>
+        </div>
+      )}
+
+      {uploadEnabled && REUPLOAD_STATES.includes(recording.processingStatus) && (
+        <div className="flex flex-col gap-2 border-t border-slate-100 pt-3">
+          <p className="text-xs text-slate-500">
+            {recording.processingStatus === "UPLOADED" ? "Upload didn't finish? You can start it again after a few minutes." : "You can upload the recording again."}
+          </p>
+          <RecordingUploader sessionId={sessionId} label="Upload again" />
+        </div>
       )}
 
       {recording.processingStatus === "NEEDS_REVIEW" && recording.aiDraft && (
