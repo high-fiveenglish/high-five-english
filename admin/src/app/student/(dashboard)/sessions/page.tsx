@@ -3,6 +3,7 @@ import { requireStudent } from "@/lib/studentAuth";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { formatAppDateTime } from "@/lib/appTime";
 import { LeaveRequestButton } from "./LeaveRequestButton";
+import { STUDENT_LEAVE_MIN_LEAD_MS, summarizeLeaveQuota, usedFromLeaveRows } from "@/lib/leavePolicy";
 
 const fmtDateTime = formatAppDateTime;
 
@@ -25,9 +26,40 @@ export default async function StudentSessionsPage() {
   });
   const now = new Date().getTime();
 
+  // 학생 연기 횟수(등록기간 전체 기준) — 정책/계산은 lib/leavePolicy.ts 한 곳에 있다.
+  const enrollments = await prisma.enrollment.findMany({
+    where: { studentId: student.id, status: { in: ["ACTIVE", "APPLIED", "PAID", "HOLDING"] } },
+    orderBy: { startDate: "desc" },
+  });
+  const leaveRows = await prisma.leaveRequest.findMany({
+    where: { studentId: student.id, enrollmentId: { in: enrollments.map((e) => e.id) } },
+    select: { enrollmentId: true, status: true, quotaImpact: true, source: true, requestedByRole: true, academyClosureId: true },
+  });
+  const quotas = enrollments.map((e) => ({
+    id: e.id,
+    ...summarizeLeaveQuota({
+      scheduleDays: e.scheduleDays,
+      packageMonths: e.packageMonths,
+      adminAdjustment: e.leaveQuotaAdjustment,
+      usedCount: usedFromLeaveRows(leaveRows.filter((l) => l.enrollmentId === e.id)),
+    }),
+  }));
+
   return (
     <div>
       <h1 className="mb-6 text-xl font-bold text-slate-900">내 수업</h1>
+
+      {quotas.length > 0 && (
+        <div className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+          <p className="font-semibold text-slate-800">수업 연기 가능 횟수 (등록기간 전체 기준)</p>
+          {quotas.map((q) => (
+            <p key={q.id} className="mt-1">
+              허용 {q.effectiveQuota}회 · 사용 {q.usedCount}회 · <span className="font-bold">남은 {q.remainingCount}회</span>
+            </p>
+          ))}
+          <p className="mt-1 text-xs text-slate-400">연기는 수업 시작 2시간 전까지 신청할 수 있습니다.</p>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <table className="w-full text-sm">
@@ -60,8 +92,10 @@ export default async function StudentSessionsPage() {
                   )}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  {s.status === "SCHEDULED" && s.scheduledAt.getTime() >= now ? (
+                  {s.status === "SCHEDULED" && s.scheduledAt.getTime() - now >= STUDENT_LEAVE_MIN_LEAD_MS ? (
                     <LeaveRequestButton sessionId={s.id} />
+                  ) : s.status === "SCHEDULED" && s.scheduledAt.getTime() > now ? (
+                    <span className="text-xs text-slate-400">시작 2시간 전부터는 연기할 수 없습니다</span>
                   ) : (
                     <span className="text-xs text-slate-300">-</span>
                   )}

@@ -5,9 +5,11 @@ import Link from "next/link";
 import { formatAppDate, formatAppTime } from "@/lib/appTime";
 import {
   addSupplementSession,
+  adjustStudentLeaveQuota,
   applyStudentLeave,
   applyAdminLeave,
   cancelSession,
+  resetEvaluation,
   revertCancelSession,
   getAvailableTeachersForSlot,
 } from "./actions";
@@ -31,6 +33,21 @@ export type CalendarSession = {
   leaveReason: string | null;
   leaveRequestId: number | null;
   isSupplement: boolean;
+  enrollmentId: number;
+  /** 평가 상태: NONE(연기 가능) / HAS_EVALUATION(평가서·녹음 결과가 있어 초기화 후 연기) / AI_PROCESSING(처리 중이라 초기화·연기 불가) */
+  evaluationState: "NONE" | "HAS_EVALUATION" | "AI_PROCESSING";
+  relatedSessionId: number | null;
+};
+
+/** 수강건별 학생 연기 횟수(lib/leavePolicy.ts의 summarizeLeaveQuota 결과) */
+export type QuotaInfo = {
+  enrollmentId: number;
+  label: string;
+  policyQuota: number;
+  adminAdjustment: number;
+  effectiveQuota: number;
+  usedCount: number;
+  remainingCount: number;
 };
 
 type EnrollmentOption = {
@@ -71,10 +88,12 @@ export function AdminSessionCalendar({
   studentId,
   sessions,
   enrollments,
+  quotas,
 }: {
   studentId: number;
   sessions: CalendarSession[];
   enrollments: EnrollmentOption[];
+  quotas: QuotaInfo[];
 }) {
   const today = new Date();
   const initial = sessions.find((s) => s.scheduledAt >= today) ?? sessions[sessions.length - 1] ?? { scheduledAt: today };
@@ -103,6 +122,7 @@ export function AdminSessionCalendar({
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5">
+      <QuotaPanel studentId={studentId} quotas={quotas} />
       <div className="mb-4 flex items-center justify-between">
         <button
           type="button"
@@ -141,7 +161,14 @@ export function AdminSessionCalendar({
       </div>
 
       {showAddForm && (
-        <AddSupplementForm studentId={studentId} enrollments={enrollments} onDone={() => setShowAddForm(false)} />
+        <AddSupplementForm
+          studentId={studentId}
+          enrollments={enrollments}
+          relatedOptions={sessions
+            .filter((s) => !s.isSupplement && s.status !== "CANCELLED")
+            .map((s) => ({ id: s.id, enrollmentId: s.enrollmentId, label: `${fmtDate(s.scheduledAt)} ${fmtTime(s.scheduledAt)} (${STATUS_LABEL[s.status]})` }))}
+          onDone={() => setShowAddForm(false)}
+        />
       )}
 
       <div className="grid grid-cols-7 gap-1 text-center text-xs">
@@ -222,9 +249,19 @@ function SessionDetail({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [revertConfirming, setRevertConfirming] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<"studentLeave" | "adminLeave" | "cancel" | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"studentLeave" | "adminLeave" | "cancel" | "resetEvaluation" | null>(null);
   const isFuture = session.scheduledAt.getTime() >= Date.now();
-  const canAct = session.status === "SCHEDULED" && isFuture;
+  // 관리자 화면의 연기는 시간 제한이 없다(학생 직접 신청의 2시간 제한은 학생 화면에만 있다).
+  //  - 학생수업연기: 예정(SCHEDULED) 수업 — 학생 연기 횟수를 차감한다.
+  //  - 관리자수업연기: 평가서가 없는 모든 수업(예정/완료/보충필요, 과거·오늘·미래) — 횟수를 차감하지 않는다.
+  //  - 평가서/녹음 결과가 있으면 평가 초기화(녹음 원본은 보존)를 먼저 해야 한다. AI 분석 중이면 초기화도 연기도 불가.
+  const leavable = session.status === "SCHEDULED" || session.status === "COMPLETED" || session.status === "MAKEUP_NEEDED";
+  const canStudentLeave = session.status === "SCHEDULED" && session.evaluationState === "NONE";
+  const canAdminLeave = leavable && session.evaluationState === "NONE";
+  const needsReset = leavable && session.evaluationState === "HAS_EVALUATION";
+  const aiBusy = leavable && session.evaluationState === "AI_PROCESSING";
+  const canCancel = session.status === "SCHEDULED" && isFuture;
+  const canAct = canStudentLeave || canAdminLeave || needsReset || aiBusy || canCancel;
 
   function run(action: () => Promise<{ error?: string } | void>) {
     setError(null);
@@ -237,20 +274,25 @@ function SessionDetail({
   // 학생연기/관리자연기/수업취소를 눌렀을 때 실행되는 실제 처리 — cancelSession은
   // throw로 실패를 알리므로, applyStudentLeave/applyAdminLeave의 {error} 반환 방식과
   // 맞춰 여기서 한 번에 흡수한다(run()의 error 상태로 그대로 보여줄 수 있도록).
-  async function runConfirmedAction(action: "studentLeave" | "adminLeave" | "cancel"): Promise<{ error?: string } | void> {
+  async function runConfirmedAction(action: "studentLeave" | "adminLeave" | "cancel" | "resetEvaluation"): Promise<{ error?: string } | void> {
     try {
       if (action === "studentLeave") return await applyStudentLeave(studentId, session.id, reason);
       if (action === "adminLeave") return await applyAdminLeave(studentId, session.id, reason);
+      if (action === "resetEvaluation") return await resetEvaluation(studentId, session.id, reason);
       await cancelSession(studentId, session.id);
     } catch (err) {
       return { error: err instanceof Error ? err.message : "처리 중 오류가 발생했습니다." };
     }
   }
 
-  const CONFIRM_COPY: Record<"studentLeave" | "adminLeave" | "cancel", string> = {
-    studentLeave: "학생수업연기로 처리합니다. 학생의 연기 가능 횟수에서 차감됩니다. 진행할까요?",
-    adminLeave: "관리자수업연기로 처리합니다. 학생의 연기 가능 횟수에서 차감되지 않습니다. 진행할까요?",
+  const CONFIRM_COPY: Record<"studentLeave" | "adminLeave" | "cancel" | "resetEvaluation", string> = {
+    studentLeave:
+      "학생수업연기로 처리합니다. 학생의 연기 가능 횟수에서 차감됩니다(관리자가 대신 실행하므로 2시간 제한은 없습니다). 연기된 수업은 정규 수업 시퀀스를 한 칸 뒤로 밀어 다음 유효 정규 슬롯에 배치되고, 수강 종료일이 마지막 정규 수업 날짜까지 늘어납니다. 진행할까요?",
+    adminLeave:
+      "관리자수업연기로 처리합니다. 학생의 연기 가능 횟수에서 차감되지 않습니다. 연기된 수업은 정규 수업 시퀀스를 한 칸 뒤로 밀어 다음 유효 정규 슬롯에 배치되고, 수강 종료일이 마지막 정규 수업 날짜까지 늘어납니다. 진행할까요?",
     cancel: "이 수업을 취소합니다. 진행할까요?",
+    resetEvaluation:
+      "이 수업의 평가서와 AI 평가 결과(초안·QC)를 초기화합니다. 녹음 원본과 전사는 삭제되지 않습니다. 초기화 후에 연기할 수 있습니다. 사유를 꼭 입력해 주세요. 진행할까요?",
   };
 
   return (
@@ -357,7 +399,15 @@ function SessionDetail({
         </p>
       )}
 
-      {canAct && (
+      {aiBusy && (
+        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          이 수업의 녹음을 AI가 분석 중이라 평가 초기화와 연기를 할 수 없습니다. 분석이 끝난 뒤 다시 시도해 주세요.
+        </p>
+      )}
+      {session.relatedSessionId !== null && (
+        <p className="mt-2 text-xs text-slate-400">관련 수업 #{session.relatedSessionId} ({session.isSupplement ? "관련 정규 수업" : "연기된 원 수업"})</p>
+      )}
+      {canAct && !aiBusy && (
         <div className="mt-4 border-t border-slate-200 pt-3">
           <input
             type="text"
@@ -368,27 +418,42 @@ function SessionDetail({
           />
           {!confirmAction ? (
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirmAction("studentLeave")}
-                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
-              >
-                학생수업연기
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmAction("adminLeave")}
-                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
-              >
-                관리자수업연기
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmAction("cancel")}
-                className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-              >
-                수업취소
-              </button>
+              {canStudentLeave && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmAction("studentLeave")}
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
+                >
+                  학생수업연기
+                </button>
+              )}
+              {canAdminLeave && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmAction("adminLeave")}
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
+                >
+                  관리자수업연기
+                </button>
+              )}
+              {needsReset && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmAction("resetEvaluation")}
+                  className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50"
+                >
+                  평가 초기화 (연기 전 필수)
+                </button>
+              )}
+              {canCancel && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmAction("cancel")}
+                  className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                >
+                  수업취소
+                </button>
+              )}
             </div>
           ) : (
             <div className="rounded-lg border border-slate-200 bg-white p-3">
@@ -429,18 +494,91 @@ function SessionDetail({
   );
 }
 
+// 수강건별 학생 연기 횟수 요약 + 관리자 가감. 정책: 주2회=월1, 주3회=월2, 주5회=월3 × 등록 개월 수, 등록기간 전체 기준(월별 reset 없음).
+function QuotaPanel({ studentId, quotas }: { studentId: number; quotas: QuotaInfo[] }) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<number | null>(null);
+  const [adjustment, setAdjustment] = useState("0");
+  const [reason, setReason] = useState("");
+  if (quotas.length === 0) return null;
+  return (
+    <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <p className="mb-2 text-xs font-bold text-slate-700">학생 연기 횟수 (등록기간 전체 기준)</p>
+      <div className="space-y-2">
+        {quotas.map((q) => (
+          <div key={q.enrollmentId} className="text-xs text-slate-600">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="font-medium text-slate-800">{q.label}</span>
+              <span>기본 {q.policyQuota}회</span>
+              <span>관리자 가감 {q.adminAdjustment >= 0 ? "+" : ""}{q.adminAdjustment}회</span>
+              <span className="font-semibold">허용 {q.effectiveQuota}회</span>
+              <span>사용 {q.usedCount}회</span>
+              <span className={q.remainingCount === 0 ? "font-bold text-red-600" : "font-bold text-emerald-700"}>남은 {q.remainingCount}회</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(editing === q.enrollmentId ? null : q.enrollmentId);
+                  setAdjustment(String(q.adminAdjustment));
+                  setReason("");
+                  setError(null);
+                }}
+                className="rounded border border-slate-300 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-white"
+              >
+                횟수 수정
+              </button>
+            </div>
+            {editing === q.enrollmentId && (
+              <div className="mt-2 flex flex-wrap items-end gap-2 rounded-lg border border-slate-200 bg-white p-2">
+                <label className="flex flex-col gap-1 text-[11px] text-slate-500">
+                  가감 횟수(기본 {q.policyQuota}회에 더하는 값)
+                  <input type="number" value={adjustment} onChange={(e) => setAdjustment(e.target.value)} className="w-24 rounded border border-slate-300 px-2 py-1 text-xs" />
+                </label>
+                <label className="flex flex-col gap-1 text-[11px] text-slate-500">
+                  사유(필수)
+                  <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} className="w-56 rounded border border-slate-300 px-2 py-1 text-xs" />
+                </label>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => {
+                    setError(null);
+                    startTransition(async () => {
+                      const r = await adjustStudentLeaveQuota(studentId, q.enrollmentId, Number(adjustment), reason);
+                      if (r?.error) setError(r.error);
+                      else setEditing(null);
+                    });
+                  }}
+                  className="rounded bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
+                >
+                  {pending ? "저장 중..." : "저장"}
+                </button>
+                <span className="text-[11px] text-slate-400">이미 사용한 횟수({q.usedCount}회)보다 작게는 낮출 수 없습니다.</span>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
 function AddSupplementForm({
   studentId,
   enrollments,
+  relatedOptions,
   onDone,
 }: {
   studentId: number;
   enrollments: EnrollmentOption[];
+  relatedOptions: { id: number; enrollmentId: number; label: string }[];
   onDone: () => void;
 }) {
   const boundAction = addSupplementSession.bind(null, studentId);
   const [state, formAction, pending] = useActionState(boundAction, undefined);
   const defaultEnrollment = enrollments.find((e) => e.hasTeacher) ?? enrollments[0];
+  const [enrollmentId, setEnrollmentId] = useState<string>(String(defaultEnrollment?.id ?? ""));
 
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -488,7 +626,8 @@ function AddSupplementForm({
         <label className="text-xs font-medium text-slate-500">수강신청</label>
         <select
           name="enrollmentId"
-          defaultValue={defaultEnrollment?.id}
+          value={enrollmentId}
+          onChange={(e) => setEnrollmentId(e.target.value)}
           className="w-64 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs outline-none focus:border-slate-500"
         >
           {enrollments.map((e) => (
@@ -496,6 +635,23 @@ function AddSupplementForm({
               {e.label}
             </option>
           ))}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium text-slate-500">관련 정규 수업 (선택)</label>
+        <select
+          name="relatedSessionId"
+          defaultValue=""
+          className="w-56 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs outline-none focus:border-slate-500"
+        >
+          <option value="">없음</option>
+          {relatedOptions
+            .filter((o) => String(o.enrollmentId) === enrollmentId)
+            .map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
         </select>
       </div>
       <div className="flex flex-col gap-1">

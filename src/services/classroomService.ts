@@ -175,6 +175,7 @@ function mapRealLesson(lesson: RealLesson, enrollmentId: string): Lesson {
     status: lesson.status,
     evaluationStatus: lesson.evaluationStatus,
     reason: lesson.reason,
+    isSupplement: lesson.isSupplement ?? false,
   };
 }
 
@@ -236,6 +237,9 @@ async function getMyClassroomFromRealBackend(
     endDate: snap.enrollment.endDate,
     totalLessons: snap.enrollment.totalLessons,
     remainingLessons: snap.enrollment.remainingLessons,
+    supplementLessons: snap.enrollment.supplementLessons,
+    supplementTaken: snap.enrollment.supplementTaken,
+    leaveQuota: snap.enrollment.leaveQuota,
     lessonDurationMin: snap.enrollment.classDurationMin,
     weeklyDays,
     classTime,
@@ -339,6 +343,10 @@ export interface EnrollmentHistoryStats {
   /** School-caused closures (teacher_absent + academy_closed). */
   teacherAbsent: number;
   adminCancelled: number;
+  /** 보충수업 중 받은 수(정규 회차와 별개). 실제 계정에서만 채워진다. */
+  supplementTaken?: number;
+  /** 받은 수업 합계(정규 + 보충). 실제 계정에서만 채워진다. */
+  providedLessons?: number;
   /** attended / (attended + absent) as a whole-number percent — 100 if none conducted yet. */
   attendanceRatePercent: number;
 }
@@ -386,6 +394,9 @@ function buildHistoryRowFromReal(
     endDate: row.enrollment.endDate,
     totalLessons: row.enrollment.totalLessons,
     remainingLessons: row.enrollment.remainingLessons,
+    supplementLessons: row.enrollment.supplementLessons,
+    supplementTaken: row.enrollment.supplementTaken,
+    leaveQuota: row.enrollment.leaveQuota,
     lessonDurationMin: row.enrollment.classDurationMin,
     weeklyDays,
     classTime,
@@ -394,11 +405,14 @@ function buildHistoryRowFromReal(
     currentLevel: "b1",
   };
 
-  const attended = row.lessons.filter((l) => l.status === "completed").length;
-  const absent = row.lessons.filter((l) => l.status === "absent").length;
-  const rescheduled = row.lessons.filter((l) => l.status === "rescheduled").length;
-  const teacherAbsent = row.lessons.filter((l) => l.status === "teacher_absent" || l.status === "academy_closed").length;
-  const adminCancelled = row.lessons.filter((l) => l.status === "admin_cancelled").length;
+  // 정규 수업만으로 출석/결석을 센다 — 보충수업은 정규 회차(총 회차/수강수/잔여)에 들어가지 않으므로 따로 센다.
+  const regularLessons = row.lessons.filter((l) => !l.isSupplement);
+  const supplementLessonsDone = row.lessons.filter((l) => l.isSupplement && (l.status === "completed" || l.status === "absent")).length;
+  const attended = regularLessons.filter((l) => l.status === "completed").length;
+  const absent = regularLessons.filter((l) => l.status === "absent").length;
+  const rescheduled = regularLessons.filter((l) => l.status === "rescheduled").length;
+  const teacherAbsent = regularLessons.filter((l) => l.status === "teacher_absent" || l.status === "academy_closed").length;
+  const adminCancelled = regularLessons.filter((l) => l.status === "admin_cancelled").length;
   const conducted = attended + absent;
 
   const durationId = durationIdFor(enrollment);
@@ -422,6 +436,8 @@ function buildHistoryRowFromReal(
       rescheduled,
       teacherAbsent,
       adminCancelled,
+      supplementTaken: supplementLessonsDone,
+      providedLessons: enrollment.totalLessons - enrollment.remainingLessons + supplementLessonsDone,
       attendanceRatePercent: conducted > 0 ? Math.round((attended / conducted) * 100) : 100,
     },
     estimatedPriceKRW: getPrice(PRICING_SEED, durationId, frequencyId, enrollment.lessonDurationMin as 25 | 50, "KRW"),

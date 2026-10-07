@@ -214,7 +214,7 @@ const strip = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\
   const writers = srcFiles.filter((f) => GENERATION_WRITES.test(strip(read(f))));
   check(
     "배치/생성 키를 쓰는 소스는 실행기와 읽기 전용 로더/화면뿐",
-    writers.every((f) => ["src/lib/sessionGeneration.ts", "src/lib/sessionPlanData.ts", "src/app/(admin)/session-plan/page.tsx", "src/app/(admin)/enrollments/[id]/edit/page.tsx", "src/lib/sessionPlan.ts"].includes(f)),
+    writers.every((f) => ["src/lib/sessionGeneration.ts", "src/lib/sessionPlanData.ts", "src/app/(admin)/session-plan/page.tsx", "src/app/(admin)/enrollments/[id]/edit/page.tsx", "src/lib/sessionPlan.ts", "src/lib/reschedule.ts"].includes(f)),
     writers.join(", "),
   );
   const batchWriters = srcFiles.filter((f) => /sessionGenerationBatch(Item)?\.(create|createMany|update|updateMany|upsert|delete|deleteMany)\s*\(/.test(strip(read(f))));

@@ -42,6 +42,7 @@ export default async function EditTeacherPage({
           approvalStatus: teacher.approvalStatus,
           currentRate: teacher.rates[0]?.ratePerUnit.toString() ?? null,
           teacherGrade: teacher.teacherGrade,
+          employmentType: teacher.employmentType,
           teamLeaderId: teacher.teamLeaderId,
           sex: teacher.sex,
           age: teacher.age,

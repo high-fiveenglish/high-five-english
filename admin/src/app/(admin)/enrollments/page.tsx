@@ -135,15 +135,21 @@ export default async function EnrollmentsPage({
   // 개별 쿼리를 날리지 않기 위함) — "결석"의 기준(MAKEUP_NEEDED)은 학생 강의실 화면의
   // 잔여 회차 계산(studentClassroom.ts)과 동일하게 맞췄다.
   const sessionCounts = await prisma.classSession.groupBy({
-    by: ["enrollmentId", "status"],
+    by: ["enrollmentId", "status", "isSupplement"],
     where: { enrollmentId: { in: enrollments.map((e) => e.id) } },
     _count: true,
   });
-  const attendanceByEnrollment = new Map<number, { present: number; absent: number }>();
+  // 정규 수업과 보충수업을 분리해서 센다(lib/lessonCounts.ts의 규칙과 같다): 보충수업은 정규 잔여 회차를 소모하지 않는다.
+  const attendanceByEnrollment = new Map<number, { present: number; absent: number; supplementTotal: number; supplementTaken: number }>();
   for (const row of sessionCounts) {
-    const entry = attendanceByEnrollment.get(row.enrollmentId) ?? { present: 0, absent: 0 };
-    if (row.status === "COMPLETED") entry.present += row._count;
-    if (row.status === "MAKEUP_NEEDED") entry.absent += row._count;
+    const entry = attendanceByEnrollment.get(row.enrollmentId) ?? { present: 0, absent: 0, supplementTotal: 0, supplementTaken: 0 };
+    if (row.isSupplement) {
+      if (row.status === "SCHEDULED" || row.status === "COMPLETED" || row.status === "MAKEUP_NEEDED") entry.supplementTotal += row._count;
+      if (row.status === "COMPLETED" || row.status === "MAKEUP_NEEDED") entry.supplementTaken += row._count;
+    } else {
+      if (row.status === "COMPLETED") entry.present += row._count;
+      if (row.status === "MAKEUP_NEEDED") entry.absent += row._count;
+    }
     attendanceByEnrollment.set(row.enrollmentId, entry);
   }
 
@@ -307,7 +313,7 @@ export default async function EnrollmentsPage({
           </thead>
           <tbody>
             {enrollments.map((e, i) => {
-              const attendance = attendanceByEnrollment.get(e.id) ?? { present: 0, absent: 0 };
+              const attendance = attendanceByEnrollment.get(e.id) ?? { present: 0, absent: 0, supplementTotal: 0, supplementTaken: 0 };
               const remaining = Math.max(0, e.totalSessions - attendance.present - attendance.absent);
               // 오래된 순 1부터의 일련번호 — 현재 필터·검색어에 맞는 전체 건수(matchingCount)에서
               // 페이지 오프셋을 더한 최신순 정렬상 위치를 빼서, 가장 오래된 건이 1번이 되게 한다.
@@ -353,9 +359,17 @@ export default async function EnrollmentsPage({
                 <td className="px-4 py-3 text-slate-500">
                   {fmtDate(e.startDate)} ~ {fmtDate(e.endDate)}
                 </td>
-                <td className="px-4 py-3 text-slate-600">{e.totalSessions}회</td>
+                <td className="px-4 py-3 text-slate-600">
+                  {e.totalSessions}회
+                  {attendance.supplementTotal > 0 && (
+                    <span className="ml-1 text-[11px] text-amber-700" title="보충수업은 정규 회차(총 회차)에 포함되지 않는 추가 수업입니다">
+                      + 보충 {attendance.supplementTotal}
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-slate-600">
                   출석 {attendance.present} · 결석 {attendance.absent}
+                  {attendance.supplementTotal > 0 && <span className="ml-1 text-[11px] text-amber-700">· 보충 {attendance.supplementTaken}회 진행</span>}
                 </td>
                 <td className="px-4 py-3 text-slate-600">{remaining}회</td>
                 <td className="px-4 py-3">

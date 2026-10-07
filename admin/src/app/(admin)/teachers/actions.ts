@@ -8,7 +8,7 @@ import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission, logAudit } from "@/lib/rbac";
 import { startTeacherImpersonation, stopTeacherImpersonation } from "@/lib/teacherAuth";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
-import type { AccountStatus, ApprovalStatus, Sex, TeacherGrade } from "@/generated/prisma/client";
+import type { AccountStatus, ApprovalStatus, Sex, TeacherEmploymentType, TeacherGrade } from "@/generated/prisma/client";
 
 export async function createTeacher(_prevState: { error?: string } | undefined, formData: FormData) {
   const actor = await requireBackofficeActor();
@@ -68,6 +68,9 @@ export async function updateTeacher(id: number, _prevState: { error?: string } |
   const newRatePerUnit = Number(formData.get("newRatePerUnit") ?? 0);
 
   const teacherGrade = String(formData.get("teacherGrade") ?? "GENERAL") as TeacherGrade;
+  // 정규 강사 여부(유급휴가 대상) — teacherGrade(수석/일반)와는 별개다.
+  const employmentTypeRaw = String(formData.get("employmentType") ?? "NON_REGULAR");
+  const employmentType: TeacherEmploymentType = employmentTypeRaw === "REGULAR" ? "REGULAR" : "NON_REGULAR";
   const teamLeaderIdRaw = String(formData.get("teamLeaderId") ?? "");
   const sexRaw = String(formData.get("sex") ?? "");
   const ageRaw = String(formData.get("age") ?? "");
@@ -93,6 +96,7 @@ export async function updateTeacher(id: number, _prevState: { error?: string } |
     return { error: "실명은 필수입니다." };
   }
 
+  const before = await prisma.teacher.findUnique({ where: { id }, select: { employmentType: true } });
   await prisma.teacher.update({
     where: { id },
     data: {
@@ -102,6 +106,7 @@ export async function updateTeacher(id: number, _prevState: { error?: string } |
       email: email || null,
       approvalStatus,
       teacherGrade,
+      employmentType,
       teamLeaderId: teamLeaderIdRaw ? Number(teamLeaderIdRaw) : null,
       sex: sexRaw ? (sexRaw as Sex) : null,
       age: ageRaw ? Number(ageRaw) : null,
@@ -129,9 +134,13 @@ export async function updateTeacher(id: number, _prevState: { error?: string } |
     },
   });
   await logAudit({ actor, action: "UPDATE", targetType: "Teacher", targetId: id, description: newPassword ? "강사 정보 수정(비밀번호 변경 포함)" : "강사 정보 수정" });
+  if (before && before.employmentType !== employmentType) {
+    await logAudit({ actor, action: "UPDATE", targetType: "Teacher", targetId: id, description: `정규 강사 여부 변경: ${before.employmentType} → ${employmentType} (유급휴가 대상 판정에 쓰임)` });
+  }
 
   revalidatePath("/teachers");
   revalidatePath(`/teachers/${id}`);
+  revalidatePath("/teacher-paid-leaves");
   redirect("/teachers");
 }
 
