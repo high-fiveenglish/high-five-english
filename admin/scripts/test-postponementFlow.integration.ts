@@ -313,7 +313,9 @@ test("cascade: 금요일이 휴강이면 다음 월요일로 건너뜀 / 빈 슬
   check("수업 월·수 → 수요일 연기, 금요일(10/9) 휴강이라 다음 월요일(10/12)", eq(await activeRegular(e.id), ["2026-10-05", "2026-10-12"]) && r.replacementAt?.getTime() === kst("2026-10-12").getTime());
   check("종료일은 10/7 → 10/12", (await endIso(e.id)) === "2026-10-12");
 
-  // gap: 수강 종료일(10/16) 이내에 비어 있는 슬롯(10/9)이 있으면 그 슬롯을 채우고 종료일은 늘지 않는다
+  // gap: 수강 종료일(10/16) 이내에 비어 있는 슬롯(10/9)이 있으면 그 슬롯을 채우고 종료일은 늘지 않는다.
+  // (앞부분에서 등록한 10/9 휴강은 본사 전체 휴강이라 이 수강에도 적용되므로 먼저 지운다.)
+  await db.academyClosure.deleteMany();
   const e2 = await mkEnrollment({ teacherId: (await mkTeacher()).id, studentId: (await mkStudent()).id, days: "월수금", months: 1, total: 5, end: "2026-10-16" });
   const ses2 = await mkSeq(e2, ["2026-10-05", "2026-10-07", "2026-10-12", "2026-10-14", "2026-10-16"]); // 10/9 비어 있음
   const r2 = await adminPostpone(db, ses2[1].id);
