@@ -110,8 +110,10 @@ async function main() {
       [schema],
     );
     check("quotaImpact는 0/1만 허용하는 CHECK 제약이 있다", chk.rows.length === 1);
+    // 같은 DB의 public 스키마(앞선 db push)에도 같은 이름의 enum이 있을 수 있으므로 이 격리 스키마의 타입만 본다.
     const en = await cleanup.query(
-      `select enumlabel from pg_enum e join pg_type t on t.oid = e.enumtypid where t.typname = 'TeacherEmploymentType' order by enumsortorder`,
+      `select enumlabel from pg_enum e join pg_type t on t.oid = e.enumtypid join pg_namespace n on n.oid = t.typnamespace where t.typname = 'TeacherEmploymentType' and n.nspname = $1 order by enumsortorder`,
+      [schema],
     );
     check("정규 강사 enum: REGULAR/NON_REGULAR", JSON.stringify(en.rows.map((r: { enumlabel: string }) => r.enumlabel)) === JSON.stringify(["REGULAR", "NON_REGULAR"]));
     const def = await cleanup.query(
