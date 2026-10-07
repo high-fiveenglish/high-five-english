@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { AdminSessionCalendar } from "./AdminSessionCalendar";
 import { parseRouteId } from "@/lib/routeId";
-import { evaluationStateOf } from "@/lib/reschedule";
+import { loadEvaluationStates } from "@/lib/sessionEvaluationState";
 import { summarizeLeaveQuota, usedFromLeaveRows, weeklyLessonCount } from "@/lib/leavePolicy";
 
 export default async function StudentSessionsPage({
@@ -21,12 +21,7 @@ export default async function StudentSessionsPage({
     prisma.classSession.findMany({
       where: { studentId },
       orderBy: { scheduledAt: "asc" },
-      include: {
-        teacher: { select: TEACHER_SUMMARY_SELECT },
-        evaluation: true,
-        leaveRequest: true,
-        audioRecording: { select: { processingStatus: true } },
-      },
+      include: { teacher: { select: TEACHER_SUMMARY_SELECT }, evaluation: true, leaveRequest: true },
     }),
     prisma.enrollment.findMany({
       where: { studentId, status: { in: ["ACTIVE", "APPLIED"] } },
@@ -36,6 +31,9 @@ export default async function StudentSessionsPage({
   ]);
 
   if (!student || student.deletedAt) notFound();
+
+  // 평가 상태(NONE/HAS_EVALUATION/AI_PROCESSING)만 서버 전용 lib에서 받는다 — 이 페이지는 녹음 테이블을 직접 읽지 않는다.
+  const evaluationStates = await loadEvaluationStates(sessions.map((s) => s.id));
 
   return (
     <div>
@@ -62,7 +60,7 @@ export default async function StudentSessionsPage({
           leaveRequestId: s.leaveRequest?.id ?? null,
           isSupplement: s.isSupplement,
           enrollmentId: s.enrollmentId,
-          evaluationState: evaluationStateOf(s),
+          evaluationState: evaluationStates.get(s.id) ?? "NONE",
           relatedSessionId: s.relatedSessionId,
         }))}
         quotas={enrollments.map((e) => ({
