@@ -6,6 +6,7 @@ import { CLASS_METHOD_OPTIONS } from "@/lib/levelTestOptions";
 import { formatAppDate } from "@/lib/appTime";
 import { DeleteButton } from "../DeleteButton";
 import { cancelReservation } from "./actions";
+import { requirePageActor } from "@/lib/pageAccess";
 
 const WEEKDAY_LABEL: Record<number, string> = Object.fromEntries(WEEKDAYS.map((d) => [d.value, d.label]));
 const CLASS_METHOD_LABEL: Record<string, string> = Object.fromEntries(
@@ -59,6 +60,7 @@ export default async function ReservationsPage({
 }: {
   searchParams: Promise<{ filter?: string }>;
 }) {
+  await requirePageActor("reservations.view", { denyAgent: true });
   const { filter } = await searchParams;
   const showAll = filter === "all";
 

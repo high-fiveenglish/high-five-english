@@ -9,6 +9,7 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { applyClassLeave } from "@/lib/leaveApply";
 import { parseAppDateTime } from "@/lib/appTime";
 import { syncTeacherScheduleToGoogleSheet } from "@/lib/teacherScheduleSheet";
+import { requireInScope } from "@/lib/agentScope";
 
 const EXTENDED_DAYS = 1;
 
@@ -26,6 +27,7 @@ export async function createLeaveRequestAdmin(
     return { error: "수업을 선택해주세요." };
   }
 
+  await requireInScope(prisma, actor, "session", sessionId);
   const session = await prisma.classSession.findUnique({ where: { id: sessionId }, include: { leaveRequest: true } });
   if (!session) {
     return { error: "존재하지 않는 수업입니다." };
@@ -89,6 +91,7 @@ export async function createLeaveRequestAdmin(
 export async function approveLeaveRequest(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "leave_requests.update");
+  await requireInScope(prisma, actor, "leaveRequest", id);
 
   const leaveRequest = await prisma.leaveRequest.findUnique({ where: { id } });
   if (!leaveRequest) throw new Error("존재하지 않는 요청입니다.");
@@ -119,6 +122,7 @@ export async function approveLeaveRequest(id: number) {
 export async function rejectLeaveRequest(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "leave_requests.update");
+  await requireInScope(prisma, actor, "leaveRequest", id);
 
   const leaveRequest = await prisma.leaveRequest.findUnique({ where: { id } });
   if (!leaveRequest) throw new Error("존재하지 않는 요청입니다.");
@@ -137,6 +141,7 @@ export async function rejectLeaveRequest(id: number) {
 export async function revertLeaveRequest(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "leave_requests.revert");
+  await requireInScope(prisma, actor, "leaveRequest", id);
 
   const leaveRequest = await prisma.leaveRequest.findUnique({ where: { id } });
   if (!leaveRequest) return;

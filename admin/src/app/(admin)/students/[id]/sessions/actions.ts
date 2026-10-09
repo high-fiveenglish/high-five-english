@@ -11,6 +11,7 @@ import { parseAppDateTime } from "@/lib/appTime";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { isWithinAvailableHours, timeStringToMinuteOfDay } from "@/lib/timeSlots";
+import { requireInScope } from "@/lib/agentScope";
 
 const EXTENDED_DAYS = 1;
 
@@ -26,7 +27,9 @@ export async function getAvailableTeachersForSlot(
   scheduledAt: string,
   durationMin: number,
 ): Promise<{ id: number; label: string }[]> {
-  await requireBackofficeActor();
+  // 보충수업 폼(schedules.create)이 쓰는 조회 — 권한 없이 로그인만으로 모든 강사의 근무 가능 시간·일정 충돌 여부를 알 수 없게 한다.
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "schedules.create");
   if (!scheduledAt || !durationMin) return [];
 
   const start = parseAppDateTime(scheduledAt);
@@ -53,6 +56,7 @@ export async function addSupplementSession(
 ): Promise<{ error?: string }> {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "schedules.create");
+  await requireInScope(prisma, actor, "student", studentId);
 
   const enrollmentId = Number(formData.get("enrollmentId"));
   const teacherId = Number(formData.get("teacherId"));
@@ -178,6 +182,7 @@ async function createLeaveForSession(
 export async function applyStudentLeave(studentId: number, sessionId: number, reason: string) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "leave_requests.update");
+  await requireInScope(prisma, actor, "student", studentId);
   return createLeaveForSession(actor, studentId, sessionId, reason, "STUDENT");
 }
 
@@ -185,6 +190,7 @@ export async function applyStudentLeave(studentId: number, sessionId: number, re
 export async function applyAdminLeave(studentId: number, sessionId: number, reason: string) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "leave_requests.update");
+  await requireInScope(prisma, actor, "student", studentId);
   return createLeaveForSession(actor, studentId, sessionId, reason, actor.role === "MANAGER" ? "MANAGER" : "ADMIN");
 }
 
@@ -192,6 +198,7 @@ export async function applyAdminLeave(studentId: number, sessionId: number, reas
 export async function cancelSession(studentId: number, sessionId: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "schedules.update");
+  await requireInScope(prisma, actor, "student", studentId);
 
   const session = await prisma.classSession.findUnique({ where: { id: sessionId } });
   if (!session || session.studentId !== studentId) {
@@ -216,6 +223,7 @@ export async function cancelSession(studentId: number, sessionId: number) {
 export async function revertCancelSession(studentId: number, sessionId: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "schedules.update");
+  await requireInScope(prisma, actor, "student", studentId);
 
   const session = await prisma.classSession.findUnique({ where: { id: sessionId } });
   if (!session || session.studentId !== studentId) {

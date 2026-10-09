@@ -4,8 +4,10 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { BulletinForm } from "../BulletinForm";
 import { updateBulletin } from "../actions";
 import { parseRouteId } from "@/lib/routeId";
+import { requirePageActor } from "@/lib/pageAccess";
 
 export default async function EditBulletinPage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePageActor("bulletins.view", { denyAgent: true });
   const { id } = await params;
   const bulletinId = parseRouteId(id);
   if (bulletinId === null) notFound();

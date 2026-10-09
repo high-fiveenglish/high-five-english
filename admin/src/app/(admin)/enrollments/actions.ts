@@ -14,6 +14,7 @@ import { isWithinAvailableHours, timeStringToMinuteOfDay } from "@/lib/timeSlots
 import { countSessionsBlockingDeletion, deletionBlockedMessage } from "@/lib/enrollmentDeletion";
 import { Prisma, type EnrollmentStatus, type EnrollmentRequestStatus, type PaymentStatus } from "@/generated/prisma/client";
 import type { Actor } from "@/lib/rbac";
+import { requireHeadquarters, requireInScope } from "@/lib/agentScope";
 
 const REQUEST_STATUSES = ["NEW", "CONTACTED", "CONVERTED", "CANCELLED"] as const;
 
@@ -32,6 +33,7 @@ async function assertOwnsEnrollment(actor: Actor, enrollmentId: number): Promise
 export async function updateEnrollmentRequestStatus(id: number, status: EnrollmentRequestStatus) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "enrollment_requests.update");
+  requireHeadquarters(actor);
   if (!REQUEST_STATUSES.includes(status)) throw new Error("잘못된 상태값입니다.");
 
   await prisma.enrollmentRequest.update({ where: { id }, data: { status } });
@@ -409,6 +411,7 @@ export async function updateEnrollmentPrice(
 export async function deleteEnrollment(id: number): Promise<{ error?: string }> {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "enrollments.delete");
+  await requireInScope(prisma, actor, "enrollment", id);
   // 수업(ClassSession)이 있으면 삭제를 막고 안내한다 — 어차피 FK(RESTRICT)로 실패하므로 오류 화면 대신 메시지를 돌려준다.
   const blocking = await countSessionsBlockingDeletion(prisma, id);
   if (blocking > 0) return { error: deletionBlockedMessage(blocking) };

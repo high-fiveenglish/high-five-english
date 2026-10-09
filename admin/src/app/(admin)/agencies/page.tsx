@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID, HIGHFIVE_AGENT_CODE } from "@/lib/constants";
+import { requirePageActor } from "@/lib/pageAccess";
 
 export default async function AgenciesPage() {
+  await requirePageActor("agencies.view", { denyAgent: true });
   const agents = await prisma.agent.findMany({
     where: { siteId: DEFAULT_SITE_ID },
     orderBy: { name: "asc" },

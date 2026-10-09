@@ -10,6 +10,7 @@ import { AcademyClosureCalendar } from "./AcademyClosureCalendar";
 import { AcademyClosureRevertButton } from "./AcademyClosureRevertButton";
 import { formatAppDate, formatAppDateTime } from "@/lib/appTime";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePagePermission } from "@/lib/pageAccess";
 import type { Prisma } from "@/generated/prisma/client";
 
 const fmtDateTime = formatAppDateTime;
@@ -54,6 +55,8 @@ export default async function LeaveRequestsPage({
   // 정보까지 노출되므로 쿼리스트링을 조작해도 접근을 허용하지 않는다.
   const tab: TabKey = isAgent ? "academy" : tabParam === "admin" || tabParam === "academy" ? tabParam : "student";
   const query = q?.trim();
+  // 탭마다 필요한 권한이 다르다: 전체수업휴강(어학원 휴강)은 academy_closures.view, 학생/관리자 휴강 내역은 leave_requests.view.
+  requirePagePermission(actor, tab === "academy" ? "academy_closures.view" : "leave_requests.view");
 
   return (
     <div>

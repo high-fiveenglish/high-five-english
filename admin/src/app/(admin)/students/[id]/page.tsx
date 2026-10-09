@@ -4,7 +4,7 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { StudentEditForm } from "./StudentEditForm";
 import { ConsultationNotes } from "./ConsultationNotes";
 import { formatAppDateTime } from "@/lib/appTime";
-import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePageActor } from "@/lib/pageAccess";
 import { parseRouteId } from "@/lib/routeId";
 
 const fmtDateTime = formatAppDateTime;
@@ -14,7 +14,7 @@ export default async function EditStudentPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const actor = await requireBackofficeActor();
+  const actor = await requirePageActor("students.view");
   const { id } = await params;
   const studentId = parseRouteId(id);
   if (studentId === null) notFound();

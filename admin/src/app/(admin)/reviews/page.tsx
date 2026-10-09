@@ -4,8 +4,10 @@ import { DeleteButton } from "../DeleteButton";
 import { deleteReviewPost } from "./actions";
 import { formatAppDateTime } from "@/lib/appTime";
 import { ReviewViewsForm } from "./ReviewViewsForm";
+import { requirePageActor } from "@/lib/pageAccess";
 
 export default async function ReviewsPage() {
+  await requirePageActor("reviews.view", { denyAgent: true });
   const posts = await prisma.reviewPost.findMany({
     where: { siteId: DEFAULT_SITE_ID },
     orderBy: { createdAt: "desc" },

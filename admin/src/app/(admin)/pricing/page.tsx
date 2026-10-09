@@ -5,7 +5,7 @@ import { parseRouteId } from "@/lib/routeId";
 import { DEFAULT_SITE_ID, HIGHFIVE_AGENT_CODE } from "@/lib/constants";
 import { PriceCell } from "./PriceCell";
 import { ensureAgentPricing } from "./actions";
-import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePageActor } from "@/lib/pageAccess";
 
 const FREQUENCY_LABEL: Record<string, string> = {
   freq5: "주 5회",
@@ -24,7 +24,7 @@ export default async function PricingPage({
 }: {
   searchParams: Promise<{ agentId?: string }>;
 }) {
-  const actor = await requireBackofficeActor();
+  const actor = await requirePageActor("pricing.view");
   const { agentId: agentIdRaw } = await searchParams;
 
   const agents = await prisma.agent.findMany({

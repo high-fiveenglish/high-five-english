@@ -3,6 +3,7 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { findAllOverlappingSessions } from "@/lib/scheduleConflict";
 import { formatAppDateTime } from "@/lib/appTime";
 import { RefreshButton } from "./RefreshButton";
+import { requirePageActor } from "@/lib/pageAccess";
 
 const fmtDateTime = formatAppDateTime;
 const PAGE_SIZE = 20;
@@ -12,6 +13,7 @@ export default async function OverlappingSessionsPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  await requirePageActor("schedules.view", { denyAgent: true });
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 

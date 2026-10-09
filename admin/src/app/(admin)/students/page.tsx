@@ -8,7 +8,7 @@ import { ImpersonateButton } from "./ImpersonateButton";
 import { StudentDeleteButton } from "./StudentDeleteButton";
 import { RestoreStudentButton } from "./RestoreStudentButton";
 import { formatAppDateTime } from "@/lib/appTime";
-import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePageActor } from "@/lib/pageAccess";
 
 const fmtDateTime = formatAppDateTime;
 const CONSULT_ROUTE_LABEL: Record<string, string> = { WECHAT: "위챗", KAKAOTALK: "카카오톡" };
@@ -25,7 +25,7 @@ export default async function StudentsPage({
 }: {
   searchParams: Promise<{ filter?: string; notice?: string; q?: string; page?: string }>;
 }) {
-  const actor = await requireBackofficeActor();
+  const actor = await requirePageActor("students.view");
   const scopeAgentId = actor.role === "AGENT" ? actor.agentId : undefined;
   const { filter, notice, q, page: pageParam } = await searchParams;
   const showDeleted = filter === "deleted";

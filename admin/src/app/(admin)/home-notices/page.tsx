@@ -6,12 +6,14 @@ import { DEFAULT_SITE_ID, HIGHFIVE_AGENT_CODE } from "@/lib/constants";
 import { DeleteButton } from "../DeleteButton";
 import { deleteHomeNotice } from "./actions";
 import { formatAppDateTime } from "@/lib/appTime";
+import { requirePageActor } from "@/lib/pageAccess";
 
 export default async function HomeNoticesPage({
   searchParams,
 }: {
   searchParams: Promise<{ agentId?: string }>;
 }) {
+  await requirePageActor("home_notices.view", { denyAgent: true });
   const { agentId: agentIdRaw } = await searchParams;
   const selectedAgentId = agentIdRaw ? parseRouteId(agentIdRaw) : null;
   if (agentIdRaw && selectedAgentId === null) notFound();

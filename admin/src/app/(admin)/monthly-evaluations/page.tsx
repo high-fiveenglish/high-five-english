@@ -5,6 +5,7 @@ import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { parseScheduleDaysLabel } from "@/lib/weekdays";
 import { sessionsPerCycleFor, computeCompletedCycles, type CycleInfo } from "@/lib/monthlyEvaluationCycle";
 import { formatAppDate } from "@/lib/appTime";
+import { requirePageActor } from "@/lib/pageAccess";
 
 const PAGE_SIZE = 20;
 
@@ -13,6 +14,7 @@ export default async function MonthlyEvaluationsPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  await requirePageActor("monthly_evaluations.view", { denyAgent: true });
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 

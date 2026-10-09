@@ -1,14 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID, HIGHFIVE_AGENT_CODE } from "@/lib/constants";
 import { StudentCreateForm } from "./StudentCreateForm";
-import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePageActor } from "@/lib/pageAccess";
 
 // 학생 등록 시점의 협력사 선택은 직영/맘앤맘/시너지 3곳만 노출한다(다른 협력사는
 // 실무상 이 화면에서 바로 고를 일이 없어, 목록에 섞이면 오히려 실수를 유발한다).
 const REGISTRATION_AGENT_CODES = [HIGHFIVE_AGENT_CODE, "mnmenglish", "synergyenglish"];
 
 export default async function NewStudentPage() {
-  const actor = await requireBackofficeActor();
+  const actor = await requirePageActor("students.create");
   const agents = await prisma.agent.findMany({
     where: { siteId: DEFAULT_SITE_ID, code: { in: REGISTRATION_AGENT_CODES } },
   });

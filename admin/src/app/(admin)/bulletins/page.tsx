@@ -4,10 +4,12 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { DeleteButton } from "../DeleteButton";
 import { deleteBulletin } from "./actions";
 import { formatAppDateTime } from "@/lib/appTime";
+import { requirePageActor } from "@/lib/pageAccess";
 
 const fmtDateTime = formatAppDateTime;
 
 export default async function BulletinsPage() {
+  await requirePageActor("bulletins.view", { denyAgent: true });
   const bulletins = await prisma.bulletin.findMany({
     where: { siteId: DEFAULT_SITE_ID },
     orderBy: { createdAt: "desc" },

@@ -4,10 +4,12 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission, logAudit } from "@/lib/rbac";
+import { requireHeadquarters } from "@/lib/agentScope";
 
 export async function updateAgentBranding(id: number, _prevState: { error?: string } | undefined, formData: FormData) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "agencies.update");
+  requireHeadquarters(actor);
 
   const str = (key: string) => String(formData.get(key) ?? "").trim();
   const domain = str("domain").toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
@@ -51,6 +53,7 @@ export async function updateAgentConsultChannel(
 ) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "agencies.update");
+  requireHeadquarters(actor);
 
   const agent = await prisma.agent.findUnique({ where: { id: agentId } });
   if (!agent) throw new Error("존재하지 않는 협력사입니다.");

@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID, HIGHFIVE_AGENT_CODE } from "@/lib/constants";
 import { ReservationCreateForm } from "./ReservationCreateForm";
+import { requirePageActor } from "@/lib/pageAccess";
 
 const RESERVATION_AGENT_CODES = [HIGHFIVE_AGENT_CODE, "mnmenglish", "synergyenglish"];
 
 export default async function NewReservationPage() {
+  await requirePageActor("reservations.create", { denyAgent: true });
   const [teachers, agents] = await Promise.all([
     prisma.teacher.findMany({
       where: { siteId: DEFAULT_SITE_ID, accountStatus: "ACTIVE" },

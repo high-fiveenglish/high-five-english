@@ -9,6 +9,7 @@ import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { WEEKDAYS } from "@/lib/weekdays";
 import { syncTeacherScheduleToGoogleSheet } from "@/lib/teacherScheduleSheet";
+import { requireHeadquarters } from "@/lib/agentScope";
 
 // 상담 단계에서 강사 자리를 미리 "가예약"해두는 기능. 본사와 협력사 2곳이 같은 강사
 // 풀을 공유해서 쓰다 보니, 상담원이 강사 빈자리를 구글시트로 먼저 확인하고 자리를
@@ -23,6 +24,7 @@ import { syncTeacherScheduleToGoogleSheet } from "@/lib/teacherScheduleSheet";
 export async function createReservation(_prevState: { error?: string } | undefined, formData: FormData) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "reservations.create");
+  requireHeadquarters(actor);
 
   const teacherId = Number(formData.get("teacherId"));
   const agentIdRaw = String(formData.get("agentId") ?? "");
@@ -104,6 +106,7 @@ export async function createReservation(_prevState: { error?: string } | undefin
 export async function cancelReservation(key: string) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "reservations.update");
+  requireHeadquarters(actor);
 
   const isLegacyId = /^\d+$/.test(key);
 

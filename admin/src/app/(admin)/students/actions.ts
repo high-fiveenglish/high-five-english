@@ -12,6 +12,7 @@ import { DEFAULT_SITE_ID, HIGHFIVE_AGENT_CODE } from "@/lib/constants";
 import { syncTeacherScheduleToGoogleSheet } from "@/lib/teacherScheduleSheet";
 import type { Actor } from "@/lib/rbac";
 import type { StudentGrade, StudentStatus, Sex, ResidenceRegion, ConsultRoute } from "@/generated/prisma/client";
+import { requireInScope } from "@/lib/agentScope";
 
 // AGENT는 자기 협력사 소속 학생만 만질 수 있다 — URL을 직접 조작해 다른 협력사 학생
 // 페이지로 들어와도(목록 화면의 필터는 UX 편의일 뿐) 서버 단에서 한 번 더 막는다.
@@ -183,6 +184,7 @@ export async function deleteStudent(id: number) {
 export async function restoreStudent(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "students.delete");
+  await requireInScope(prisma, actor, "student", id);
   await prisma.student.update({ where: { id }, data: { deletedAt: null } });
   await logAudit({ actor, action: "UPDATE", targetType: "Student", targetId: id, description: "학생 삭제 취소(복원)" });
   revalidatePath("/students");
@@ -238,6 +240,7 @@ export async function deleteConsultationNote(studentId: number, noteId: number) 
 export async function impersonateStudent(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "students.impersonate");
+  await requireInScope(prisma, actor, "student", id);
   const student = await prisma.student.findUnique({ where: { id } });
   if (!student || student.deletedAt) {
     throw new Error("대리 로그인할 수 없는 학생입니다.");

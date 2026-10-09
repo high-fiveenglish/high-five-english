@@ -7,7 +7,7 @@ import { ImpersonateButton } from "../students/ImpersonateButton";
 import { deleteLevelTest } from "./actions";
 import { SUBJECT_OPTIONS } from "@/lib/levelTestOptions";
 import { formatAppDate, formatAppDateTime } from "@/lib/appTime";
-import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePageActor } from "@/lib/pageAccess";
 
 const SUBJECT_LABEL: Record<string, string> = Object.fromEntries(SUBJECT_OPTIONS.map((o) => [o.value, o.label]));
 
@@ -24,7 +24,7 @@ const PROGRESS_BADGE_STYLE: Record<string, string> = {
 const PROGRESS_ORDER = ["접수", "수업확정", "수업완료", "결석", "취소"] as const;
 
 export default async function LevelTestsPage() {
-  const actor = await requireBackofficeActor();
+  const actor = await requirePageActor("level_tests.view");
   const scopeAgentId = actor.role === "AGENT" ? actor.agentId : undefined;
   const [levelTests, progressGroups] = await Promise.all([
     prisma.levelTest.findMany({

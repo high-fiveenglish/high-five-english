@@ -8,12 +8,14 @@ import { DeleteButton } from "../../../DeleteButton";
 import { deleteMonthlyEvaluation } from "../../actions";
 import { MonthlyEvaluationForm } from "./MonthlyEvaluationForm";
 import { parseRouteId } from "@/lib/routeId";
+import { requirePageActor } from "@/lib/pageAccess";
 
 export default async function MonthlyEvaluationDetailPage({
   params,
 }: {
   params: Promise<{ enrollmentId: string; cycleNumber: string }>;
 }) {
+  await requirePageActor("monthly_evaluations.view", { denyAgent: true });
   const { enrollmentId, cycleNumber } = await params;
 
   const enrollmentIdValue = parseRouteId(enrollmentId);

@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { AgentBrandingForm } from "./AgentBrandingForm";
 import { AgentConsultChannelField } from "./AgentConsultChannelField";
 import { parseRouteId } from "@/lib/routeId";
+import { requirePageActor } from "@/lib/pageAccess";
 
 export default async function EditAgencyPage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePageActor("agencies.view", { denyAgent: true });
   const { id } = await params;
   const agentId = parseRouteId(id);
   if (agentId === null) notFound();

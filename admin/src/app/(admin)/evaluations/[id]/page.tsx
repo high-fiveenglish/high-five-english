@@ -5,6 +5,7 @@ import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { EvaluationAdminForm } from "./EvaluationAdminForm";
 import { formatAppDateTime } from "@/lib/appTime";
 import { parseRouteId } from "@/lib/routeId";
+import { requirePageActor } from "@/lib/pageAccess";
 
 const fmtDateTime = formatAppDateTime;
 
@@ -13,6 +14,7 @@ export default async function EvaluationDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requirePageActor("evaluations.view", { denyAgent: true });
   const { id } = await params;
 
   const routeId = parseRouteId(id);

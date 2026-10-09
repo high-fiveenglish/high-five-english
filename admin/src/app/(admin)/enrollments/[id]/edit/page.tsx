@@ -7,11 +7,11 @@ import { computeBasePriceKRW } from "@/lib/enrollmentPricing";
 import { EnrollmentCreateForm } from "../../new/EnrollmentCreateForm";
 import { parseScheduleDaysLabel } from "../../scheduleUtils";
 import { PaymentForm } from "./PaymentForm";
-import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePageActor } from "@/lib/pageAccess";
 import { parseRouteId } from "@/lib/routeId";
 
 export default async function EditEnrollmentPage({ params }: { params: Promise<{ id: string }> }) {
-  const actor = await requireBackofficeActor();
+  const actor = await requirePageActor("enrollments.update");
   const { id } = await params;
   const enrollmentId = parseRouteId(id);
   if (enrollmentId === null) notFound();
