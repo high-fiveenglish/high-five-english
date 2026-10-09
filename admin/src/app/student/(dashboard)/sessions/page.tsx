@@ -54,7 +54,7 @@ export default async function StudentSessionsPage() {
           <p className="font-semibold text-slate-800">수업 연기 가능 횟수 (등록기간 전체 기준)</p>
           {quotas.map((q) => (
             <p key={q.id} className="mt-1">
-              허용 {q.effectiveQuota}회 · 사용 {q.usedCount}회 · <span className="font-bold">남은 {q.remainingCount}회</span>
+              최종 적용 {q.effectiveQuota}회 · 사용 {q.usedCount}회 · <span className="font-bold">잔여 {q.remainingCount}회</span>
             </p>
           ))}
           <p className="mt-1 text-xs text-slate-400">연기는 수업 시작 2시간 전까지 신청할 수 있습니다.</p>

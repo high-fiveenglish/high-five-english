@@ -24,6 +24,7 @@ import { countLessons, type CountableSession } from "../src/lib/lessonCounts";
 import { checkPaidLeaveApprovalTiming, checkPaidLeaveQuota, paidLeavePay, paidLeavePeriod } from "../src/lib/paidLeavePolicy";
 import { classSessionPay, paidLeaveStatRow, summarizeStatRows, type TeacherStatRow } from "../src/lib/teacherStats";
 import { evaluationStateOf } from "../src/lib/reschedule";
+import { parseEmploymentTypeInput } from "../src/lib/teacherEmployment";
 
 let passed = 0;
 let failed = 0;
@@ -193,6 +194,44 @@ const kst = (s: string) => new Date(`${s}+09:00`);
   check("학생 연기 횟수 검사는 STUDENT_POSTPONEMENT일 때만 수행(관리자연기·휴강·홀드·유급휴가는 미차감)", /const quotaImpact: 0 \| 1 = p\.source === "STUDENT_POSTPONEMENT" \? 1 : 0;/.test(resched));
   check("teacherStats는 LEAVE 세션을 급여 대상으로 조회하지 않는다(일반 LEAVE = 0원)", !/"LEAVE"/.test(stats) && /status:\s*\{\s*in:\s*\["COMPLETED", "MAKEUP_NEEDED"\]\s*\}/.test(stats));
   check("teacherStats는 승인된(APPROVED) 유급휴가만 지급한다", /teacherPaidLeave\.findMany\(\{[\s\S]{0,200}status:\s*"APPROVED"/.test(stats));
+}
+
+// ── 9) 오너 결정 반영: 정규/비정규 입력 검증, 연기 횟수 화면, 승인 락 순서 ────────────────────────────────────────────────
+{
+  check("정규/비정규 입력: 값 없음 → 변경 없음(null)", eq(parseEmploymentTypeInput(null), { ok: true, value: null }) && eq(parseEmploymentTypeInput(undefined), { ok: true, value: null }));
+  check("정규/비정규 입력: REGULAR / NON_REGULAR만 허용", eq(parseEmploymentTypeInput("REGULAR"), { ok: true, value: "REGULAR" }) && eq(parseEmploymentTypeInput("NON_REGULAR"), { ok: true, value: "NON_REGULAR" }));
+  for (const bad of ["regular", "Regular", "", " REGULAR", "ADMIN", "true", "0"]) check(`정규/비정규 입력: 잘못된 값 ${JSON.stringify(bad)} 거부`, parseEmploymentTypeInput(bad).ok === false);
+  check("정규/비정규 입력: 파일 값(File)도 거부", parseEmploymentTypeInput(new Blob(["x"]) as unknown as FormDataEntryValue).ok === false);
+
+  const adminRoot = process.cwd();
+  const read = (p: string) => fs.readFileSync(path.join(adminRoot, p), "utf8").replace(/\/\/.*$/gm, "");
+  const teachers = read("src/app/(admin)/teachers/actions.ts");
+  check("강사 수정: 서버에서 parseEmploymentTypeInput으로 검증하고, 잘못된 값은 오류로 끝낸다", /parseEmploymentTypeInput\(formData\.get\("employmentType"\)\)/.test(teachers) && /if \(!employment\.ok\) return \{ error: employment\.error \}/.test(teachers));
+  check("강사 수정: 값이 없으면 현재 값을 바꾸지 않고(조건부 spread), 협력사(AGENT)는 지정 불가", /\.\.\.\(employmentType !== null \? \{ employmentType \} : \{\}\)/.test(teachers) && /employmentType !== null && actor\.role === "AGENT"/.test(teachers));
+  check("강사 수정: 기존 teachers.update 권한 검증 유지 + 변경은 감사 로그", /requirePermission\(actor, "teachers\.update"\)/.test(teachers) && /정규 강사 여부 변경/.test(teachers));
+  check("정규 강사로 일괄 변경하는 코드가 없다(기존 강사는 DB 값 그대로)", !/updateMany\([^)]*employmentType/.test(teachers) && !/employmentType:\s*"REGULAR"/.test(teachers));
+
+  const enrollActions = read("src/app/(admin)/enrollments/actions.ts");
+  check(
+    "수강 연기 횟수 수정 액션: enrollments.update 권한 + 협력사 차단 + 정수 검증 + 공통 adjustLeaveQuota(감사 로그·사용량 검증 포함)",
+    /export async function adjustEnrollmentLeaveQuota/.test(enrollActions) && /requirePermission\(actor, "enrollments\.update"\)/.test(enrollActions) && /actor\.role === "AGENT"/.test(enrollActions) && /Number\.isInteger\(newAdjustment\)/.test(enrollActions) && /adjustLeaveQuota\(tx/.test(enrollActions),
+  );
+  const cell = fs.readFileSync(path.join(adminRoot, "src/app/(admin)/enrollments/LeaveQuotaCell.tsx"), "utf8");
+  check("수강내역 화면은 기본 / 관리자 조정 / 최종 적용 / 사용 / 잔여를 서로 다른 이름으로 표시", ["기본", "관리자 조정", "최종 적용", "사용", "잔여"].every((w) => cell.includes(w)));
+  const enrollPage = read("src/app/(admin)/enrollments/page.tsx");
+  check("수강내역 목록에 연기 횟수 열 + 협력사는 보기만(canEdit)", /LeaveQuotaCell/.test(enrollPage) && /canEditQuota = actor\.role !== "AGENT"/.test(enrollPage));
+  check("연기 횟수 기본값 정책은 leavePolicy 한 곳(주1·4·6·7회 = 0)", policyLeaveQuota({ scheduleDays: "월", packageMonths: 3 }) === 0 && policyLeaveQuota({ scheduleDays: "월화수목", packageMonths: 3 }) === 0);
+
+  const paid = read("src/lib/teacherPaidLeave.ts");
+  const approveFn = paid.slice(paid.indexOf("export async function approvePaidLeave"));
+  const lockAt = approveFn.indexOf("lockAll(tx, { teacherIds: [head.teacherId] })");
+  const readAt = approveFn.indexOf("await loadSessions()");
+  check("유급휴가 승인: 강사 락을 먼저 잡고 그 다음에 수업 목록을 읽는다(stale 스냅샷 방지)", lockAt >= 0 && readAt > lockAt);
+  check("유급휴가 승인: 수강/학생 락을 잡은 뒤 목록을 다시 읽어 같은지 확인한다", /const fresh = await loadSessions\(\)/.test(approveFn) && /fresh\.every\(/.test(approveFn));
+  check(
+    "과거 유급휴가 이력을 옮기는 별도 기능이 없다(요청/승인/거부/취소 4개 함수뿐)",
+    ["requestPaidLeave", "approvePaidLeave", "rejectPaidLeave", "revokePaidLeave"].every((n) => new RegExp(`export async function ${n}\\b`).test(paid)) && (paid.match(/export async function \w+/g) ?? []).length === 4,
+  );
 }
 
 console.log(`${passed} passed, ${failed} failed`);

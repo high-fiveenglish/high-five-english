@@ -49,6 +49,12 @@ export async function createSupplementSession(tx: Tx, input: SupplementInput): P
   const hit = closure.find((c) => formatAppDate(c.date) === dateIso);
   if (hit) return { ok: false, error: `${dateIso}은(는) 학원 휴강일입니다(${hit.reason}).` };
 
+  const onLeave = await tx.teacherPaidLeave.findFirst({
+    where: { teacherId: input.teacherId, status: "APPROVED", leaveDate: new Date(`${dateIso}T00:00:00Z`) },
+    select: { id: true },
+  });
+  if (onLeave) return { ok: false, error: `해당 강사는 ${dateIso}에 승인된 유급휴가가 있어 그 날에는 수업을 만들 수 없습니다.` };
+
   if (input.relatedSessionId != null) {
     const rel = await tx.classSession.findUnique({ where: { id: input.relatedSessionId }, select: { enrollmentId: true, deletedAt: true } });
     if (!rel || rel.deletedAt || rel.enrollmentId !== input.enrollmentId) return { ok: false, error: "관련 정규 수업이 이 수강의 수업이 아닙니다." };

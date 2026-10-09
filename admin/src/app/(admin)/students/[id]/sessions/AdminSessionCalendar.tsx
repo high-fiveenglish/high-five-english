@@ -511,10 +511,10 @@ function QuotaPanel({ studentId, quotas }: { studentId: number; quotas: QuotaInf
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               <span className="font-medium text-slate-800">{q.label}</span>
               <span>기본 {q.policyQuota}회</span>
-              <span>관리자 가감 {q.adminAdjustment >= 0 ? "+" : ""}{q.adminAdjustment}회</span>
-              <span className="font-semibold">허용 {q.effectiveQuota}회</span>
+              <span>관리자 조정 {q.adminAdjustment >= 0 ? "+" : ""}{q.adminAdjustment}회</span>
+              <span className="font-semibold">최종 적용 {q.effectiveQuota}회</span>
               <span>사용 {q.usedCount}회</span>
-              <span className={q.remainingCount === 0 ? "font-bold text-red-600" : "font-bold text-emerald-700"}>남은 {q.remainingCount}회</span>
+              <span className={q.remainingCount === 0 ? "font-bold text-red-600" : "font-bold text-emerald-700"}>잔여 {q.remainingCount}회</span>
               <button
                 type="button"
                 onClick={() => {

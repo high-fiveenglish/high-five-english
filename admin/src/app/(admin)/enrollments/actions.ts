@@ -339,6 +339,25 @@ export async function updateEnrollment(id: number, _prevState: { error?: string 
   redirect("/enrollments");
 }
 
+// 수강내역 화면에서 학생 연기 가능 횟수를 관리자가 조정한다(기본 정책값에 더하는 가감값). 검증(음수/이미 쓴 횟수보다 적게 금지, 사유 필수, 감사 로그)은
+// lib/reschedule.adjustLeaveQuota가 수강 단위 advisory lock 안에서 한다. 본사 계정(ADMIN/MANAGER)만 — 협력사(AGENT)는 볼 수만 있다.
+export async function adjustEnrollmentLeaveQuota(enrollmentId: number, newAdjustment: number, reason: string): Promise<{ error?: string }> {
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "enrollments.update");
+  if (actor.role === "AGENT") return { error: "협력사 계정은 학생 연기 횟수를 수정할 수 없습니다." };
+  if (!Number.isInteger(enrollmentId) || !Number.isInteger(newAdjustment)) return { error: "입력값이 올바르지 않습니다." };
+  const exists = await prisma.enrollment.findUnique({ where: { id: enrollmentId }, select: { studentId: true } });
+  if (!exists) return { error: "존재하지 않는 수강 건입니다." };
+  const { runTx } = await import("@/lib/appTransaction");
+  const { adjustLeaveQuota } = await import("@/lib/reschedule");
+  const result = await runTx((tx) => adjustLeaveQuota(tx, { enrollmentId, newAdjustment, reason, actor: { role: actor.role, id: actor.id, name: actor.name } }));
+  if (!result.ok) return { error: result.error };
+  revalidatePath("/enrollments");
+  revalidatePath(`/students/${exists.studentId}/sessions`);
+  revalidatePath("/student/sessions");
+  return {};
+}
+
 export async function updateEnrollmentStatus(id: number, status: EnrollmentStatus) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "enrollments.update");

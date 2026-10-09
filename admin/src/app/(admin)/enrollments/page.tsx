@@ -13,6 +13,8 @@ import { formatScheduleDayTime } from "./scheduleUtils";
 import { formatAppDate, formatAppDateTime } from "@/lib/appTime";
 import { closeExpiredEnrollments } from "@/lib/enrollmentLifecycle";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { summarizeLeaveQuota, usedFromLeaveRows } from "@/lib/leavePolicy";
+import { LeaveQuotaCell } from "./LeaveQuotaCell";
 
 const PAYMENT_STATUS_LABEL: Record<string, string> = { UNPAID: "미결제", PAID: "결제완료", FAILED: "결제실패" };
 const PAYMENT_STATUS_CLASS: Record<string, string> = {
@@ -152,6 +154,13 @@ export default async function EnrollmentsPage({
     }
     attendanceByEnrollment.set(row.enrollmentId, entry);
   }
+
+  // 학생 연기 횟수(기본 정책값 + 관리자 조정 = 최종 적용, 사용, 잔여) — 계산은 lib/leavePolicy.ts 한 곳이고 학생 화면·마케팅 API와 같다.
+  const leaveRows = await prisma.leaveRequest.findMany({
+    where: { enrollmentId: { in: enrollments.map((e) => e.id) }, status: "APPROVED" },
+    select: { enrollmentId: true, status: true, quotaImpact: true, source: true, requestedByRole: true, academyClosureId: true },
+  });
+  const canEditQuota = actor.role !== "AGENT";
 
   // 탭 옆 숫자 — 지금 몇 건이 각 상태에 있는지 한눈에 보이도록. 탭마다 조건이 달라(상태별,
   // 종료일 임박순 등) buildEnrollmentWhere를 그대로 재사용해 개별 count 쿼리를 병렬로 날린다.
@@ -306,6 +315,7 @@ export default async function EnrollmentsPage({
               <th className="px-4 py-3">총 회차</th>
               <th className="px-4 py-3">출결석</th>
               <th className="px-4 py-3">잔여 회차</th>
+              <th className="px-4 py-3">학생 연기 횟수</th>
               <th className="px-4 py-3">상태</th>
               <th className="px-4 py-3">결제</th>
               <th className="px-4 py-3" />
@@ -373,6 +383,18 @@ export default async function EnrollmentsPage({
                 </td>
                 <td className="px-4 py-3 text-slate-600">{remaining}회</td>
                 <td className="px-4 py-3">
+                  <LeaveQuotaCell
+                    enrollmentId={e.id}
+                    canEdit={canEditQuota}
+                    quota={summarizeLeaveQuota({
+                      scheduleDays: e.scheduleDays,
+                      packageMonths: e.packageMonths,
+                      adminAdjustment: e.leaveQuotaAdjustment,
+                      usedCount: usedFromLeaveRows(leaveRows.filter((l) => l.enrollmentId === e.id)),
+                    })}
+                  />
+                </td>
+                <td className="px-4 py-3">
                   <StatusSelect id={e.id} status={e.status} />
                 </td>
                 <td className="px-4 py-3">
@@ -411,7 +433,7 @@ export default async function EnrollmentsPage({
             })}
             {enrollments.length === 0 && (
               <tr>
-                <td colSpan={16} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={17} className="px-4 py-10 text-center text-slate-400">
                   해당하는 수강내역이 없습니다.
                 </td>
               </tr>

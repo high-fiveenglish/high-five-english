@@ -151,6 +151,12 @@ export async function releaseHoldInTx(
     ),
   ]);
   const teacherBusy = new Map<number, BusyInterval[]>(perTeacher);
+  // 강사별 승인된 유급휴가일 — 휴강일처럼 새 수업을 놓을 수 없는 날이다.
+  const paidLeaves = await tx.teacherPaidLeave.findMany({
+    where: { teacherId: { in: teacherIds }, status: "APPROVED", leaveDate: { gte: new Date(`${formatAppDate(rangeStart)}T00:00:00Z`) } },
+    select: { teacherId: true, leaveDate: true },
+  });
+  const leaveDatesOf = (teacherId: number): Set<string> => new Set(paidLeaves.filter((l) => l.teacherId === teacherId).map((l) => l.leaveDate.toISOString().slice(0, 10)));
   const studentBusy: BusyInterval[] = studentSessions.map((t) => ({ start: t.scheduledAt.getTime(), end: t.scheduledAt.getTime() + t.durationMin * 60_000 }));
   const closureDates = new Set(closures.map((c) => formatAppDate(c.date)));
   // 제자리에서 되살리는 수업의 날짜도 이미 찬 슬롯이다.
@@ -165,7 +171,9 @@ export async function releaseHoldInTx(
     const why =
       closureDates.has(formatAppDate(s.scheduledAt))
         ? "학원 휴강일입니다"
-        : overlaps(start, end, teacherBusy.get(s.teacherId) ?? [])
+        : leaveDatesOf(s.teacherId).has(formatAppDate(s.scheduledAt))
+          ? "담당 강사의 승인된 유급휴가일입니다"
+          : overlaps(start, end, teacherBusy.get(s.teacherId) ?? [])
           ? "담당 강사의 다른 수업 또는 레벨테스트 일정이 있습니다"
           : overlaps(start, end, studentBusy)
             ? "학생의 다른 수업 일정이 있습니다"
@@ -188,8 +196,9 @@ export async function releaseHoldInTx(
     const desired = new Date(s.scheduledAt.getTime() + shiftDays * MS_PER_DAY);
     const desiredIso = formatAppDate(desired);
     const busy = [...(teacherBusy.get(s.teacherId) ?? []), ...studentBusy];
+    const blockedDates = new Set([...closureDates, ...leaveDatesOf(s.teacherId)]);
     const usable =
-      desired.getTime() > now.getTime() && !occupied.has(desiredIso) && !closureDates.has(desiredIso) && !overlaps(desired.getTime(), desired.getTime() + s.durationMin * 60_000, busy);
+      desired.getTime() > now.getTime() && !occupied.has(desiredIso) && !blockedDates.has(desiredIso) && !overlaps(desired.getTime(), desired.getTime() + s.durationMin * 60_000, busy);
     let destination = desired;
     if (usable) {
       shifted++;
@@ -200,7 +209,7 @@ export async function releaseHoldInTx(
         durationMin: s.durationMin,
         lowerBound: new Date(Math.max(desired.getTime(), now.getTime())),
         occupiedDates: occupied,
-        closureDates,
+        closureDates: blockedDates,
         busy,
       });
       if (!slot) throw new HoldReleaseError("홀드 해제 후 수업을 배치할 수 있는 다음 정규 수업 슬롯을 찾지 못했습니다(수업 요일·시간 정보를 확인해 주세요).");

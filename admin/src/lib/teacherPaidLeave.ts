@@ -69,13 +69,26 @@ export async function approvePaidLeave(
   const dayStartExact = new Date(`${leaveIso}T00:00:00+09:00`);
   const dayEnd = new Date(dayStartExact.getTime() + 24 * 60 * 60 * 1000);
 
-  // 그날 수업이 걸린 수강/학생까지 한꺼번에 전역 순서(강사→수강→학생)로 잠근다.
-  const sessions = await tx.classSession.findMany({
-    where: { teacherId: head.teacherId, deletedAt: null, status: "SCHEDULED", scheduledAt: { gte: dayStartExact, lt: dayEnd } },
-    select: { id: true, enrollmentId: true, studentId: true, isSupplement: true, scheduledAt: true },
-    orderBy: { scheduledAt: "asc" },
-  });
-  await lockAll(tx, { teacherIds: [head.teacherId], enrollmentIds: sessions.map((s) => s.enrollmentId), studentIds: sessions.map((s) => s.studentId) });
+  // 강사 락을 "먼저" 잡는다. 이 강사의 수업을 만드는 모든 경로(보충수업 생성, 연기 대체 수업 배치, 수업 생성 실행기)가 같은 강사 락을 잡으므로,
+  // 이 락을 쥐고 있는 동안에는 이 강사에게 새 수업이 생기지 않는다. 그 다음에 그날 수업 목록을 읽어(락 이후의 최신 스냅샷) 수강/학생 락을 전역 순서
+  // (강사 → 수강 → 학생)로 잡는다. 예전에는 목록을 먼저 읽고 나중에 잠가서, 그 사이에 생긴 수업이 목록에서 빠질 수 있었다.
+  await lockAll(tx, { teacherIds: [head.teacherId] });
+  const loadSessions = () =>
+    tx.classSession.findMany({
+      where: { teacherId: head.teacherId, deletedAt: null, status: "SCHEDULED", scheduledAt: { gte: dayStartExact, lt: dayEnd } },
+      select: { id: true, enrollmentId: true, studentId: true, isSupplement: true, scheduledAt: true },
+      orderBy: [{ scheduledAt: "asc" }, { id: "asc" }],
+    });
+  let sessions = await loadSessions();
+  for (let attempt = 0; ; attempt++) {
+    await lockAll(tx, { teacherIds: [head.teacherId], enrollmentIds: sessions.map((s) => s.enrollmentId), studentIds: sessions.map((s) => s.studentId) });
+    // 수강/학생 락을 잡고 나서 한 번 더 읽어 같은 목록인지 확인한다(다르면 새 목록으로 다시 잠근다).
+    const fresh = await loadSessions();
+    const same = fresh.length === sessions.length && fresh.every((s, i) => s.id === sessions[i].id);
+    sessions = fresh;
+    if (same) break;
+    if (attempt >= 3) throw new PaidLeaveSessionError("승인 중에 그 날 수업이 계속 바뀌어 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
 
   const pl = await tx.teacherPaidLeave.findUnique({ where: { id: input.paidLeaveId }, include: { teacher: { select: { employmentType: true } } } });
   if (!pl) return { ok: false, error: "유급휴가 요청을 찾을 수 없습니다." };

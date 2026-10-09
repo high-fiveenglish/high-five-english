@@ -10,6 +10,7 @@ import type { PrismaClient } from "../src/generated/prisma/client";
 import type { Tx } from "../src/lib/advisoryLock";
 import { formatAppDate } from "../src/lib/appTime";
 import { countLessons } from "../src/lib/lessonCounts";
+import { lockAll } from "../src/lib/advisoryLock";
 import { registerAcademyClosure, revertAcademyClosure, ClosureError } from "../src/lib/academyClosureFlow";
 import { adjustLeaveQuota, getLeaveQuotaSummary, RescheduleError, rescheduleSession, resetSessionEvaluation, revertReschedule, type RescheduleParams } from "../src/lib/reschedule";
 import { createSupplementSession } from "../src/lib/supplement";
@@ -649,6 +650,142 @@ test("유급휴가 승인 시점: 휴가일 이후 일반 사용자 승인 거�
   const r2 = await reqPL(db, t2.id, "2026-10-20");
   await run(db, async (tx) => tx.teacherPaidLeave.update({ where: { id: (r2 as { paidLeaveId: number }).paidLeaveId }, data: { status: "REJECTED" } }));
   check("거부됐던 유급휴가를 관리자가 승인(수정)할 수 있음", (await approvePL(db, (r2 as { paidLeaveId: number }).paidLeaveId)).ok);
+});
+
+// ── 오너 결정 반영: 정규/비정규 지정이 유급휴가 자격에 반영, 승인 중 stale 세션 스냅샷 방지(강사 락 먼저), 휴가일에는 새 수업이 생기지 않음 ────────────────────
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const activeOn = (teacherId: number, iso: string) =>
+  db.classSession.count({
+    where: { teacherId, deletedAt: null, status: { in: ["SCHEDULED", "COMPLETED", "HOLD"] }, scheduledAt: { gte: kst(iso, "00:00"), lt: new Date(kst(iso, "00:00").getTime() + 86_400_000) } },
+  });
+
+test("정규/비정규 지정이 유급휴가 자격에 실제로 반영된다(저장 값 확인, 비정규 요청·승인 거부, 지정 변경 후 승인 판정)", async () => {
+  await reset();
+  const t = await mkTeacher();
+  check("새 강사는 비정규(NON_REGULAR)가 기본값 — 임의로 정규가 되지 않음", t.employmentType === "NON_REGULAR");
+  const denied = await reqPL(db, t.id, "2026-10-19");
+  check("비정규 강사는 유급휴가 요청 불가", !denied.ok);
+  await db.teacher.update({ where: { id: t.id }, data: { employmentType: "REGULAR" } });
+  check("정규로 지정한 값이 DB에 정확히 저장됨(다시 읽으면 REGULAR)", (await db.teacher.findUniqueOrThrow({ where: { id: t.id } })).employmentType === "REGULAR");
+  const req = await reqPL(db, t.id, "2026-10-19");
+  check("정규 지정 후 요청 가능", req.ok);
+  const pid = (req as { paidLeaveId: number }).paidLeaveId;
+  // 승인 전에 비정규로 바뀌면 승인할 수 없다(자격은 승인 시점의 지정으로 판정)
+  await db.teacher.update({ where: { id: t.id }, data: { employmentType: "NON_REGULAR" } });
+  const rejected = await approvePL(db, pid);
+  check("요청 뒤 비정규로 바뀌면 승인 거부", !rejected.ok && /정규 강사만/.test(rejected.error), JSON.stringify(rejected));
+  check("거부 시 상태/수업 변화 없음(PENDING)", (await db.teacherPaidLeave.findUniqueOrThrow({ where: { id: pid } })).status === "PENDING");
+  await db.teacher.update({ where: { id: t.id }, data: { employmentType: "REGULAR" } });
+  check("다시 정규로 지정하면 승인 가능", (await approvePL(db, pid)).ok);
+  // 다른 강사의 지정은 영향 없음
+  const other = await mkTeacher();
+  check("다른(비정규) 강사는 여전히 요청 불가", !(await reqPL(db, other.id, "2026-10-20")).ok);
+});
+
+test("유급휴가 승인 이후: 그 날에는 보충수업을 만들 수 없고, 연기 대체 슬롯과 홀드 해제 배치가 그 날을 건너뜀", async () => {
+  await reset();
+  const t = await mkTeacher({ regular: true });
+  const s1 = await mkStudent();
+  const e1 = await mkEnrollment({ teacherId: t.id, studentId: s1.id, days: "월", months: 3, total: 6, end: "2026-10-12" });
+  const e1s = await mkSeq(e1, ["2026-10-05", "2026-10-12"]);
+  const req = await reqPL(db, t.id, "2026-10-19");
+  check("유급휴가(10/19) 승인 — 그 날 수업은 아직 없음(재배치 0건)", (await approvePL(db, (req as { paidLeaveId: number }).paidLeaveId)).ok);
+  // a) 연기 대체 슬롯: 원래라면 10/19(월)이지만 유급휴가일이라 10/26
+  const r = await adminPostpone(db, e1s[1].id);
+  check("연기 대체 수업은 유급휴가일(10/19)을 건너뛰고 10/26", formatAppDate(r.replacementAt!) === "2026-10-26", formatAppDate(r.replacementAt!));
+  // b) 보충수업: 그 날 그 강사로는 생성 불가
+  const s2 = await mkStudent();
+  const e2 = await mkEnrollment({ teacherId: (await mkTeacher()).id, studentId: s2.id, days: "화", months: 1, total: 4, end: "2026-11-30" });
+  const sup = await run(db, (tx) => createSupplementSession(tx, { studentId: s2.id, enrollmentId: e2.id, teacherId: t.id, scheduledAt: kst("2026-10-19", "15:00"), durationMin: 25, siteId: 1 }));
+  check("유급휴가일에는 그 강사의 보충수업 생성 불가", !sup.ok && /유급휴가/.test(sup.error), JSON.stringify(sup));
+  const supOk = await run(db, (tx) => createSupplementSession(tx, { studentId: s2.id, enrollmentId: e2.id, teacherId: t.id, scheduledAt: kst("2026-10-20", "15:00"), durationMin: 25, siteId: 1 }));
+  check("다른 날은 정상 생성", supOk.ok);
+  // c) 수강 홀드 해제: 밀린 날짜가 유급휴가일이면 다음 유효 슬롯
+  const s3 = await mkStudent();
+  const e3 = await mkEnrollment({ teacherId: t.id, studentId: s3.id, days: "월", time: "21:00", months: 3, total: 4, end: "2026-10-12" });
+  await mkSeq(e3, ["2026-10-05", "2026-10-12"], "21:00");
+  await putOnHold(e3.id);
+  const rel = await releaseHoldAt(db, e3.id);
+  check("홀드 해제: 10/5→10/12는 그대로, 10/12→10/19(유급휴가일)는 10/26으로", eq(await activeRegular(e3.id), ["2026-10-12", "2026-10-26"]) && rel.shifted === 1 && rel.relocated === 1, JSON.stringify({ rel, a: await activeRegular(e3.id) }));
+  // 승인을 취소하면 그 날이 다시 열린다
+  const pl = await db.teacherPaidLeave.findFirstOrThrow({ where: { teacherId: t.id } });
+  await run(db, (tx) => revokePaidLeave(tx, { paidLeaveId: pl.id, actor: ADMIN, now: NOW }));
+  const supAfterRevoke = await run(db, (tx) => createSupplementSession(tx, { studentId: s2.id, enrollmentId: e2.id, teacherId: t.id, scheduledAt: kst("2026-10-19", "15:00"), durationMin: 25, siteId: 1 }));
+  check("승인 취소 후에는 그 날 보충수업 생성 가능", supAfterRevoke.ok);
+});
+
+test("승인 중 stale 스냅샷 방지(결정적): 강사 락을 쥔 트랜잭션이 승인 도중 그 날 새 수업을 만들고 커밋하면, 승인은 그 수업까지 처리한다", async () => {
+  await reset();
+  const t = await mkTeacher({ regular: true });
+  const s = await mkStudent();
+  const e = await mkEnrollment({ teacherId: t.id, studentId: s.id, days: "월", months: 3, total: 4, end: "2026-11-02" });
+  await mkSeq(e, ["2026-10-12", "2026-10-19", "2026-10-26", "2026-11-02"]);
+  const s2 = await mkStudent();
+  const e2 = await mkEnrollment({ teacherId: (await mkTeacher()).id, studentId: s2.id, days: "화", months: 1, total: 4, end: "2026-11-30" });
+  const req = await reqPL(db, t.id, "2026-10-12");
+  const pid = (req as { paidLeaveId: number }).paidLeaveId;
+  const holder: { approve: Promise<unknown> | null; lateId: number } = { approve: null, lateId: 0 };
+  await run(db, async (tx) => {
+    // 이 트랜잭션이 강사 락을 쥔 채로, 다른 연결에서 승인을 시작한다 — 승인은 강사 락에서 기다린다.
+    await lockAll(tx, { teacherIds: [t.id] });
+    holder.approve = approvePL(dbB, pid);
+    await sleep(800);
+    // 승인이 기다리는 사이, 같은 강사·같은 날(휴가일)에 새 수업(보충)이 생긴다.
+    const late = await tx.classSession.create({
+      data: { siteId: 1, enrollmentId: e2.id, studentId: s2.id, teacherId: t.id, scheduledAt: kst("2026-10-12", "15:00"), durationMin: 25, status: "SCHEDULED", isSupplement: true },
+    });
+    holder.lateId = late.id;
+  });
+  const res = (await holder.approve) as { ok: boolean; movedSessions?: number; supplementSessions?: number };
+  const lateId = holder.lateId;
+  check("승인 성공, 정규 1건 + 승인 도중 생긴 보충 1건을 처리", res.ok && res.movedSessions === 1 && res.supplementSessions === 1, JSON.stringify(res));
+  check("승인 도중 생긴 수업이 SCHEDULED로 남지 않고 휴가 처리됨(예전 구현은 놓침)", (await db.classSession.findUniqueOrThrow({ where: { id: lateId } })).status === "LEAVE");
+  check("그 강사의 휴가일(10/12)에 남은 활성 수업 없음", (await activeOn(t.id, "2026-10-12")) === 0);
+  check("유급휴가 1건(같은 강사·같은 날)", (await db.teacherPaidLeave.count({ where: { teacherId: t.id, status: "APPROVED" } })) === 1);
+});
+
+test("동시성(반복): 유급휴가 승인과 같은 강사·같은 날 보충수업 생성이 동시에 일어나도 휴가일에 활성 수업이 남지 않음", async () => {
+  await reset();
+  let supplementWon = 0;
+  let approvalWon = 0;
+  for (let round = 0; round < 6; round++) {
+    const t = await mkTeacher({ regular: true });
+    const s = await mkStudent();
+    const e = await mkEnrollment({ teacherId: t.id, studentId: s.id, days: "월", months: 3, total: 3, end: "2026-10-26" });
+    await mkSeq(e, ["2026-10-12", "2026-10-19", "2026-10-26"]);
+    const s2 = await mkStudent();
+    const e2 = await mkEnrollment({ teacherId: (await mkTeacher()).id, studentId: s2.id, days: "화", months: 1, total: 4, end: "2026-11-30" });
+    const req = await reqPL(db, t.id, "2026-10-12");
+    const pid = (req as { paidLeaveId: number }).paidLeaveId;
+    const [a, b] = await Promise.all([
+      approvePL(db, pid),
+      run(dbB, (tx) => createSupplementSession(tx, { studentId: s2.id, enrollmentId: e2.id, teacherId: t.id, scheduledAt: kst("2026-10-12", "15:00"), durationMin: 25, siteId: 1 })),
+    ]);
+    if (b.ok) supplementWon++;
+    else approvalWon++;
+    check(`라운드 ${round + 1}: 승인 성공(${a.ok}) · 보충 생성(${b.ok ? "성공 후 승인이 휴가 처리" : "승인 후라서 거부"}) → 휴가일에 활성 수업 0건`, a.ok && (await activeOn(t.id, "2026-10-12")) === 0, JSON.stringify({ a, b }));
+  }
+  console.log(`  (참고) 보충이 먼저 ${supplementWon}회, 승인이 먼저 ${approvalWon}회`);
+});
+
+test("동시성(반복): 유급휴가 승인과 같은 강사 수업의 연기 대체 배치가 동시에 같은 휴가일을 노려도 휴가일에 활성 수업이 남지 않고 정규 회차 유지", async () => {
+  await reset();
+  for (let round = 0; round < 6; round++) {
+    const t = await mkTeacher({ regular: true });
+    const x = await mkStudent();
+    const y = await mkStudent();
+    // X: 10/5 수업 하나 — 연기하면 대체 슬롯의 첫 후보가 휴가일(10/12 20:00)
+    const ex = await mkEnrollment({ teacherId: t.id, studentId: x.id, days: "월", months: 3, total: 1, end: "2026-10-05" });
+    const [xs] = await mkSeq(ex, ["2026-10-05"]);
+    // Y: 휴가일에 이미 있는 다른 학생 수업(19:00) — 승인이 처리할 대상
+    const ey = await mkEnrollment({ teacherId: t.id, studentId: y.id, days: "월", time: "19:00", months: 3, total: 2, end: "2026-10-19" });
+    await mkSeq(ey, ["2026-10-12", "2026-10-19"], "19:00");
+    const req = await reqPL(db, t.id, "2026-10-12");
+    const pid = (req as { paidLeaveId: number }).paidLeaveId;
+    const [a, b] = await Promise.all([approvePL(db, pid), codeOf(() => adminPostpone(dbB, xs.id))]);
+    check(`라운드 ${round + 1}: 승인(${a.ok}) · 연기(${b}) → 휴가일(10/12) 활성 수업 0건`, a.ok && b === "NO_ERROR" && (await activeOn(t.id, "2026-10-12")) === 0, JSON.stringify({ a, b }));
+    check(`라운드 ${round + 1}: X의 정규 회차 1개 유지, 휴가일이 아닌 날(10/19)`, eq(await activeRegular(ex.id), ["2026-10-19"]) && (await activeRegular(ey.id)).length === 2, JSON.stringify({ x: await activeRegular(ex.id), y: await activeRegular(ey.id) }));
+  }
 });
 
 // ── 보충수업 ─────────────────────────────────────────────────────────────────────────────────────────────────────────

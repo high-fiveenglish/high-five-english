@@ -315,6 +315,11 @@ export async function rescheduleSession(tx: Tx, p: RescheduleParams): Promise<Re
       where: { siteId: s.siteId, date: { gte: new Date(rangeStart.getTime() - MS_PER_DAY) }, OR: [{ agentId: null }, ...(student?.agentId ? [{ agentId: student.agentId }] : [])] },
       select: { date: true },
     });
+    // 이 강사에게 승인된 유급휴가일에도 새 수업을 배치하지 않는다(휴강일과 같은 취급).
+    const paidLeaves = await tx.teacherPaidLeave.findMany({
+      where: { teacherId: s.teacherId, status: "APPROVED", leaveDate: { gte: new Date(`${formatAppDate(rangeStart)}T00:00:00Z`) } },
+      select: { leaveDate: true },
+    });
 
     const occupiedDates = occupiedDatesOf(own);
     const busy: BusyInterval[] = [];
@@ -327,7 +332,7 @@ export async function rescheduleSession(tx: Tx, p: RescheduleParams): Promise<Re
       durationMin: s.durationMin,
       lowerBound,
       occupiedDates,
-      closureDates: new Set(closures.map((c) => formatAppDate(c.date))),
+      closureDates: new Set([...closures.map((c) => formatAppDate(c.date)), ...paidLeaves.map((l) => l.leaveDate.toISOString().slice(0, 10))]),
       busy,
     });
     if (!slot) throw new RescheduleError("NO_SLOT_AVAILABLE");
