@@ -10,11 +10,12 @@
 //  4) LeaveRequest에 사유/실행자/횟수 영향/대체 수업/이전 종료일을 남긴다(되돌리기와 감사용).
 // totalSessions는 건드리지 않고 보충수업도 만들지 않는다.
 import type { RescheduleSource, RoleName, SessionStatus } from "../generated/prisma/client";
-import { formatAppDate, formatAppTime } from "./appTime";
+import { formatAppDate, formatAppTime, parseAppDateTime } from "./appTime";
 import { lockAll, type Tx } from "./advisoryLock";
 import { checkQuotaAdjustment, checkStudentLeadTime, summarizeLeaveQuota, usedFromLeaveRows, type LeaveQuotaSummary } from "./leavePolicy";
 import {
   addDaysIso,
+  buildTimeByWeekday,
   DEFAULT_SLOT_HORIZON_DAYS,
   endDateToIso,
   extendedEndDate,
@@ -26,7 +27,29 @@ import {
 import { parseScheduleDaysLabel } from "./weekdays";
 
 /** 레벨테스트에는 소요시간 필드가 없어 충돌 판정용 고정값을 쓴다(scheduleConflict.ts와 같은 값). */
-const LEVEL_TEST_DURATION_MIN = 30;
+export const LEVEL_TEST_DURATION_MIN = 30;
+
+/**
+ * 같은 날짜에 정규 수업이 둘이 되지 않도록, 이 수강의 정규 수업 행(삭제된 것 포함)의 날짜와 generationKey가 가진 날짜는 전부 "찬 슬롯"이다.
+ * generationKey는 생성 시점의 날짜를 박제한 키라(수업이 밀려도 안 바뀐다) 그 날짜도 다시 쓰면 unique에 걸린다.
+ */
+export async function loadOccupiedDates(tx: Tx, enrollmentId: number, excludeSessionIds: readonly number[] = []): Promise<Set<string>> {
+  const own = await tx.classSession.findMany({
+    where: { enrollmentId, isSupplement: false, ...(excludeSessionIds.length > 0 ? { id: { notIn: [...excludeSessionIds] } } : {}) },
+    select: { scheduledAt: true, generationKey: true },
+  });
+  return occupiedDatesOf(own);
+}
+
+export function occupiedDatesOf(rows: readonly { scheduledAt: Date; generationKey: string | null }[]): Set<string> {
+  const occupied = new Set<string>();
+  for (const o of rows) {
+    occupied.add(formatAppDate(o.scheduledAt));
+    const m = o.generationKey ? /:(\d{4}-\d{2}-\d{2})$/.exec(o.generationKey) : null;
+    if (m) occupied.add(m[1]);
+  }
+  return occupied;
+}
 
 export type RescheduleErrorCode =
   | "SESSION_NOT_FOUND"
@@ -226,13 +249,6 @@ export interface RescheduleResult {
   quotaImpact: 0 | 1;
 }
 
-function timeOrFallback(raw: unknown, fallback: string): string {
-  if (typeof raw !== "string") return fallback;
-  const m = /^(\d{1,2}):(\d{2})$/.exec(raw.trim());
-  if (!m) return fallback;
-  return `${m[1].padStart(2, "0")}:${m[2]}`;
-}
-
 /** 수강의 정규 시퀀스에서 연기된 수업을 다음 유효 슬롯으로 옮기는 단일 구현. 반드시 트랜잭션 안에서 호출한다. */
 export async function rescheduleSession(tx: Tx, p: RescheduleParams): Promise<RescheduleResult> {
   const head = await tx.classSession.findUnique({ where: { id: p.sessionId }, select: { enrollmentId: true, teacherId: true, studentId: true } });
@@ -276,9 +292,7 @@ export async function rescheduleSession(tx: Tx, p: RescheduleParams): Promise<Re
   let endExt: Date | null = null;
   if (!s.isSupplement) {
     const weekdays = [...new Set(parseScheduleDaysLabel(enrollment.scheduleDays))];
-    const fallbackTime = formatAppTime(s.scheduledAt);
-    const overrides = enrollment.classTimes && typeof enrollment.classTimes === "object" && !Array.isArray(enrollment.classTimes) ? (enrollment.classTimes as Record<string, unknown>) : {};
-    const timeByWeekday = (w: number) => timeOrFallback(overrides[String(w)], timeOrFallback(enrollment.classTime, fallbackTime));
+    const timeByWeekday = buildTimeByWeekday(enrollment, formatAppTime(s.scheduledAt));
 
     const lowerBound = new Date(Math.max(s.scheduledAt.getTime(), p.now.getTime()));
     const rangeStart = new Date(lowerBound.getTime() - MS_PER_DAY);
@@ -302,13 +316,7 @@ export async function rescheduleSession(tx: Tx, p: RescheduleParams): Promise<Re
       select: { date: true },
     });
 
-    // 같은 날짜에 정규 수업이 둘이 되지 않도록, 이 수강의 정규 수업(삭제된 것 포함)과 generationKey가 가진 날짜는 전부 "찬 슬롯"이다.
-    const occupiedDates = new Set<string>();
-    for (const o of own) {
-      occupiedDates.add(formatAppDate(o.scheduledAt));
-      const m = o.generationKey ? /:(\d{4}-\d{2}-\d{2})$/.exec(o.generationKey) : null;
-      if (m) occupiedDates.add(m[1]);
-    }
+    const occupiedDates = occupiedDatesOf(own);
     const busy: BusyInterval[] = [];
     for (const t of [...teacherSessions, ...studentSessions]) busy.push({ start: t.scheduledAt.getTime(), end: t.scheduledAt.getTime() + t.durationMin * 60_000 });
     for (const lt of levelTests) if (lt.scheduledTestDate) busy.push({ start: lt.scheduledTestDate.getTime(), end: lt.scheduledTestDate.getTime() + LEVEL_TEST_DURATION_MIN * 60_000 });
@@ -416,7 +424,18 @@ export async function revertReschedule(tx: Tx, leaveRequestId: number): Promise<
       });
       const prevIso = endDateToIso(fresh.previousEndDate);
       const lastIso = last ? formatAppDate(last.scheduledAt) : prevIso;
-      restoredEnd = isoToEndDate(lastIso > prevIso ? lastIso : prevIso);
+      let restoredIso = lastIso > prevIso ? lastIso : prevIso;
+      if (prevIso > lastIso) {
+        // 이전 종료일이 이미 사라진 다른 연기(되돌려진 대체 수업)가 만든 날짜일 수 있다 — 그 날짜에 이 수강의 수업(어떤 상태든)이 아직 있을 때만 그대로 쓰고,
+        // 아니면 실제 마지막 정규 수업 날짜로 맞춘다(종료일 = 마지막 정규 수업 날짜).
+        const dayStart = parseAppDateTime(`${prevIso}T00:00`);
+        const anchored = await tx.classSession.findFirst({
+          where: { enrollmentId: enrollment.id, deletedAt: null, scheduledAt: { gte: dayStart, lt: new Date(dayStart.getTime() + MS_PER_DAY) } },
+          select: { id: true },
+        });
+        if (!anchored) restoredIso = lastIso;
+      }
+      restoredEnd = isoToEndDate(restoredIso);
     }
   } else if (fresh.source === null) {
     // 옛 방식(새 필드가 생기기 전의 건): 수업 상태와 종료일(+extendedDays일)만 바꿨다. (새 방식인데 대체 수업이 없는 건 — 보충수업 — 은 종료일을 바꾸지 않았다.)

@@ -13,6 +13,7 @@ import { countLessons } from "../src/lib/lessonCounts";
 import { registerAcademyClosure, revertAcademyClosure, ClosureError } from "../src/lib/academyClosureFlow";
 import { adjustLeaveQuota, getLeaveQuotaSummary, RescheduleError, rescheduleSession, resetSessionEvaluation, revertReschedule, type RescheduleParams } from "../src/lib/reschedule";
 import { createSupplementSession } from "../src/lib/supplement";
+import { releaseHoldInTx } from "../src/lib/holdApply";
 import { approvePaidLeave, requestPaidLeave, revokePaidLeave, PaidLeaveSessionError } from "../src/lib/teacherPaidLeave";
 
 const raw = process.env.TEST_DATABASE_URL;
@@ -826,6 +827,159 @@ test("동시성: 같은 보충수업을 동시에 두 번 생성 → 한 번만"
     run(dbB, (tx) => createSupplementSession(tx, { studentId: s3.id, enrollmentId: e3.id, teacherId: sub.id, scheduledAt: at, durationMin: 25, siteId: 1 })),
   ]);
   check("같은 강사·같은 시각 보충 동시 요청 → 강사 충돌로 정확히 한 건", r2.filter((r) => r.ok).length === 1, JSON.stringify(r2));
+});
+
+// ── 수강 홀드 해제(holdApply.ts): 같은 일수만 밀되, 쓸 수 없는 자리는 reschedule과 같은 다음 유효 슬롯 ───────────────────────────────
+// 홀드 시작 = NOW(10/5 10:00 KST), 해제 = 10/12 10:00 KST → 정확히 7일을 쉬었으므로 7일(1주) 이동.
+const HOLD_RELEASE_AT = new Date("2026-10-12T10:00:00+09:00");
+async function putOnHold(enrollmentId: number) {
+  await db.enrollment.update({ where: { id: enrollmentId }, data: { status: "HOLDING", holdStartedAt: NOW } });
+  await db.classSession.updateMany({ where: { enrollmentId, status: "SCHEDULED", deletedAt: null }, data: { status: "HOLD" } });
+}
+const releaseHoldAt = (client: PrismaClient, enrollmentId: number, now: Date = HOLD_RELEASE_AT) => run(client, (tx) => releaseHoldInTx(tx, enrollmentId, now, ADMIN));
+
+test("수강 홀드 해제: 방해가 없으면 정규 수업 전체가 같은 주 수만큼 밀리고, 종료일도 같은 만큼, 회차·generationKey 불변", async () => {
+  await reset();
+  const t = await mkTeacher();
+  const s = await mkStudent();
+  const e = await mkEnrollment({ teacherId: t.id, studentId: s.id, days: "월수금", months: 3, total: 18, end: "2026-10-16" });
+  await mkSeq(e, MWF_DATES);
+  await putOnHold(e.id);
+  check("(전제) 홀드 중에는 정규 수업이 HOLD", (await db.classSession.count({ where: { enrollmentId: e.id, status: "HOLD" } })) === 6);
+  const r = await releaseHoldAt(db, e.id);
+  check("6건 모두 같은 일수(7일)만큼 이동, 재배치 0건", r.shifted === 6 && r.relocated === 0 && r.pinned === 0, JSON.stringify(r));
+  check("월 수 금 월 수 금 → 한 주씩 뒤", eq(await activeRegular(e.id), ["2026-10-12", "2026-10-14", "2026-10-16", "2026-10-19", "2026-10-21", "2026-10-23"]));
+  check("종료일 10/16 → 10/23, 수강 상태 ACTIVE, holdStartedAt 해제", (await endIso(e.id)) === "2026-10-23" && (await db.enrollment.findUniqueOrThrow({ where: { id: e.id } })).holdStartedAt === null);
+  const first = await db.classSession.findFirstOrThrow({ where: { enrollmentId: e.id }, orderBy: { scheduledAt: "asc" } });
+  check("generationKey는 박제된 값 그대로(행이 옮겨가도 안 바뀜), 새 행은 만들지 않음", first.generationKey === `${e.id}:2026-10-05` && (await db.classSession.count({ where: { enrollmentId: e.id } })) === 6);
+  check("정규 회차(totalSessions) 불변, 보충 없음", (await db.enrollment.findUniqueOrThrow({ where: { id: e.id } })).totalSessions === 18 && (await db.classSession.count({ where: { isSupplement: true } })) === 0);
+  check("이미 해제된 수강을 다시 해제하면 거부", (await releaseHoldAt(db, e.id)).error === "현재 홀드 상태가 아닙니다.");
+});
+test("수강 홀드 해제: 밀린 날짜가 학원 휴강일이면 건너뛰고 뒤따르는 수업이 연쇄로 밀림(같은 날짜 중복·휴강일 배치 없음)", async () => {
+  await reset();
+  const t = await mkTeacher();
+  const s = await mkStudent();
+  const e = await mkEnrollment({ teacherId: t.id, studentId: s.id, days: "월수금", months: 3, total: 18, end: "2026-10-16" });
+  await mkSeq(e, MWF_DATES);
+  await putOnHold(e.id);
+  // 홀드 중에 등록된 휴강(HOLD 수업은 휴강 등록이 건드리지 않는다)
+  await db.academyClosure.create({ data: { siteId: 1, date: kst("2026-10-16", "00:00"), reason: "홀드 중 휴강" } });
+  const r = await releaseHoldAt(db, e.id);
+  const a = await activeRegular(e.id);
+  check("10/16(휴강)을 피해 배치: 월 수 월 수 금 월", eq(a, ["2026-10-12", "2026-10-14", "2026-10-19", "2026-10-21", "2026-10-23", "2026-10-26"]), JSON.stringify(a));
+  check("정규 6개 유지, 같은 날짜 중복 없음, 휴강일에 수업 없음", a.length === 6 && new Set(a).size === 6 && !a.includes("2026-10-16"));
+  check("같은 일수만 민 것 2건 + 연쇄 재배치 4건", r.shifted === 2 && r.relocated === 4, JSON.stringify(r));
+  check("종료일은 실제 마지막 정규 수업 날짜(10/26)", (await endIso(e.id)) === "2026-10-26");
+});
+test("수강 홀드 해제: 평가서가 붙은 수업은 날짜 이동 없이 제자리에서 되살리고(평가서가 따라가지 않음), 보충수업은 같은 일수만 이동", async () => {
+  await reset();
+  const t = await mkTeacher();
+  const sub = await mkTeacher();
+  const s = await mkStudent();
+  const e = await mkEnrollment({ teacherId: t.id, studentId: s.id, days: "월수금", months: 3, total: 18, end: "2026-10-16" });
+  const reg = await mkSeq(e, MWF_DATES);
+  const supp = await db.classSession.create({ data: { siteId: 1, enrollmentId: e.id, studentId: s.id, teacherId: sub.id, scheduledAt: kst("2026-10-06", "15:00"), durationMin: 25, status: "SCHEDULED", isSupplement: true } });
+  await putOnHold(e.id);
+  await db.lessonEvaluation.create({ data: { classSessionId: reg[1].id, content: "pinned evaluation" } }); // 10/7 수업에 평가서
+  const r = await releaseHoldAt(db, e.id);
+  const pinned = await db.classSession.findUniqueOrThrow({ where: { id: reg[1].id } });
+  check("평가서 붙은 수업: 제자리(10/7)에서 SCHEDULED, 평가서도 그 수업에 그대로", pinned.status === "SCHEDULED" && formatAppDate(pinned.scheduledAt) === "2026-10-07" && (await db.lessonEvaluation.count({ where: { classSessionId: reg[1].id } })) === 1 && r.pinned === 1);
+  check("나머지 정규 5건은 한 주씩 이동", eq(await activeRegular(e.id), ["2026-10-07", "2026-10-12", "2026-10-16", "2026-10-19", "2026-10-21", "2026-10-23"]) && r.shifted === 5);
+  const movedSupp = await db.classSession.findUniqueOrThrow({ where: { id: supp.id } });
+  check("보충수업은 정규 시퀀스 밖 — 같은 7일 이동(10/13 15:00), SCHEDULED 복귀, 정규 회차에 섞이지 않음", movedSupp.status === "SCHEDULED" && movedSupp.isSupplement && movedSupp.scheduledAt.getTime() === kst("2026-10-13", "15:00").getTime() && r.supplements === 1 && (await activeRegular(e.id)).length === 6);
+});
+test("수강 홀드 해제: 밀린 날짜에 휴강 기록(LEAVE 묘비)이 있거나 강사 일정이 겹치면 다음 유효 슬롯으로", async () => {
+  await reset();
+  const t = await mkTeacher();
+  const s = await mkStudent();
+  const e = await mkEnrollment({ teacherId: t.id, studentId: s.id, days: "월수금", months: 1, total: 4, end: "2026-10-07" });
+  const [h1, h2] = await mkSeq(e, ["2026-10-05", "2026-10-07"]);
+  void h1;
+  void h2;
+  // 같은 수강의 이전 연기 기록(LEAVE)이 10/12에 남아 있음 — 그 날짜는 이미 찬 슬롯
+  await db.classSession.create({ data: { siteId: 1, enrollmentId: e.id, studentId: s.id, teacherId: t.id, scheduledAt: kst("2026-10-12"), durationMin: 25, status: "LEAVE", isSupplement: false, generationKey: `${e.id}:2026-10-12` } });
+  // 같은 강사의 다른 학생이 10/14 20:00에 수업
+  const other = await mkStudent();
+  const e2 = await mkEnrollment({ teacherId: t.id, studentId: other.id, days: "수", months: 1, total: 1, end: "2026-10-14" });
+  await mkSeq(e2, ["2026-10-14"]);
+  await putOnHold(e.id);
+  const r = await releaseHoldAt(db, e.id);
+  const a = await activeRegular(e.id);
+  check("첫 수업: 10/12(LEAVE 기록) 건너뜀 → 10/14는 강사 충돌 → 10/16, 둘째: 10/14 충돌 → 10/19", eq(a, ["2026-10-16", "2026-10-19"]) && r.relocated === 2 && r.shifted === 0, JSON.stringify({ a, r }));
+  check("종료일은 마지막 정규 수업 날짜(10/19)", (await endIso(e.id)) === "2026-10-19");
+});
+test("동시성: 같은 수강 홀드를 동시에 두 번 해제 → 한 번만 이동", async () => {
+  await reset();
+  const t = await mkTeacher();
+  const s = await mkStudent();
+  const e = await mkEnrollment({ teacherId: t.id, studentId: s.id, days: "월수금", months: 3, total: 18, end: "2026-10-16" });
+  await mkSeq(e, MWF_DATES);
+  await putOnHold(e.id);
+  const res = await Promise.all([releaseHoldAt(db, e.id), releaseHoldAt(dbB, e.id)]);
+  check("한 쪽만 성공, 다른 쪽은 '현재 홀드 상태가 아닙니다'", res.filter((r) => !r.error).length === 1 && res.filter((r) => r.error === "현재 홀드 상태가 아닙니다.").length === 1, JSON.stringify(res));
+  check("수업은 한 번만(7일) 이동, 종료일 10/23", eq(await activeRegular(e.id), ["2026-10-12", "2026-10-14", "2026-10-16", "2026-10-19", "2026-10-21", "2026-10-23"]) && (await endIso(e.id)) === "2026-10-23");
+});
+
+// ── 복합 연쇄 시나리오: 연기 → 대체 수업 재연기 → 평가서/녹음이 붙은 뒤쪽 수업 → 학생 연기 + 학원 휴강 supersede → 되돌리기 가능/불가능 ──────────
+test("연쇄: 연기 → 대체 수업 재연기 → (평가서·녹음 있는 수업 보존) → 학생 연기 후 휴강 supersede → 되돌리기 차단/허용/복원", async () => {
+  await reset();
+  const t = await mkTeacher();
+  const s = await mkStudent();
+  const e = await mkEnrollment({ teacherId: t.id, studentId: s.id, days: "월수금", months: 3, total: 10, end: "2026-10-26" });
+  const dates = ["2026-10-05", "2026-10-07", "2026-10-09", "2026-10-12", "2026-10-14", "2026-10-16", "2026-10-19", "2026-10-21", "2026-10-23", "2026-10-26"];
+  const ses = await mkSeq(e, dates);
+  const at = (iso: string) => ses[dates.indexOf(iso)];
+  // 10/14 수업은 이미 진행되어 평가서와 녹음(발행 완료)이 붙어 있다
+  await db.classSession.update({ where: { id: at("2026-10-14").id }, data: { status: "COMPLETED" } });
+  await db.lessonEvaluation.create({ data: { classSessionId: at("2026-10-14").id, content: "Evaluation of the 10/14 lesson." } });
+  await db.audioRecording.create({ data: { classSessionId: at("2026-10-14").id, fileName: "l.m4a", driveFileId: "r2:recordings/7/l.m4a", aiDraft: "draft", processingStatus: "PUBLISHED" } });
+
+  // 1) 10/7 수업(A) 관리자연기 → 대체 R1
+  const r1 = await adminPostpone(db, at("2026-10-07").id);
+  const R1 = r1.replacementSessionId!;
+  // 2) 대체 수업 R1을 다시 연기 → R2
+  const r2 = await adminPostpone(db, R1);
+  const R2 = r2.replacementSessionId!;
+  // 3) 10/12 수업을 학생이 연기 → R3 (학생 횟수 1)
+  const r3 = await studentSelf(db, at("2026-10-12").id, s.id);
+  const R3 = r3.replacementSessionId!;
+  check("1~3단계: 대체 슬롯 10/28, 10/30, 11/2 (앞선 대체 수업이 찬 슬롯으로 취급됨)", [r1, r2, r3].map((r) => formatAppDate(r.replacementAt!)).join(",") === "2026-10-28,2026-10-30,2026-11-02");
+  check("학생 연기 횟수 1(관리자연기는 차감 없음)", (await usage(e.id)) === 1);
+  // 4) 학원 휴강 10/12(이미 학생이 연기한 날 → supersede), 10/16(예정 수업 있음 → 재배치 R4)
+  const c12 = await run(db, (tx) => registerAcademyClosure(tx, { siteId: 1, dateStr: "2026-10-12", reason: "휴강12", actor: ADMIN, now: NOW }));
+  const c16 = await run(db, (tx) => registerAcademyClosure(tx, { siteId: 1, dateStr: "2026-10-16", reason: "휴강16", actor: ADMIN, now: NOW }));
+  const lr4 = await db.leaveRequest.findFirstOrThrow({ where: { academyClosureId: c16.closureId } });
+  const R4 = lr4.replacementSessionId!;
+  check("휴강 10/12: supersede 1, 재배치 0 / 휴강 10/16: 재배치 1 → R4 11/4", c12.superseded === 1 && c12.rescheduled === 0 && c16.rescheduled === 1 && formatAppDate((await db.classSession.findUniqueOrThrow({ where: { id: R4 } })).scheduledAt) === "2026-11-04");
+
+  // ── 정합성 ──
+  const all = await db.classSession.findMany({ where: { enrollmentId: e.id } });
+  const keys = all.map((x) => x.generationKey).filter((k): k is string => !!k);
+  check("generationKey 중복 없음", new Set(keys).size === keys.length);
+  check("정규 회차 수 유지(LEAVE 4건 제외 + 대체 수업 = 10), 보충과 섞이지 않음", (await activeRegular(e.id)).length === 10 && (await db.classSession.count({ where: { isSupplement: true } })) === 0 && (await db.enrollment.findUniqueOrThrow({ where: { id: e.id } })).totalSessions === 10);
+  check("relatedSessionId 사슬: R1→A, R2→R1, R3→10/12 수업, R4→10/16 수업", (await db.classSession.findUniqueOrThrow({ where: { id: R1 } })).relatedSessionId === at("2026-10-07").id && (await db.classSession.findUniqueOrThrow({ where: { id: R2 } })).relatedSessionId === R1 && (await db.classSession.findUniqueOrThrow({ where: { id: R3 } })).relatedSessionId === at("2026-10-12").id && (await db.classSession.findUniqueOrThrow({ where: { id: R4 } })).relatedSessionId === at("2026-10-16").id);
+  check("평가서/녹음은 원래 10/14 수업에만 있고 어떤 대체 수업으로도 이동/복사되지 않음", (await db.lessonEvaluation.count()) === 1 && (await db.audioRecording.count()) === 1 && (await db.lessonEvaluation.count({ where: { classSessionId: at("2026-10-14").id } })) === 1 && (await db.audioRecording.count({ where: { classSessionId: at("2026-10-14").id } })) === 1 && (await db.lessonEvaluation.count({ where: { classSessionId: { in: [R1, R2, R3, R4] } } })) === 0 && (await db.audioRecording.count({ where: { classSessionId: { in: [R1, R2, R3, R4] } } })) === 0);
+  check("종료일 = 실제 마지막 정규 수업 날짜(11/4), 연장은 한 번씩만", (await endIso(e.id)) === "2026-11-04");
+  check("학생 연기가 휴강으로 대체되어 횟수 0, 이력은 보존(source=STUDENT, final=ACADEMY_CLOSURE)", (await usage(e.id)) === 0 && (await db.leaveRequest.findUniqueOrThrow({ where: { id: r3.leaveRequestId } })).finalSource === "ACADEMY_CLOSURE");
+
+  // ── 되돌리기: 차단 ──
+  const snapshot = async () => JSON.stringify((await db.classSession.findMany({ where: { enrollmentId: e.id }, orderBy: { id: "asc" }, select: { id: true, status: true, scheduledAt: true } })).map((x) => [x.id, x.status, x.scheduledAt.toISOString()]));
+  const before = await snapshot();
+  check("후속 연기가 있는 대체 수업(R1)을 만든 연기(A)는 되돌릴 수 없음(REVERT_BLOCKED) — 아무것도 바뀌지 않음", (await codeOf(() => run(db, (tx) => revertReschedule(tx, r1.leaveRequestId)))) === "REVERT_BLOCKED" && (await snapshot()) === before);
+  check("휴강으로 대체된 학생 연기는 개별로 되돌릴 수 없음(SUPERSEDED_BY_CLOSURE)", (await codeOf(() => run(db, (tx) => revertReschedule(tx, r3.leaveRequestId)))) === "SUPERSEDED_BY_CLOSURE" && (await snapshot()) === before);
+
+  // ── 되돌리기: 허용(역순) ──
+  await run(db, (tx) => revertReschedule(tx, r2.leaveRequestId)); // R2 삭제, R1 복귀
+  check("R1의 재연기를 되돌림: R2 삭제, R1 다시 SCHEDULED, 정규 10개 유지, 종료일은 더 뒤의 연장(11/4) 그대로", (await db.classSession.count({ where: { id: R2 } })) === 0 && (await db.classSession.findUniqueOrThrow({ where: { id: R1 } })).status === "SCHEDULED" && (await activeRegular(e.id)).length === 10 && (await endIso(e.id)) === "2026-11-04");
+  await run(db, (tx) => revertReschedule(tx, r1.leaveRequestId)); // 이제 가능: R1 삭제, A 복귀
+  check("이제 A의 연기를 되돌릴 수 있음: R1 삭제, A SCHEDULED, 정규 10개", (await db.classSession.count({ where: { id: R1 } })) === 0 && (await db.classSession.findUniqueOrThrow({ where: { id: at("2026-10-07").id } })).status === "SCHEDULED" && (await activeRegular(e.id)).length === 10);
+  await run(db, (tx) => revertAcademyClosure(tx, { closureId: c16.closureId, actor: ADMIN }));
+  check("휴강 10/16 되돌림: R4 삭제, 10/16 수업 복귀, 종료일 11/2(남은 마지막 정규 수업)", (await db.classSession.count({ where: { id: R4 } })) === 0 && (await db.classSession.findUniqueOrThrow({ where: { id: at("2026-10-16").id } })).status === "SCHEDULED" && (await endIso(e.id)) === "2026-11-02");
+  const rc = await run(db, (tx) => revertAcademyClosure(tx, { closureId: c12.closureId, actor: ADMIN }));
+  check("휴강 10/12 되돌림: 학생 연기 복원(횟수 1) — 이중 복구 없음", rc?.restoredStudentPostponements === 1 && (await usage(e.id)) === 1);
+  await run(db, (tx) => revertReschedule(tx, r3.leaveRequestId));
+  check("학생 연기 되돌림: 모든 대체 수업 제거, 원래 10개 날짜 복원, 종료일 10/26, 횟수 0", eq(await activeRegular(e.id), [...dates].sort()) && (await db.classSession.count({ where: { enrollmentId: e.id } })) === 10 && (await endIso(e.id)) === "2026-10-26" && (await usage(e.id)) === 0);
+  check("끝까지 평가서/녹음은 10/14 수업에 그대로 1건씩", (await db.lessonEvaluation.count({ where: { classSessionId: at("2026-10-14").id } })) === 1 && (await db.audioRecording.count({ where: { classSessionId: at("2026-10-14").id } })) === 1 && (await db.lessonEvaluation.count()) === 1);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────

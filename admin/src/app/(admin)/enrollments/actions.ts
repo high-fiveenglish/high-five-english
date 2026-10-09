@@ -354,7 +354,9 @@ export async function updateEnrollmentStatus(id: number, status: EnrollmentStatu
     await applyHold(id);
   } else if (existing.status === "HOLDING" && status !== "HOLDING") {
     const { releaseHold } = await import("@/lib/holdApply");
-    await releaseHold(id);
+    const released = await releaseHold(id, { role: actor.role, id: actor.id, name: actor.name });
+    // 해제하지 못했다면(수업을 배치할 슬롯이 없는 등) 수강은 홀드 상태 그대로 둔다.
+    if (released.error) return;
     if (status !== "ACTIVE") {
       await prisma.enrollment.update({ where: { id }, data: { status } });
     }

@@ -44,6 +44,22 @@ export interface NextSlotInput {
 
 export const DEFAULT_SLOT_HORIZON_DAYS = 400;
 
+function timeOrFallback(raw: unknown, fallback: string): string {
+  if (typeof raw !== "string") return fallback;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(raw.trim());
+  if (!m) return fallback;
+  return `${m[1].padStart(2, "0")}:${m[2]}`;
+}
+
+/** 요일별 수업 시각 규칙: classTimes[요일] → classTime → fallbackTime(보통 그 수업 자신의 시각). 형식이 이상한 값은 건너뛴다. */
+export function buildTimeByWeekday(enrollment: { classTime: string | null; classTimes: unknown }, fallbackTime: string): (weekday: number) => string {
+  const overrides =
+    enrollment.classTimes && typeof enrollment.classTimes === "object" && !Array.isArray(enrollment.classTimes)
+      ? (enrollment.classTimes as Record<string, unknown>)
+      : {};
+  return (w: number) => timeOrFallback(overrides[String(w)], timeOrFallback(enrollment.classTime, fallbackTime));
+}
+
 const MS_PER_DAY = 86_400_000;
 const MS_PER_MINUTE = 60_000;
 

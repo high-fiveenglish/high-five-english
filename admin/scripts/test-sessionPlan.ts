@@ -404,7 +404,11 @@ for (const rel of ["src/lib/sessionPlan.ts", "src/lib/sessionPlanData.ts", "src/
     /status:\s*"LEAVE"/.test(leaveCode) && /isSupplement:\s*false/.test(leaveCode) && /findNextFreeRegularSlot/.test(leaveCode) && !/totalSessions:/.test(leaveCode) && !/planClassSessions|executeGeneration/.test(leaveCode),
   );
   const hold = read("src/lib/holdApply.ts");
-  check("holdApply: 예정 수업을 HOLD로 멈추고 해제 시 7의 배수 일수만큼 밀며 endDate도 연장", /data:\s*\{\s*status:\s*"HOLD"\s*\}/.test(hold) && /Math\.ceil\(heldDays \/ 7\) \* 7/.test(hold) && /endDate:\s*newEndDate/.test(hold) && !/classSession\.create/.test(hold));
+  check("holdApply: 예정 수업을 HOLD로 멈추고 해제 시 7의 배수 일수만큼 밀며 endDate도 연장", /data:\s*\{\s*status:\s*"HOLD"\s*\}/.test(hold) && /Math\.ceil\(heldDays \/ 7\) \* 7/.test(hold) && /endDate:\s*newEndDate/.test(hold) && !/classSession\.create\(/.test(hold));
+  check(
+    "holdApply: 해제 시 밀린 정규 수업이 휴강/점유/충돌 자리면 reschedule과 같은 다음 유효 슬롯 규칙(findNextFreeRegularSlot)을 쓰고, advisory lock 아래에서 처리",
+    /findNextFreeRegularSlot\(/.test(hold) && /lockAll\(tx/.test(hold) && /closureDates/.test(hold) && /evaluationStateOf\(/.test(hold),
+  );
   const leaveActions = read("src/app/(admin)/leave-requests/actions.ts");
   const closureFlow = read("src/lib/academyClosureFlow.ts");
   check(
