@@ -13,7 +13,7 @@ import { countLessons } from "../src/lib/lessonCounts";
 import { registerAcademyClosure, revertAcademyClosure, ClosureError } from "../src/lib/academyClosureFlow";
 import { adjustLeaveQuota, getLeaveQuotaSummary, RescheduleError, rescheduleSession, resetSessionEvaluation, revertReschedule, type RescheduleParams } from "../src/lib/reschedule";
 import { createSupplementSession } from "../src/lib/supplement";
-import { releaseHoldInTx } from "../src/lib/holdApply";
+import { HoldReleaseError, releaseHoldInTx } from "../src/lib/holdApply";
 import { approvePaidLeave, requestPaidLeave, revokePaidLeave, PaidLeaveSessionError } from "../src/lib/teacherPaidLeave";
 
 const raw = process.env.TEST_DATABASE_URL;
@@ -918,6 +918,78 @@ test("동시성: 같은 수강 홀드를 동시에 두 번 해제 → 한 번만
   const res = await Promise.all([releaseHoldAt(db, e.id), releaseHoldAt(dbB, e.id)]);
   check("한 쪽만 성공, 다른 쪽은 '현재 홀드 상태가 아닙니다'", res.filter((r) => !r.error).length === 1 && res.filter((r) => r.error === "현재 홀드 상태가 아닙니다.").length === 1, JSON.stringify(res));
   check("수업은 한 번만(7일) 이동, 종료일 10/23", eq(await activeRegular(e.id), ["2026-10-12", "2026-10-14", "2026-10-16", "2026-10-19", "2026-10-21", "2026-10-23"]) && (await endIso(e.id)) === "2026-10-23");
+});
+
+// ── 수강 홀드 해제: 평가서/녹음이 붙은 수업은 제자리로 되살리기 전에 충돌을 검사한다(겹치면 전체 롤백) ─────────────────────────────────────
+const releaseHoldCatching = async (client: PrismaClient, enrollmentId: number) => {
+  try {
+    return await releaseHoldAt(client, enrollmentId);
+  } catch (e) {
+    if (e instanceof HoldReleaseError) return { error: e.message };
+    throw e;
+  }
+};
+async function pinnedHoldSetup() {
+  const t = await mkTeacher();
+  const s = await mkStudent();
+  const e = await mkEnrollment({ teacherId: t.id, studentId: s.id, days: "월수금", months: 3, total: 18, end: "2026-10-16" });
+  const reg = await mkSeq(e, MWF_DATES);
+  await putOnHold(e.id);
+  return { t, s, e, reg, pinnedSession: reg[1] /* 10/7 20:00 */ };
+}
+/** 해제가 거부된 뒤 아무것도 바뀌지 않았는지(수강은 홀드 그대로, 모든 수업은 HOLD + 원래 날짜) */
+async function assertHoldUntouched(label: string, e: { id: number }, reg: { id: number; scheduledAt: Date }[]) {
+  const enr = await db.enrollment.findUniqueOrThrow({ where: { id: e.id } });
+  const rows = await db.classSession.findMany({ where: { enrollmentId: e.id }, orderBy: { id: "asc" } });
+  check(
+    `${label}: 롤백 — 수강은 HOLDING 그대로(시작 시각 유지, 종료일 10/16), 모든 수업은 HOLD + 원래 시각, 새 행 없음`,
+    enr.status === "HOLDING" && enr.holdStartedAt?.getTime() === NOW.getTime() && (await endIso(e.id)) === "2026-10-16" && rows.length === reg.length && rows.every((r, i) => r.status === "HOLD" && r.scheduledAt.getTime() === reg[i].scheduledAt.getTime()),
+  );
+}
+
+test("수강 홀드 해제: 평가서가 붙은 수업과 그 시각의 강사 일정이 겹치면 조용히 되살리지 않고 오류로 전체 롤백(평가서 연결 불변), 정리 후 재해제 성공", async () => {
+  await reset();
+  const { t, e, reg, pinnedSession } = await pinnedHoldSetup();
+  const evaluation = await db.lessonEvaluation.create({ data: { classSessionId: pinnedSession.id, content: "kept evaluation" } });
+  // 홀드 중에 같은 강사의 다른 학생이 10/7 20:00(= 평가서 붙은 수업의 시각)에 새 수업을 잡았다
+  const other = await mkStudent();
+  const e2 = await mkEnrollment({ teacherId: t.id, studentId: other.id, days: "수", months: 1, total: 1, end: "2026-10-07" });
+  const [conflicting] = await mkSeq(e2, ["2026-10-07"]);
+  const r = await releaseHoldCatching(db, e.id);
+  check("강사 일정 충돌 → 명확한 오류(수업 시각과 사유 포함)", !!r.error && /평가서\/녹음이 연결된 수업\(2026-10-07 20:00\)/.test(r.error ?? "") && /담당 강사/.test(r.error ?? ""), r.error);
+  await assertHoldUntouched("강사 충돌", e, reg);
+  check("평가서 연결 불변: 같은 수업에 같은 평가서 1건, 다른 수업으로 이동/복사 없음", (await db.lessonEvaluation.count()) === 1 && (await db.lessonEvaluation.findUniqueOrThrow({ where: { classSessionId: pinnedSession.id } })).id === evaluation.id);
+  check("충돌한 다른 일정도 그대로(건드리지 않음)", (await db.classSession.findUniqueOrThrow({ where: { id: conflicting.id } })).status === "SCHEDULED");
+  // 충돌을 정리(그 일정을 지움)한 뒤 다시 해제하면 성공
+  await db.classSession.delete({ where: { id: conflicting.id } });
+  const ok = await releaseHoldCatching(db, e.id);
+  const pinned = await db.classSession.findUniqueOrThrow({ where: { id: pinnedSession.id } });
+  check("정리 후 재해제 성공: 평가서 수업은 제자리(10/7)에서 SCHEDULED, 평가서 그대로, 나머지 5건은 한 주씩 이동", !ok.error && ok.pinned === 1 && pinned.status === "SCHEDULED" && formatAppDate(pinned.scheduledAt) === "2026-10-07" && (await db.lessonEvaluation.count({ where: { classSessionId: pinnedSession.id } })) === 1 && ok.shifted === 5, JSON.stringify(ok));
+  void reg;
+});
+test("수강 홀드 해제: 녹음만 붙은 수업도 pinned — 학생 본인의 다른 수업과 겹치면 오류로 롤백, 학원 휴강일이면 오류로 롤백, 녹음 연결 불변", async () => {
+  await reset();
+  const { s, e, reg, pinnedSession } = await pinnedHoldSetup();
+  const rec = await db.audioRecording.create({ data: { classSessionId: pinnedSession.id, fileName: "x.m4a", driveFileId: "r2:recordings/3/x.m4a", aiDraft: "draft", processingStatus: "PUBLISHED" } });
+  // (a) 같은 학생의 다른 수강(다른 강사)이 10/7 20:10에 수업 → 10/7 20:00~20:25와 겹친다
+  const t2 = await mkTeacher();
+  const e2 = await mkEnrollment({ teacherId: t2.id, studentId: s.id, days: "수", months: 1, total: 1, end: "2026-10-07" });
+  const [studentClash] = await mkSeq(e2, ["2026-10-07"], "20:10");
+  const r1 = await releaseHoldCatching(db, e.id);
+  check("학생 일정 충돌 → 오류", !!r1.error && /학생의 다른 수업/.test(r1.error ?? ""), r1.error);
+  await assertHoldUntouched("학생 충돌", e, reg);
+  await db.classSession.delete({ where: { id: studentClash.id } });
+  // (b) 홀드 중에 그 날(10/7)이 학원 휴강일로 등록됨
+  await db.academyClosure.create({ data: { siteId: 1, date: kst("2026-10-07", "00:00"), reason: "홀드 중 휴강" } });
+  const r2 = await releaseHoldCatching(db, e.id);
+  check("학원 휴강일 → 오류", !!r2.error && /학원 휴강일/.test(r2.error ?? ""), r2.error);
+  await assertHoldUntouched("휴강일", e, reg);
+  const after = await db.audioRecording.findUniqueOrThrow({ where: { id: rec.id } });
+  check("녹음 연결·내용 불변(같은 수업, aiDraft/상태/원본 키 그대로, 레코드 1건)", (await db.audioRecording.count()) === 1 && after.classSessionId === pinnedSession.id && after.aiDraft === "draft" && after.processingStatus === "PUBLISHED" && after.driveFileId === "r2:recordings/3/x.m4a");
+  // 휴강을 지우면(되돌리면) 해제 가능
+  await db.academyClosure.deleteMany();
+  const ok = await releaseHoldCatching(db, e.id);
+  check("충돌 해소 후 재해제 성공, 녹음 수업은 제자리", !ok.error && ok.pinned === 1 && (await db.classSession.findUniqueOrThrow({ where: { id: pinnedSession.id } })).status === "SCHEDULED" && (await db.audioRecording.findUniqueOrThrow({ where: { id: rec.id } })).classSessionId === pinnedSession.id, JSON.stringify(ok));
 });
 
 // ── 복합 연쇄 시나리오: 연기 → 대체 수업 재연기 → 평가서/녹음이 붙은 뒤쪽 수업 → 학생 연기 + 학원 휴강 supersede → 되돌리기 가능/불가능 ──────────

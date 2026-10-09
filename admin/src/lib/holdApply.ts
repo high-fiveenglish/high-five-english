@@ -11,6 +11,8 @@
 //  - 밀린 날짜가 학원 휴강일 / 같은 수강의 다른 정규 수업·휴강 기록(generationKey 포함)이 찬 날짜 / 강사·학생 일정과 겹치면 그 수업은
 //    reschedule.ts와 같은 "다음 유효 정규 슬롯"으로 한 번 더 밀린다(뒤따르는 수업은 그 슬롯을 피해 자기 자리를 찾으므로 시퀀스가 자연스럽게 연쇄 이동한다).
 //  - 평가서/녹음이 이미 붙은 수업(드문 경우)은 옮기지 않고 제자리에서 SCHEDULED로 되돌린다 — 평가/녹음이 다른 날짜의 수업으로 따라가지 않는다.
+//    다만 제자리로 되살리기 전에 그 시각이 학원 휴강일이거나 강사·학생·레벨테스트 일정과 겹치지 않는지 검사한다. 겹치면 조용히 되살리지 않고
+//    명확한 오류로 해제 전체를 롤백한다(수강은 홀드 상태 그대로 — 관리자가 충돌을 정리한 뒤 다시 해제).
 //  - 보충수업은 정규 시퀀스가 아니므로 예전처럼 같은 일수만큼 이동하고 슬롯 탐색은 하지 않는다.
 //  - generationKey는 박제된 값이라 행이 옮겨가도 바뀌지 않는다(unique 충돌 없음). 새 행은 만들지 않는다.
 //  - 수강 단위 advisory lock(강사 → 수강 → 학생)과 한 트랜잭션 아래에서 처리하므로 같은 수강에 대한 연기/휴강/유급휴가/다른 해제와 직렬화된다.
@@ -119,9 +121,10 @@ export async function releaseHoldInTx(
   // ── 슬롯 판단에 필요한 맥락: 휴강일 / 이 수강에서 이미 찬 날짜 / 강사·학생·레벨테스트 일정 ──
   const student = await tx.student.findUnique({ where: { id: enrollment.studentId }, select: { agentId: true } });
   const furthest = held.length > 0 ? Math.max(...held.map((s) => s.scheduledAt.getTime())) + (shiftDays + DEFAULT_SLOT_HORIZON_DAYS + 2) * MS_PER_DAY : now.getTime();
-  const rangeStart = new Date(now.getTime() - MS_PER_DAY);
+  // 제자리에서 되살릴 수업은 과거 시각일 수 있으므로, 충돌 조회 범위는 그 수업들의 시각까지 거슬러 올라간다.
+  const rangeStart = new Date(Math.min(now.getTime(), ...pinned.map((s) => s.scheduledAt.getTime())) - MS_PER_DAY);
   const rangeEnd = new Date(furthest);
-  const teacherIds = [...new Set(regular.map((s) => s.teacherId))];
+  const teacherIds = [...new Set([...regular, ...pinned].map((s) => s.teacherId))];
   const [occupied, studentSessions, closures, perTeacher] = await Promise.all([
     loadOccupiedDates(tx, enrollmentId, heldIds),
     tx.classSession.findMany({
@@ -153,6 +156,29 @@ export async function releaseHoldInTx(
   // 제자리에서 되살리는 수업의 날짜도 이미 찬 슬롯이다.
   for (const s of pinned) occupied.add(formatAppDate(s.scheduledAt));
   const weekdays = [...new Set(parseScheduleDaysLabel(enrollment.scheduleDays))];
+
+  // ── 평가서/녹음이 붙은 수업: 제자리로 되살리기 전에 충돌 검사(아무것도 쓰기 전에 실패시킨다) ──
+  for (const s of pinned) {
+    const start = s.scheduledAt.getTime();
+    const end = start + s.durationMin * 60_000;
+    const when = `${formatAppDate(s.scheduledAt)} ${formatAppTime(s.scheduledAt)}`;
+    const why =
+      closureDates.has(formatAppDate(s.scheduledAt))
+        ? "학원 휴강일입니다"
+        : overlaps(start, end, teacherBusy.get(s.teacherId) ?? [])
+          ? "담당 강사의 다른 수업 또는 레벨테스트 일정이 있습니다"
+          : overlaps(start, end, studentBusy)
+            ? "학생의 다른 수업 일정이 있습니다"
+            : null;
+    if (why) {
+      throw new HoldReleaseError(
+        `평가서/녹음이 연결된 수업(${when})은 날짜를 옮길 수 없는데 그 시각은 ${why} 그래서 홀드를 해제할 수 없습니다. 겹치는 일정을 먼저 정리한 뒤 다시 해제해 주세요(수강은 홀드 상태 그대로입니다).`,
+      );
+    }
+    const interval = { start, end };
+    teacherBusy.set(s.teacherId, [...(teacherBusy.get(s.teacherId) ?? []), interval]);
+    studentBusy.push(interval);
+  }
 
   // ── 정규 수업: 시퀀스 순서대로 같은 일수만큼 밀고, 쓸 수 없는 자리는 다음 유효 슬롯으로 ──
   let shifted = 0;
