@@ -112,6 +112,29 @@ const row = (r: PlanResult, id: number) => r.rows.find((x) => x.enrollmentId ===
   check("협력사 소속 없는 학생(본사)은 협력사 휴강의 영향을 받지 않음", rn.skippedClosure.length === 0);
 }
 
+// ---- 2b. 승인된 강사 유급휴가일 ---------------------------------------------------------------------------------------
+{
+  const e = enr({ scheduleDays: "월", teacherId: 501, endDate: d("2026-11-02") }); // 10/5, 10/12, 10/19, 10/26, 11/2
+  const otherTeacher = enr({ scheduleDays: "월", teacherId: 502, endDate: d("2026-11-02") });
+  const noTeacher = enr({ scheduleDays: "월", teacherId: null, endDate: d("2026-11-02") });
+  const leave = { teacherId: 501, date: d("2026-10-12") }; // TeacherPaidLeave.leaveDate(@db.Date): KST 달력 날짜를 UTC 자정으로 저장
+  const withLeave = plan([e, otherTeacher, noTeacher], { teacherPaidLeaves: [leave] });
+  const r1 = row(withLeave, e.id);
+  check("승인된 유급휴가일(10/12)은 그 강사의 정규 수업 후보에서 제외되고 기록된다", r1.skippedPaidLeave.join() === "2026-10-12" && !r1.plannedSessions.some((p) => p.date === "2026-10-12") && r1.plannedSessions.length === 4);
+  check("다른 강사의 수강은 영향 없음(5건 그대로)", row(withLeave, otherTeacher.id).skippedPaidLeave.length === 0 && row(withLeave, otherTeacher.id).plannedSessions.length === 5);
+  check("담당 강사가 없는 수강은 영향 없음", row(withLeave, noTeacher.id).skippedPaidLeave.length === 0);
+  check("요약: 유급휴가 건너뜀 집계 + 총합에 포함, 종료일은 연장하지 않음(마지막 11/2)", withLeave.summary.sessionsSkipped.paidLeave === 1 && withLeave.summary.sessionsSkipped.total === withLeave.summary.sessionsSkipped.pastDates + withLeave.summary.sessionsSkipped.startedToday + withLeave.summary.sessionsSkipped.closure + withLeave.summary.sessionsSkipped.paidLeave + withLeave.summary.sessionsSkipped.alreadyExisting + withLeave.summary.sessionsSkipped.withheldByConflict && r1.plannedSessions.at(-1)?.date === "2026-11-02");
+  const without = plan([e, otherTeacher, noTeacher]);
+  check("계획 지문이 달라진다 — 미리보기 뒤에 승인된 유급휴가가 있으면 옛 지문으로는 실행할 수 없다", computePlanHash(without.rows) !== computePlanHash(withLeave.rows));
+  const rWithout = row(without, e.id);
+  check("유급휴가가 없으면 기존 결과 그대로(5건, 기록 없음)", rWithout.skippedPaidLeave.length === 0 && rWithout.plannedSessions.length === 5);
+  const both = row(plan([e], { closures: [{ date: new Date("2026-10-12T00:00:00+09:00"), agentId: null }], teacherPaidLeaves: [leave] }), e.id);
+  check("휴강일과 유급휴가일이 같은 날이면 한 번만 기록(휴강 우선)", both.skippedClosure.join() === "2026-10-12" && both.skippedPaidLeave.length === 0 && both.plannedSessions.length === 4);
+  const nonClassDay = row(plan([e], { teacherPaidLeaves: [{ teacherId: 501, date: d("2026-10-13") }] }), e.id);
+  check("수업일이 아닌 날짜의 유급휴가는 영향 없음", nonClassDay.skippedPaidLeave.length === 0 && nonClassDay.plannedSessions.length === 5);
+  check("계획기 버전이 session-plan/3 이상(규칙이 바뀌어 옛 지문과 섞이지 않음)", Number(PLANNER_VERSION.split("/")[1]) >= 3);
+}
+
 // ---- 3. 이미 생성된 수강 / 휴강일·이미 시작 슬롯 우선순위 ---------------------------------------------------------------
 {
   const e = enr({ scheduleDays: "월" });

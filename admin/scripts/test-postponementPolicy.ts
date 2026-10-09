@@ -234,5 +234,24 @@ const kst = (s: string) => new Date(`${s}+09:00`);
   );
 }
 
+// ── 10) 수업 생성 실행기 ↔ 유급휴가 승인: 같은 강사 락 프로토콜, 유급휴가가 계획에 반영 ─────────────────────────────────────────────
+{
+  const adminRoot = process.cwd();
+  const read = (p: string) => fs.readFileSync(path.join(adminRoot, p), "utf8").replace(/\/\/.*$/gm, "");
+  const gen = read("src/lib/sessionGeneration.ts");
+  const lock = read("src/lib/advisoryLock.ts");
+  const num = (src: string, name: string) => Number(new RegExp(`${name}\\s*=\\s*(\\d+)`).exec(src)?.[1]);
+  check("실행기와 advisoryLock이 같은 강사/수강 락 네임스페이스를 쓴다(7002/7001) — 같은 대상은 같은 락이다", num(gen, "LOCK_NS_TEACHER") === 7002 && num(lock, "LOCK_NS_TEACHER") === 7002 && num(gen, "LOCK_NS_ENROLLMENT") === 7001 && num(lock, "LOCK_NS_ENROLLMENT") === 7001);
+  const one = gen.slice(gen.indexOf("async function generateOneEnrollment"));
+  const tAt = one.indexOf("pg_advisory_xact_lock(${LOCK_NS_TEACHER}");
+  const eAt = one.indexOf("pg_advisory_xact_lock(${LOCK_NS_ENROLLMENT}");
+  const replanAt = one.indexOf("loadSessionPlanInput(tx");
+  check("실행기: 강사 락 → 수강 락 → 그 다음에 최신 상태로 재계획(유급휴가 포함)", tAt >= 0 && eAt > tAt && replanAt > eAt);
+  const loader = read("src/lib/sessionPlanData.ts");
+  check("계획 입력 로더가 승인된(APPROVED) 유급휴가를 읽어 계획기에 넘긴다(실행기도 같은 로더)", /teacherPaidLeave\.findMany\(\{[\s\S]{0,200}status:\s*"APPROVED"/.test(loader) && /teacherPaidLeaves:/.test(loader) && /loadSessionPlanInput/.test(gen));
+  const planner = read("src/lib/sessionPlan.ts");
+  check("계획기: 담당 강사의 승인된 유급휴가일은 후보에서 제외하고 기록(skippedPaidLeave)", /paidLeaveByTeacher\.get\(e\.teacherId\)\?\.has\(iso\)/.test(planner) && /row\.skippedPaidLeave\.push\(iso\)/.test(planner));
+}
+
 console.log(`${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
