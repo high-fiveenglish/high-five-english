@@ -40,7 +40,7 @@ export async function requestHoldRelease(enrollmentId: number): Promise<{ error?
     return { error: "본인 수강 건만 홀드 해제를 요청할 수 있습니다." };
   }
 
-  const result = await releaseHold(enrollmentId);
+  const result = await releaseHold(enrollmentId, { role: "STUDENT", id: student.id, name: student.name });
   if (result.error) return result;
 
   await logAudit({ actor, action: "UPDATE", targetType: "Enrollment", targetId: enrollmentId, description: "학생 홀드 해제 요청" });

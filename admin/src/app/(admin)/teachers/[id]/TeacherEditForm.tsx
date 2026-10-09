@@ -21,6 +21,7 @@ export type TeacherEditValues = {
   approvalStatus: string;
   currentRate: string | null;
   teacherGrade: string;
+  employmentType: string;
   teamLeaderId: number | null;
   sex: string | null;
   age: number | null;
@@ -71,6 +72,12 @@ export function TeacherEditForm({
             <select name="teacherGrade" defaultValue={t.teacherGrade} className="input">
               <option value="GENERAL">일반강사</option>
               <option value="SENIOR">수석강사</option>
+            </select>
+          </Field>
+          <Field label="정규 강사 여부 (유급휴가 대상)">
+            <select name="employmentType" defaultValue={t.employmentType} className="input">
+              <option value="NON_REGULAR">비정규 강사</option>
+              <option value="REGULAR">정규 강사</option>
             </select>
           </Field>
           <Field label="팀 리더 (선택)">

@@ -65,7 +65,7 @@ jobs:
         working-directory: admin
         run: |
           set -euo pipefail
-          for f in             scripts/test-talkTime.ts             scripts/test-assemblyaiParsing.ts             scripts/test-recordingWorkflow.ts             scripts/test-recordingProcessing.ts             scripts/test-teacherQcVisibility.ts             scripts/test-aiEvaluationDraft.ts             scripts/test-evaluationFormatPreservation.ts             scripts/test-evaluationTranslation.ts             scripts/test-evaluationQuality.ts             scripts/test-evaluationDiagnostics.ts             scripts/test-recordingWebhook.ts             scripts/test-recordingUpload.ts             scripts/test-recordingAwaitingRecovery.ts             scripts/test-recordingR2Isolation.ts             scripts/test-recordingPublish.ts             scripts/test-speakerRoles.ts             scripts/test-speakerConfirmation.ts             scripts/test-netlifyFunctionBundle.ts             scripts/test-proxyMatcher.ts             scripts/test-studentEvaluationApi.ts             scripts/test-routeId.ts             scripts/test-sessionPlan.ts             scripts/test-sessionGeneration.ts
+          for f in             scripts/test-talkTime.ts             scripts/test-assemblyaiParsing.ts             scripts/test-recordingWorkflow.ts             scripts/test-recordingProcessing.ts             scripts/test-teacherQcVisibility.ts             scripts/test-aiEvaluationDraft.ts             scripts/test-evaluationFormatPreservation.ts             scripts/test-evaluationTranslation.ts             scripts/test-evaluationQuality.ts             scripts/test-evaluationDiagnostics.ts             scripts/test-recordingWebhook.ts             scripts/test-recordingUpload.ts             scripts/test-recordingAwaitingRecovery.ts             scripts/test-recordingR2Isolation.ts             scripts/test-recordingPublish.ts             scripts/test-speakerRoles.ts             scripts/test-speakerConfirmation.ts             scripts/test-netlifyFunctionBundle.ts             scripts/test-proxyMatcher.ts             scripts/test-studentEvaluationApi.ts             scripts/test-routeId.ts             scripts/test-sessionPlan.ts             scripts/test-sessionGeneration.ts             scripts/test-regularSlot.ts             scripts/test-postponementPolicy.ts
           do
             echo "===== $f ====="
             npx tsx "$f"
@@ -84,3 +84,5 @@ jobs:
           npx prisma db push
           npx tsx scripts/test-sessionGeneration.integration.ts
           npx tsx scripts/test-sessionGenerationMigration.ts
+          npx tsx scripts/test-postponementFlow.integration.ts
+          npx tsx scripts/test-postponementMigration.ts

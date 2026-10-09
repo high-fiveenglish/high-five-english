@@ -11,7 +11,12 @@ export function RescheduleAllowanceCard({
   rescheduleRequests: RescheduleRequest[];
 }) {
   const { t } = useTranslation("classroom");
-  const allowance = computeRescheduleAllowance(enrollment, rescheduleRequests);
+  // 실제 계정은 서버가 정책(주2회=월1, 주3회=월2, 주5회=월3 × 등록 개월, 관리자 가감, 학원 휴강으로 대체된 연기 제외)으로 계산한 값을 그대로 쓴다.
+  // 서버 값이 없는 데모/옛 응답일 때만 클라이언트 추정치를 쓴다.
+  const estimated = computeRescheduleAllowance(enrollment, rescheduleRequests);
+  const allowance = enrollment.leaveQuota
+    ? { total: enrollment.leaveQuota.effectiveQuota, usedByStudent: enrollment.leaveQuota.usedCount, usedByAdmin: estimated.usedByAdmin }
+    : estimated;
 
   return (
     <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_8px_24px_rgba(20,44,88,0.06)]">

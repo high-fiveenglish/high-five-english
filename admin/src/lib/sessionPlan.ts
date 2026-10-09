@@ -29,7 +29,7 @@ import { isWithinAvailableHours, timeStringToMinuteOfDay } from "./timeSlots";
 import { createHash } from "node:crypto";
 
 /** 계획기 버전 — 계획 해시와 배치 기록에 남는다(규칙이 바뀌면 올린다). */
-export const PLANNER_VERSION = "session-plan/2";
+export const PLANNER_VERSION = "session-plan/3";
 
 export type PlanEnrollmentStatus = "APPLIED" | "PAID" | "ACTIVE" | "HOLDING" | "COMPLETED";
 export type PlanSessionStatus = "SCHEDULED" | "COMPLETED" | "CANCELLED" | "MAKEUP_NEEDED" | "LEAVE" | "HOLD";
@@ -75,6 +75,15 @@ export interface PlanClosureInput {
   agentId: number | null;
 }
 
+/**
+ * 강사에게 승인된 유급휴가(TeacherPaidLeave, status=APPROVED) — date는 KST 달력 날짜를 UTC 자정으로 저장한 값(@db.Date)이다.
+ * 그 강사의 정규 수업은 그 날짜에 만들지 않는다(휴강일과 같은 취급, 다만 강사 단위).
+ */
+export interface PlanTeacherPaidLeaveInput {
+  teacherId: number;
+  date: Date;
+}
+
 /** 수업이 아닌 다른 일정(레벨테스트 등)이 강사 시간을 점유하는 경우. */
 export interface PlanTeacherBusyInput {
   teacherId: number;
@@ -90,6 +99,8 @@ export interface PlanInput {
   existingSessions: PlanExistingSessionInput[];
   teacherBusy?: PlanTeacherBusyInput[];
   closures?: PlanClosureInput[];
+  /** 승인된 강사 유급휴가 — 그 강사의 그 날(KST)에는 정규 수업을 만들지 않는다. */
+  teacherPaidLeaves?: PlanTeacherPaidLeaveInput[];
   /** 이미 생성 배치로 만들어진 적이 있는 수강(삭제된 세션 포함) — 다시 생성하지 않는다. */
   alreadyGeneratedEnrollmentIds?: number[];
 }
@@ -224,6 +235,8 @@ export interface EnrollmentPlanRow {
   skippedStartedToday: string[];
   /** 휴강일이라 만들지 않은 슬롯(KST 날짜). */
   skippedClosure: string[];
+  /** 담당 강사의 승인된 유급휴가일이라 만들지 않은 슬롯(KST 날짜). */
+  skippedPaidLeave: string[];
   skippedExisting: { date: string; sessionId: number; status: PlanSessionStatus }[];
   alreadyExisting: ExistingSessionView[];
   conflicts: ConflictGroup[];
@@ -254,6 +267,7 @@ export interface PlanSummary {
     pastDates: number;
     startedToday: number;
     closure: number;
+    paidLeave: number;
     alreadyExisting: number;
     withheldByConflict: number;
     total: number;
@@ -337,6 +351,7 @@ function emptyRow(e: PlanEnrollmentInput): EnrollmentPlanRow {
     skippedPastDates: [],
     skippedStartedToday: [],
     skippedClosure: [],
+    skippedPaidLeave: [],
     skippedExisting: [],
     alreadyExisting: [],
     conflicts: [],
@@ -370,6 +385,13 @@ export function planClassSessions(input: PlanInput): PlanResult {
 
   const alreadyGenerated = new Set(input.alreadyGeneratedEnrollmentIds ?? []);
   const closureList = (input.closures ?? []).map((c) => ({ kstDate: formatAppDate(c.date), agentId: c.agentId }));
+  // 강사별 승인된 유급휴가일(KST 날짜 문자열). @db.Date는 UTC 자정이므로 UTC 날짜가 곧 KST 달력 날짜다.
+  const paidLeaveByTeacher = new Map<number, Set<string>>();
+  for (const l of input.teacherPaidLeaves ?? []) {
+    const set = paidLeaveByTeacher.get(l.teacherId) ?? new Set<string>();
+    set.add(l.date.toISOString().slice(0, 10));
+    paidLeaveByTeacher.set(l.teacherId, set);
+  }
 
   const rows: EnrollmentPlanRow[] = [];
   const candidates: Candidate[] = [];
@@ -486,6 +508,10 @@ export function planClassSessions(input: PlanInput): PlanResult {
       }
       if (closureDates.has(iso)) {
         row.skippedClosure.push(iso);
+        continue;
+      }
+      if (e.teacherId !== null && paidLeaveByTeacher.get(e.teacherId)?.has(iso)) {
+        row.skippedPaidLeave.push(iso);
         continue;
       }
       const weekday = weekdayOfIso(iso);
@@ -675,7 +701,7 @@ export function planClassSessions(input: PlanInput): PlanResult {
     errors: active.filter((r) => r.outcome === "ERROR").length,
     nonActiveExcluded: rows.length - active.length,
     sessionsWouldBeCreated: active.reduce((n, r) => n + r.willCreateCount, 0),
-    sessionsSkipped: { pastDates: 0, startedToday: 0, closure: 0, alreadyExisting: 0, withheldByConflict: 0, total: 0 },
+    sessionsSkipped: { pastDates: 0, startedToday: 0, closure: 0, paidLeave: 0, alreadyExisting: 0, withheldByConflict: 0, total: 0 },
     generationEligible: active.filter((r) => r.generationEligible).length,
     generationSessions: active.filter((r) => r.generationEligible).reduce((n, r) => n + r.willCreateCount, 0),
     timeUnverifiedEnrollments: active.filter((r) => r.outcome === "ELIGIBLE" && !r.generationEligible).length,
@@ -691,13 +717,14 @@ export function planClassSessions(input: PlanInput): PlanResult {
     summary.sessionsSkipped.pastDates += r.skippedPastDates.length;
     summary.sessionsSkipped.startedToday += r.skippedStartedToday.length;
     summary.sessionsSkipped.closure += r.skippedClosure.length;
+    summary.sessionsSkipped.paidLeave += r.skippedPaidLeave.length;
     summary.sessionsSkipped.alreadyExisting += r.skippedExisting.length;
     summary.sessionsSkipped.withheldByConflict += r.withheldCount;
     if (r.outcome === "EXCLUDED") for (const reason of r.reasons) summary.excludedByReason[reason] = (summary.excludedByReason[reason] ?? 0) + 1;
     for (const w of r.warnings) summary.warningsByCode[w] = (summary.warningsByCode[w] ?? 0) + 1;
   }
   const sk = summary.sessionsSkipped;
-  sk.total = sk.pastDates + sk.startedToday + sk.closure + sk.alreadyExisting + sk.withheldByConflict;
+  sk.total = sk.pastDates + sk.startedToday + sk.closure + sk.paidLeave + sk.alreadyExisting + sk.withheldByConflict;
 
   return { rows, summary };
 }
