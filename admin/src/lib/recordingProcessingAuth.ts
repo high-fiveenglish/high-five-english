@@ -10,8 +10,14 @@ import { timingSafeEqual } from "crypto";
 
 export const RECORDING_PROCESSING_SECRET_HEADER = "x-recording-processing-secret";
 
-export function getRecordingProcessingSecret(): string | null {
-  return process.env.RECORDING_PROCESSING_SECRET || null;
+// 호출한 배포가 자기 환경(APP_ENV)을 스스로 밝히는 헤더 — enforce 모드의 처리 함수는 이 값이 자기 APP_ENV 와 다르면 거부한다(recordingTarget.ts).
+// 이것은 인증이 아니라 "설정 실수를 잡는 일관성 검사"다: 비밀값(위 헤더)을 아는 호출자는 이 헤더도 마음대로 쓸 수 있다.
+// 비밀값이 우연히 같은 환경 사이에서 미리보기→운영 호출을 막아 주지만, 실제 방어선은 수신 쪽 enforce 와 환경별로 서로 다른 비밀값이다
+// (admin/docs/recording-environment-isolation.md 4절). 비밀이 아니다.
+export const RECORDING_SOURCE_ENV_HEADER = "x-recording-source-env";
+
+export function getRecordingProcessingSecret(env: Record<string, string | undefined> = process.env): string | null {
+  return env.RECORDING_PROCESSING_SECRET || null;
 }
 
 /** 비밀값이 서버에 설정되지 않았으면(expected 없음) 항상 false — "미설정 = 전부 허용"이

@@ -19,6 +19,7 @@ import { generateAIEvaluationDraft } from "../../src/lib/aiEvaluation";
 import { ageBandFromBirthDate } from "../../src/lib/projectEvaluationRules";
 import { formatAppDate } from "../../src/lib/appTime";
 import { getRecordingProcessingSecret } from "../../src/lib/recordingProcessingAuth";
+import { readRecordingEnvCheck } from "../../src/lib/recordingTarget";
 import { handleProcessRecordingRequest, type ProcessRecordingDeps } from "../../src/lib/recordingProcessing";
 import { truncateErrorMessage } from "../../src/lib/recordingWorkflow";
 import { projectUtterancesForStorage } from "../../src/lib/speakerConfirmation";
@@ -109,4 +110,6 @@ const prismaDeps: ProcessRecordingDeps = {
   generateDraft: (params) => generateAIEvaluationDraft({ ...params, onDiagnostics: (d) => console.log("ai-evaluation-attempts", JSON.stringify(d)) }),
 };
 
-export default async (req: Request) => handleProcessRecordingRequest(req, getRecordingProcessingSecret(), prismaDeps);
+// 환경 검사(x-recording-source-env ↔ 이 배포의 APP_ENV)는 RECORDING_TARGET_GUARD=enforce 일 때만 거부한다(기본 observe: 사유 로그만).
+export default async (req: Request) =>
+  handleProcessRecordingRequest(req, getRecordingProcessingSecret(), prismaDeps, readRecordingEnvCheck(process.env));
