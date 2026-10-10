@@ -4,6 +4,7 @@
 // fake의 "조건 확인 + 갱신"이 한 번에 실행되므로, Postgres가 단일 UPDATE문에 거는 행
 // 잠금과 같은 원자성을 갖는다.
 import { handleProcessRecordingRequest, processRecording, type ProcessRecordingDeps } from "../src/lib/recordingProcessing";
+import { readRecordingEnvCheck } from "../src/lib/recordingTarget";
 import { isAuthorizedProcessingRequest, RECORDING_PROCESSING_SECRET_HEADER } from "../src/lib/recordingProcessingAuth";
 import { ANALYZING_STUCK_AFTER_MS, MAX_ERROR_MESSAGE_LENGTH } from "../src/lib/recordingWorkflow";
 import { studentFirstLesson, teacherFirstLesson, threeVoiceLesson } from "./fixtures/syntheticLessons";
@@ -15,6 +16,9 @@ import {
   TRANSCRIBED_RECOVERY_MAX_AGE_MS,
   type RecoveryDeps,
 } from "../src/lib/recordingRecovery";
+
+/** These tests exercise processing logic, not the environment guard: the default (observe) check is passed explicitly because the parameter is required. */
+const OBSERVE_ENV_CHECK = readRecordingEnvCheck({});
 
 let pass = 0;
 let fail = 0;
@@ -217,6 +221,7 @@ function createFakeEnv(rows: FakeRow[], options: { fetchThrowsFor?: Set<number> 
       request({ [RECORDING_PROCESSING_SECRET_HEADER]: SECRET }, { audioRecordingId: id }),
       SECRET,
       deps,
+      OBSERVE_ENV_CHECK,
     );
     return res.ok;
   }
@@ -286,7 +291,7 @@ async function main() {
     for (const c of cases) {
       const env = createFakeEnv([transcribedRow(1, 0)]);
       const req = env.request(c.headers);
-      const res = await handleProcessRecordingRequest(req, c.expected, env.deps);
+      const res = await handleProcessRecordingRequest(req, c.expected, env.deps, OBSERVE_ENV_CHECK);
       assert(res.status === c.status, `unauthorized(${c.label}): status ${c.status} (got ${res.status})`);
       assert(env.totalDepCalls() === 0, `unauthorized(${c.label}): AI/DB deps 호출 0회`);
       assert(!req.bodyUsed, `unauthorized(${c.label}): 요청 본문도 읽지 않음`);
@@ -294,7 +299,7 @@ async function main() {
     }
 
     const env = createFakeEnv([transcribedRow(1, 0)]);
-    const res = await handleProcessRecordingRequest(env.request({ [RECORDING_PROCESSING_SECRET_HEADER]: SECRET }), SECRET, env.deps);
+    const res = await handleProcessRecordingRequest(env.request({ [RECORDING_PROCESSING_SECRET_HEADER]: SECRET }), SECRET, env.deps, OBSERVE_ENV_CHECK);
     assert(res.status === 200 && (await res.text()) === "ok", "authorized: 정상 처리");
     assert(env.db.get(1)!.processingStatus === "NEEDS_REVIEW", "authorized: NEEDS_REVIEW로 전이");
     assert(env.calls.generateDraft === 1, "authorized: Claude 1회 호출");
@@ -461,7 +466,7 @@ async function main() {
   // ── 6. background 입력 검증: 잘못된 id는 DB 조회 전에 거절 ─────────────────────
   for (const bad of [-1, 0, 1.5, "1", null, Number.MAX_SAFE_INTEGER + 10, undefined]) {
     const env = createFakeEnv([transcribedRow(1, 0)]);
-    const res = await handleProcessRecordingRequest(env.request({ [RECORDING_PROCESSING_SECRET_HEADER]: SECRET }, { audioRecordingId: bad }), SECRET, env.deps);
+    const res = await handleProcessRecordingRequest(env.request({ [RECORDING_PROCESSING_SECRET_HEADER]: SECRET }, { audioRecordingId: bad }), SECRET, env.deps, OBSERVE_ENV_CHECK);
     assert(res.status === 400 && env.totalDepCalls() === 0, `invalid id(${String(bad)}): 400, deps 호출 0회`);
   }
 

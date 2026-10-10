@@ -181,14 +181,16 @@ export async function processRecording(audioRecordingId: number, deps: ProcessRe
 /** Background Function의 HTTP 진입점. 인증은 본문 파싱/DB 조회보다 먼저 확인한다 —
  * 인증되지 않은 요청은 deps를 전혀 건드리지 않고 거절된다.
  *
- * envCheck(선택): 호출자가 보낸 x-recording-source-env 가 이 배포의 APP_ENV 와 같은지 확인한다(비밀값 검사 뒤, 본문 파싱 앞).
+ * envCheck(필수): 호출자가 보낸 x-recording-source-env 가 이 배포의 APP_ENV 와 같은지 확인한다(비밀값 검사 뒤, 본문 파싱 앞).
+ * 필수 인자인 이유: 선택 인자였을 때는 호출부에서 인자가 빠져도 컴파일·실행이 모두 통과하고 검사만 조용히 사라졌다. 필수로 두면 빠뜨린
+ * 호출은 타입 오류가 된다(검사를 일부러 끄려면 observe 모드 값을 명시적으로 넘긴다 — readRecordingEnvCheck({})).
  * 응답 코드: 비밀값 미설정 503 / 틀린 비밀값 401(기존 그대로) → 환경 헤더 누락·불일치 403(environment_mismatch),
- * enforce 인데 이 배포의 APP_ENV 가 없으면 503(environment_not_configured). 생략하거나 observe 모드면 이 검사는 거부하지 않는다. */
+ * enforce 인데 이 배포의 APP_ENV 가 없으면 503(environment_not_configured). observe 모드면 이 검사는 거부하지 않고 사유만 로그한다. */
 export async function handleProcessRecordingRequest(
   req: Request,
   expectedSecret: string | null,
   deps: ProcessRecordingDeps,
-  envCheck?: RecordingEnvCheck,
+  envCheck: RecordingEnvCheck,
 ): Promise<Response> {
   if (!expectedSecret) {
     return new Response("processing_not_configured", { status: 503 });
@@ -196,10 +198,8 @@ export async function handleProcessRecordingRequest(
   if (!isAuthorizedProcessingRequest(req.headers.get(RECORDING_PROCESSING_SECRET_HEADER), expectedSecret)) {
     return new Response("unauthorized", { status: 401 });
   }
-  if (envCheck) {
-    const verdict = verifySourceEnv(req.headers.get(RECORDING_SOURCE_ENV_HEADER), envCheck);
-    if (!verdict.ok) return new Response(verdict.body, { status: verdict.status });
-  }
+  const verdict = verifySourceEnv(req.headers.get(RECORDING_SOURCE_ENV_HEADER), envCheck);
+  if (!verdict.ok) return new Response(verdict.body, { status: verdict.status });
 
   let body: { audioRecordingId?: unknown } | null;
   try {
