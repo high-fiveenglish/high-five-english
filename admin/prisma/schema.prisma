@@ -3,8 +3,8 @@
 // 모든 테이블에 siteId를 넣어 멀티테넌트 확장에 대비하되, 지금은 site id=1 고정 운영.
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
 
@@ -152,6 +152,7 @@ model Site {
   pricingDurations   PricingDuration[]
   leaveRequests      LeaveRequest[]
   academyClosures    AcademyClosure[]
+  teacherPaidLeaves  TeacherPaidLeave[]
   monthlyEvaluations MonthlyEvaluation[]
   bulletins          Bulletin[]
   enrollmentRequests EnrollmentRequest[]
@@ -338,6 +339,23 @@ enum TeacherGrade {
   GENERAL
 }
 
+// 정규 강사 여부 — 유급휴가(TeacherPaidLeave) 대상 판정에만 쓴다. teacherGrade(SENIOR/GENERAL)와는 별개 개념이다.
+// 기본값은 NON_REGULAR: 관리자가 강사 편집 화면에서 REGULAR로 지정하기 전에는 아무에게도 유급휴가가 지급되지 않는다.
+enum TeacherEmploymentType {
+  REGULAR
+  NON_REGULAR
+}
+
+// 수업이 정규 일정에서 빠지게 된(재배치된) 사유 — 학생 연기 횟수는 "최종적으로 유효한 STUDENT_POSTPONEMENT"만 차감한다.
+enum RescheduleSource {
+  STUDENT_POSTPONEMENT
+  ADMIN_POSTPONEMENT
+  TEACHER_HOLD
+  ACADEMY_CLOSURE
+  PAID_LEAVE
+  OTHER_UNPAID_LEAVE
+}
+
 model Teacher {
   id             Int            @id @default(autoincrement())
   siteId         Int
@@ -362,7 +380,8 @@ model Teacher {
   // 프로필 상세 정보 — 레퍼런스 사이트(z02.htm 강사정보수정)의 필드를 대부분 반영.
   // 사진/음성은 마케팅용 강사소개(Instructor)와는 별개로, LMS 내부에서 신원 확인 등
   // 운영 목적으로만 쓰는 참고용 데이터다.
-  teacherGrade     TeacherGrade @default(GENERAL)
+  teacherGrade     TeacherGrade          @default(GENERAL)
+  employmentType   TeacherEmploymentType @default(NON_REGULAR)
   sex              Sex?
   age              Int?
   schoolName       String?
@@ -378,13 +397,13 @@ model Teacher {
   zoomUrl          String?
   zoomPw           String?
   tencentUrl       String?
-  experience       String?      @db.Text
-  selfIntroduction String?      @db.Text
-  photoUrl         String?      @db.Text
-  voiceUrl         String?      @db.Text
+  experience       String?               @db.Text
+  selfIntroduction String?               @db.Text
+  photoUrl         String?               @db.Text
+  voiceUrl         String?               @db.Text
   videoYoutubeCode String?
-  tesol            Boolean      @default(false)
-  priority         Int          @default(0)
+  tesol            Boolean               @default(false)
+  priority         Int                   @default(0)
 
   rates              TeacherRate[]
   enrollments        Enrollment[]
@@ -392,6 +411,7 @@ model Teacher {
   levelTests         LevelTest[]
   monthlyEvaluations MonthlyEvaluation[]
   slotReservations   SlotReservation[]
+  paidLeaves         TeacherPaidLeave[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -432,61 +452,64 @@ enum PaymentStatus {
 }
 
 model Enrollment {
-  id                 Int              @id @default(autoincrement())
-  siteId             Int
-  site               Site             @relation(fields: [siteId], references: [id])
-  agentId            Int?
-  agent              Agent?           @relation(fields: [agentId], references: [id])
-  studentId          Int
-  student            Student          @relation(fields: [studentId], references: [id])
-  teacherId          Int?
-  teacher            Teacher?         @relation(fields: [teacherId], references: [id])
-  packageMonths      Int
-  classMethod        String
-  scheduleDays       String
-  classDurationMin   Int              @default(25)
-  totalSessions      Int
-  startDate          DateTime
-  endDate            DateTime
-  status             EnrollmentStatus @default(APPLIED)
+  id                   Int              @id @default(autoincrement())
+  siteId               Int
+  site                 Site             @relation(fields: [siteId], references: [id])
+  agentId              Int?
+  agent                Agent?           @relation(fields: [agentId], references: [id])
+  studentId            Int
+  student              Student          @relation(fields: [studentId], references: [id])
+  teacherId            Int?
+  teacher              Teacher?         @relation(fields: [teacherId], references: [id])
+  packageMonths        Int
+  classMethod          String
+  scheduleDays         String
+  classDurationMin     Int              @default(25)
+  totalSessions        Int
+  startDate            DateTime
+  endDate              DateTime
+  status               EnrollmentStatus @default(APPLIED)
   // status가 HOLDING인 동안 홀드가 시작된 시점 — 해제 시 이 값으로부터 며칠(주 단위로
   // 올림) 홀드됐는지 계산해 예정 수업(HOLD 상태)들을 그만큼 뒤로 밀고 수강기간도 같이
   // 늘린다(holdApply.ts 참고). HOLDING이 아닐 때는 항상 null이다.
-  holdStartedAt      DateTime?
-  paymentStatus      PaymentStatus?
-  orderNo            String?
-  classType          String           @default("1:1")
-  textbookId         Int?
+  holdStartedAt        DateTime?
+  paymentStatus        PaymentStatus?
+  // 학생 연기 횟수(quota)에 대한 관리자 가감 — 기본 정책값(leavePolicy.ts: 주2회=월1, 주3회=월2, 주5회=월3 × 등록 개월 수)에
+  // 더해져 effectiveQuota가 된다. 변경 이력은 AuditLog에 남는다.
+  leaveQuotaAdjustment Int              @default(0)
+  orderNo              String?
+  classType            String           @default("1:1")
+  textbookId           Int?
   // 교재 테이블이 아직 없어 이름을 그대로 저장한다(textbookId는 미사용 상태로 남겨둠 —
   // 이후 Textbook 모델을 만들면 이 값을 기준으로 이관한다).
-  textbookName       String?
+  textbookName         String?
   // 수업 시각(HH:mm) — scheduleDays는 요일만 담고 있어 시각 정보가 없었다.
-  classTime          String?
+  classTime            String?
   // 요일별로 수업 시간이 다른 경우의 오버라이드 — {"1": "20:00", "3": "20:30"} 형태로
   // WEEKDAYS의 value(0=일~6=토)를 키로 저장한다. 없는 요일은 위 classTime을 그대로 쓴다.
   // 강사(teacherId)는 이 등록 건 전체에서 하나로 고정되어 있어 요일별로 다르게 배정할
   // 수는 없다 — 요일별 강사 배정이 필요해지면 별도 모델링이 필요하다.
-  classTimes         Json?
+  classTimes           Json?
   // 학생 수준 — 1~10 단계 숫자 문자열("1".."10"). 레벨테스트 결과와는 별개로, 이
   // 수강 건을 어떤 난이도로 진행할지 관리자가 직접 지정한다.
-  studentLevel       String?
+  studentLevel         String?
   // 강사가 부를 학생 영어 이름 — 학생 프로필의 englishName을 기본값으로 쓰되, 등록
   // 시점에 이 수강 건만 다르게 표기하고 싶을 때 덮어쓸 수 있도록 별도로 저장한다.
-  studentEnglishName String?
+  studentEnglishName   String?
   // 커리큘럼 — 교재와 마찬가지로 아직 전용 카탈로그 모델이 없어 자유 텍스트로 저장한다.
-  curriculum         String?
-  adminNote          String?          @db.Text
+  curriculum           String?
+  adminNote            String?          @db.Text
   // 실제 청구 수강료(KRW) — null이면 가격표(PricingDuration/PricingRow, packageMonths ×
   // scheduleDays 빈도 × classDurationMin 기준)에서 계산한 기본 수강료를 그대로 쓴다는
   // 뜻이다. 지인할인·프로모션·포인트 사용 등으로 기본 수강료와 실제 청구액이 다를 때만
   // 값이 채워진다 — "수강내역관리 > 결제 > 수정" 화면에서만 설정한다.
-  actualPriceKRW     Int?
+  actualPriceKRW       Int?
   // "재수강" 등록 화면(/enrollments/new?renewFrom=<원본 id>)에서 저장할 때만 채워진다 —
   // 원본 수강 건을 이어서 새로 만든 건임을 표시한다. 원본 쪽에서 이 값으로 자신을
   // 가리키는 건이 있는지(renewals) 확인해 "재수강" 버튼 대신 "재수강 완료"를 보여준다.
-  renewedFromId      Int?
-  renewedFrom        Enrollment?      @relation("EnrollmentRenewal", fields: [renewedFromId], references: [id])
-  renewals           Enrollment[]     @relation("EnrollmentRenewal")
+  renewedFromId        Int?
+  renewedFrom          Enrollment?      @relation("EnrollmentRenewal", fields: [renewedFromId], references: [id])
+  renewals             Enrollment[]     @relation("EnrollmentRenewal")
 
   classSessions             ClassSession[]
   leaveRequests             LeaveRequest[]
@@ -602,6 +625,12 @@ model ClassSession {
   // 있어, 강사/학생 화면 어디서든 이 수업만 별도로 표시해야 한다.
   isSupplement Boolean       @default(false)
 
+  // 이 세션이 어떤 세션과 이어진 수업인지 — 연기로 새로 배치된 정규 수업은 연기된 원 수업을, 보충수업은 (선택적으로)
+  // 관련된 정규 수업을 가리킨다. 둘 다 없으면 null(기존 데이터와 호환).
+  relatedSessionId Int?
+  relatedSession   ClassSession?  @relation("SessionRelated", fields: [relatedSessionId], references: [id], onDelete: SetNull)
+  relatedFrom      ClassSession[] @relation("SessionRelated")
+
   // 소프트 삭제 — "수업 삭제 내역"에서 이력으로 조회할 수 있도록 실제로 지우지 않고
   // deletedAt만 채운다. 전체일정표/충돌감지 등 나머지 조회는 전부 deletedAt: null만 본다.
   deletedAt DateTime?
@@ -620,6 +649,7 @@ model ClassSession {
 
   evaluation     LessonEvaluation?
   leaveRequest   LeaveRequest?
+  replacementFor LeaveRequest?     @relation("LeaveReplacement")
   audioRecording AudioRecording?
 
   @@index([siteId])
@@ -627,6 +657,7 @@ model ClassSession {
   @@index([teacherId])
   @@index([studentId])
   @@index([generationBatchId])
+  @@index([relatedSessionId])
   @@map("class_sessions")
 }
 
@@ -661,23 +692,23 @@ enum SessionGenerationItemOutcome {
 }
 
 model SessionGenerationBatch {
-  id     String                  @id @default(uuid())
-  mode   SessionGenerationMode
-  status SessionGenerationStatus @default(RUNNING)
+  id          String                  @id @default(uuid())
+  mode        SessionGenerationMode
+  status      SessionGenerationStatus @default(RUNNING)
   // 실행 중에는 'SESSION_GENERATION', 끝나면 null — unique라 동시에 두 배치가 RUNNING일 수 없다.
-  activeLock String? @unique
+  activeLock  String?                 @unique
   // 임대(lease) + 펜싱: 실행기마다 임의 토큰(leaseOwner)을 갖고, 모든 쓰기 트랜잭션은 먼저
   // "id·leaseOwner·RUNNING·activeLock이 그대로인지"를 조건으로 heartbeatAt을 갱신(행 잠금)한 뒤에만 쓴다.
   // 잠금 해제(release-lock)는 heartbeatAt이 오래된 경우에만 같은 행을 조건부로 바꾸므로, 해제 이후의 옛 실행기 쓰기는
   // 전부 거부되고, 실행 중인 트랜잭션이 있으면 해제가 그 커밋을 기다린 뒤 갱신된 heartbeat를 보고 포기한다.
   leaseOwner  String?
-  heartbeatAt DateTime @default(now())
+  heartbeatAt DateTime                @default(now())
 
-  asOf           DateTime // 계획 기준 시각(이 이후 시각의 수업만 생성)
-  asOfKstDate    String // "YYYY-MM-DD"
-  plannerVersion String
-  planHash       String
-  expectedSessions Int
+  asOf                   DateTime // 계획 기준 시각(이 이후 시각의 수업만 생성)
+  asOfKstDate            String // "YYYY-MM-DD"
+  plannerVersion         String
+  planHash               String
+  expectedSessions       Int
   requestedEnrollmentIds Int[]
 
   plannedEnrollments         Int @default(0)
@@ -888,13 +919,37 @@ model LeaveRequest {
   // 이 값으로 "학생이 직접/관리자가 개별로 신청한 휴강"과 "어학원 전체 휴강으로
   // 일괄 생성된 휴강"을 구분한다(휴강관리 화면의 세 탭 분류 기준).
   academyClosureId Int?
-  academyClosure   AcademyClosure? @relation(fields: [academyClosureId], references: [id])
+  academyClosure   AcademyClosure? @relation("ClosureLeaves", fields: [academyClosureId], references: [id])
+
+  // ── 정규 수업 재배치(cascade) 이력 — 아래 필드는 새 방식으로 처리된 건에만 채워진다(기존 건은 null/기본값 → legacy) ──
+  // source: 이 연기의 "원래" 사유. finalSource: 지금 유효한 사유(학생 연기가 학원 휴강으로 대체되면 ACADEMY_CLOSURE).
+  source                RescheduleSource?
+  finalSource           RescheduleSource?
+  // 학생 연기 횟수에 실제로 반영되는 양(최종 사유가 STUDENT_POSTPONEMENT일 때만 1). 사용 횟수는 이 값의 합으로 센다.
+  quotaImpact           Int               @default(0)
+  // 실제로 처리한 사람 — 관리자가 학생 대신 "학생 연기"를 눌러도 source는 STUDENT_POSTPONEMENT이고 executedByRole만 ADMIN이다.
+  executedByRole        RoleName?
+  executedById          Int?
+  // 학생 연기가 학원 휴강으로 대체된 경우 그 휴강
+  supersededByClosureId Int?
+  supersededByClosure   AcademyClosure?   @relation("ClosureSupersedes", fields: [supersededByClosureId], references: [id])
+  supersededAt          DateTime?
+  // 연기로 새로 배치된 정규 수업 / 이 연기로 수강 종료일이 늘어나기 전의 값(늘어나지 않았으면 null) — 되돌리기용
+  replacementSessionId  Int?              @unique
+  replacementSession    ClassSession?     @relation("LeaveReplacement", fields: [replacementSessionId], references: [id], onDelete: SetNull)
+  previousEndDate       DateTime?
+  // 유급휴가 승인으로 만들어진 건
+  paidLeaveId           Int?
+  paidLeave             TeacherPaidLeave? @relation(fields: [paidLeaveId], references: [id])
 
   createdAt DateTime @default(now())
 
   @@index([siteId])
   @@index([studentId])
+  @@index([enrollmentId])
   @@index([academyClosureId])
+  @@index([supersededByClosureId])
+  @@index([paidLeaveId])
   @@map("leave_requests")
 }
 
@@ -904,6 +959,35 @@ model LeaveRequest {
 // 동일한 applyClassLeave 로직을 재사용 — 그래야 학생별 수강 종료일 연장도 똑같이
 // 적용된다). 이 레코드는 "그 날짜에 이런 사유로 일괄 휴강했다"는 사실 자체를 남겨,
 // 휴강관리 화면에서 개별 휴강과 분리해서 보여주고 한 번에 되돌릴 수 있게 한다.
+// 정규 강사의 유급휴가 — 같은 강사의 같은 날(KST)은 DB unique로 1건만 존재할 수 있어, 그날 수업이 몇 건이든 급여(레이트×8)는 1회만 나간다.
+// 일반 LEAVE(정전/인터넷/지각 등)는 이 모델과 무관하다(급여 0, 유급휴가 한도 미차감).
+model TeacherPaidLeave {
+  id            Int            @id @default(autoincrement())
+  siteId        Int
+  site          Site           @relation(fields: [siteId], references: [id])
+  teacherId     Int
+  teacher       Teacher        @relation(fields: [teacherId], references: [id])
+  // KST 달력 날짜(시각 없음)
+  leaveDate     DateTime       @db.Date
+  status        ApprovalStatus @default(PENDING)
+  reason        String?
+  requestedAt   DateTime       @default(now())
+  requestedById Int?
+  approvedById  Int?
+  approvedAt    DateTime?
+  // 휴가일이 지난 뒤 관리자가 승인/수정한 건인지
+  postApproval  Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  leaveRequests LeaveRequest[]
+
+  @@unique([teacherId, leaveDate])
+  @@index([siteId])
+  @@index([leaveDate])
+  @@map("teacher_paid_leaves")
+}
+
 model AcademyClosure {
   id          Int      @id @default(autoincrement())
   siteId      Int
@@ -918,7 +1002,8 @@ model AcademyClosure {
   agentId Int?
   agent   Agent? @relation(fields: [agentId], references: [id])
 
-  leaveRequests LeaveRequest[]
+  leaveRequests    LeaveRequest[] @relation("ClosureLeaves")
+  supersededLeaves LeaveRequest[] @relation("ClosureSupersedes")
 
   @@index([siteId])
   @@index([agentId])

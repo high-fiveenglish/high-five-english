@@ -23,6 +23,8 @@ export type RealLesson = {
   status: RealLessonStatus;
   reason?: string;
   evaluationStatus: "not_started" | "completed";
+  /** 보충수업 여부 — 정규 수업(총 회차에 포함)과 구분한다. 옛 서버 응답에는 없을 수 있다. */
+  isSupplement?: boolean;
 };
 
 export type RealClosure = { id: number; date: string; reason: string };
@@ -34,8 +36,17 @@ export type RealClassroomSnapshot = {
     id: number;
     startDate: string;
     endDate: string;
+    /** 정규 등록 회차 */
     totalLessons: number;
+    /** 정규 잔여 회차 — 보충수업은 정규 회차를 소모하지 않는다. */
     remainingLessons: number;
+    /** 보충수업(제공되는 것) 수 / 그 중 받은 수 / 받은 수업 합계(정규+보충) / 제공 가능 합계(정규 등록 회차+보충). 옛 서버 응답에는 없을 수 있다. */
+    supplementLessons?: number;
+    supplementTaken?: number;
+    providedLessons?: number;
+    availableLessons?: number;
+    /** 학생 연기 횟수(서버가 정책으로 계산: 주2회=월1, 주3회=월2, 주5회=월3 × 등록 개월, 관리자 가감 반영) */
+    leaveQuota?: { policyQuota: number; adminAdjustment: number; effectiveQuota: number; usedCount: number; remainingCount: number };
     classDurationMin: number;
     meetingPlatform: RealMeetingPlatform;
     teacherId: number | null;

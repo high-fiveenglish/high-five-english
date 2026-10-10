@@ -2,12 +2,14 @@ import { notFound } from "next/navigation";
 import { parseRouteId } from "@/lib/routeId";
 import { HomeNoticeForm } from "../HomeNoticeForm";
 import { createHomeNotice } from "../actions";
+import { requirePageActor } from "@/lib/pageAccess";
 
 export default async function NewHomeNoticePage({
   searchParams,
 }: {
   searchParams: Promise<{ agentId?: string }>;
 }) {
+  await requirePageActor("home_notices.create", { denyAgent: true });
   const { agentId } = await searchParams;
   const agentIdValue = agentId ? parseRouteId(agentId) : null;
   if (agentId && agentIdValue === null) notFound();

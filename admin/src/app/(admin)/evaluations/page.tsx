@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { formatAppDate, formatAppTime, parseAppDateTime } from "@/lib/appTime";
+import { requirePageActor } from "@/lib/pageAccess";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -19,6 +20,7 @@ export default async function EvaluationsPage({
 }: {
   searchParams: Promise<{ date?: string; month?: string; page?: string }>;
 }) {
+  await requirePageActor("evaluations.view", { denyAgent: true });
   const { date, month, page: pageParam } = await searchParams;
   const today = formatAppDate(new Date());
   const selectedDate = date ?? today;

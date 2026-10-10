@@ -9,10 +9,13 @@ import { requirePermission, logAudit } from "@/lib/rbac";
 import { startTeacherImpersonation, stopTeacherImpersonation } from "@/lib/teacherAuth";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import type { AccountStatus, ApprovalStatus, Sex, TeacherGrade } from "@/generated/prisma/client";
+import { requireHeadquarters } from "@/lib/agentScope";
+import { EMPLOYMENT_TYPE_LABEL, parseEmploymentTypeInput } from "@/lib/teacherEmployment";
 
 export async function createTeacher(_prevState: { error?: string } | undefined, formData: FormData) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "teachers.create");
+  requireHeadquarters(actor);
 
   const realName = String(formData.get("realName") ?? "").trim();
   const nickname = String(formData.get("nickname") ?? "").trim();
@@ -58,6 +61,7 @@ export async function createTeacher(_prevState: { error?: string } | undefined, 
 export async function updateTeacher(id: number, _prevState: { error?: string } | undefined, formData: FormData) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "teachers.update");
+  requireHeadquarters(actor);
 
   const realName = String(formData.get("realName") ?? "").trim();
   const nickname = String(formData.get("nickname") ?? "").trim();
@@ -68,6 +72,12 @@ export async function updateTeacher(id: number, _prevState: { error?: string } |
   const newRatePerUnit = Number(formData.get("newRatePerUnit") ?? 0);
 
   const teacherGrade = String(formData.get("teacherGrade") ?? "GENERAL") as TeacherGrade;
+  // 정규 강사 여부(유급휴가 대상) — teacherGrade(수석/일반)와는 별개다. 서버에서 값을 검증하고, 값이 없으면 현재 값을 그대로 둔다.
+  const employment = parseEmploymentTypeInput(formData.get("employmentType"));
+  if (!employment.ok) return { error: employment.error };
+  const employmentType = employment.value;
+  // 정규 여부는 급여(유급휴가)에 직접 영향을 주므로 본사 계정(ADMIN/MANAGER)만 바꿀 수 있다. 협력사(AGENT)는 불가.
+  if (employmentType !== null && actor.role === "AGENT") return { error: "협력사 계정은 정규/비정규 강사를 지정할 수 없습니다." };
   const teamLeaderIdRaw = String(formData.get("teamLeaderId") ?? "");
   const sexRaw = String(formData.get("sex") ?? "");
   const ageRaw = String(formData.get("age") ?? "");
@@ -93,6 +103,7 @@ export async function updateTeacher(id: number, _prevState: { error?: string } |
     return { error: "실명은 필수입니다." };
   }
 
+  const before = await prisma.teacher.findUnique({ where: { id }, select: { employmentType: true } });
   await prisma.teacher.update({
     where: { id },
     data: {
@@ -102,6 +113,7 @@ export async function updateTeacher(id: number, _prevState: { error?: string } |
       email: email || null,
       approvalStatus,
       teacherGrade,
+      ...(employmentType !== null ? { employmentType } : {}),
       teamLeaderId: teamLeaderIdRaw ? Number(teamLeaderIdRaw) : null,
       sex: sexRaw ? (sexRaw as Sex) : null,
       age: ageRaw ? Number(ageRaw) : null,
@@ -129,9 +141,19 @@ export async function updateTeacher(id: number, _prevState: { error?: string } |
     },
   });
   await logAudit({ actor, action: "UPDATE", targetType: "Teacher", targetId: id, description: newPassword ? "강사 정보 수정(비밀번호 변경 포함)" : "강사 정보 수정" });
+  if (before && employmentType !== null && before.employmentType !== employmentType) {
+    await logAudit({
+      actor,
+      action: "UPDATE",
+      targetType: "Teacher",
+      targetId: id,
+      description: `정규 강사 여부 변경: ${EMPLOYMENT_TYPE_LABEL[before.employmentType]}(${before.employmentType}) → ${EMPLOYMENT_TYPE_LABEL[employmentType]}(${employmentType}) — 유급휴가 대상 판정에 쓰임`,
+    });
+  }
 
   revalidatePath("/teachers");
   revalidatePath(`/teachers/${id}`);
+  revalidatePath("/teacher-paid-leaves");
   redirect("/teachers");
 }
 
@@ -140,6 +162,7 @@ export async function updateTeacher(id: number, _prevState: { error?: string } |
 export async function deleteTeacher(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "teachers.delete");
+  requireHeadquarters(actor);
   await prisma.teacher.update({ where: { id }, data: { accountStatus: "INACTIVE" } });
   await logAudit({ actor, action: "ACCOUNT_DISABLED", targetType: "Teacher", targetId: id, description: "강사 비활성화" });
   revalidatePath("/teachers");
@@ -152,6 +175,7 @@ export async function deleteTeacher(id: number) {
 export async function impersonateTeacher(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "teachers.impersonate");
+  requireHeadquarters(actor);
   const teacher = await prisma.teacher.findUnique({ where: { id } });
   if (!teacher || teacher.accountStatus !== "ACTIVE") {
     throw new Error("대리 로그인할 수 없는 강사입니다.");
@@ -176,6 +200,7 @@ export async function endTeacherImpersonation() {
 export async function bulkHardDeleteTeachers(ids: number[]) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "teachers.delete");
+  requireHeadquarters(actor);
   if (ids.length === 0) return;
 
   const teachers = await prisma.teacher.findMany({
@@ -223,6 +248,7 @@ export async function bulkHardDeleteTeachers(ids: number[]) {
 export async function updateTeacherAccountStatus(id: number, accountStatus: AccountStatus) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "teachers.update");
+  requireHeadquarters(actor);
   await prisma.teacher.update({ where: { id }, data: { accountStatus } });
   await logAudit({
     actor,

@@ -3,15 +3,19 @@ import { prisma } from "@/lib/prisma";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { LevelTestEditForm } from "./LevelTestEditForm";
 import { parseRouteId } from "@/lib/routeId";
+import { requirePageActor, requirePageInScope } from "@/lib/pageAccess";
 
 export default async function LevelTestDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const actor = await requirePageActor("level_tests.view");
   const { id } = await params;
   const levelTestId = parseRouteId(id);
   if (levelTestId === null) notFound();
+  // 협력사 계정은 자기 협력사 레벨테스트만 — 남의 id를 직접 입력하면 404
+  await requirePageInScope(actor, "levelTest", levelTestId);
 
   const levelTest = await prisma.levelTest.findUnique({
     where: { id: levelTestId },

@@ -6,7 +6,7 @@ import { DeleteButton } from "../DeleteButton";
 import { deleteClassSession } from "./actions";
 import { SessionStatusSelect } from "./SessionStatusSelect";
 import { formatAppDate, formatAppTime, parseAppDateTime } from "@/lib/appTime";
-import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePageActor } from "@/lib/pageAccess";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -37,7 +37,7 @@ export default async function SchedulePage({
 }: {
   searchParams: Promise<{ view?: string; date?: string; month?: string; week?: string; page?: string }>;
 }) {
-  const actor = await requireBackofficeActor();
+  const actor = await requirePageActor("schedules.view");
   const scopeAgentId = actor.role === "AGENT" ? actor.agentId : undefined;
   const { view: viewParam, date, month, week, page } = await searchParams;
   const view: ViewKey = viewParam === "week" ? "week" : "day";

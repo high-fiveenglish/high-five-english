@@ -59,8 +59,14 @@ export interface Enrollment {
   startDate: ISODate;
   /** Always derived from `lessons` via recomputeEnrollmentEndDate — never set directly. */
   endDate: ISODate;
+  /** 정규 등록 회차(보충수업 제외). */
   totalLessons: number;
+  /** 정규 잔여 회차 — 보충수업은 정규 회차를 소모하지 않는다. */
   remainingLessons: number;
+  /** 실제 계정(서버 데이터)에서만 채워진다: 보충수업 수와 받은 수, 서버가 계산한 학생 연기 횟수. */
+  supplementLessons?: number;
+  supplementTaken?: number;
+  leaveQuota?: { policyQuota: number; adminAdjustment: number; effectiveQuota: number; usedCount: number; remainingCount: number };
   lessonDurationMin: number;
   weeklyDays: WeekDay[];
   /** The shared time used for every day in `weeklyDays` — this is what the standard
@@ -97,6 +103,8 @@ export interface Lesson {
   /** Set on the original lesson once it has been superseded by a new tail lesson. */
   rescheduledToLessonId?: string;
   evaluationStatus: EvaluationStatus;
+  /** 보충수업이면 true — 정규 수업(총 회차에 포함)과 구분해서 세고 보여준다. 실제 계정에서만 채워진다. */
+  isSupplement?: boolean;
   /** The join link for this specific class session, set by an admin/teacher ahead of
    * time. Undefined until registered — the "수업 입장" button stays disabled until then. */
   meetingUrl?: string;

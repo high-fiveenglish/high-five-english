@@ -39,6 +39,7 @@ const NAV_GROUPS = [
       { href: "/schedule", label: "전체 일정표", permission: "schedules.view" },
       { href: "/reservations", label: "강사 자리 예약", permission: "reservations.view" },
       { href: "/leave-requests", label: "휴강 관리", permission: "leave_requests.view" },
+      { href: "/teacher-paid-leaves", label: "강사 유급휴가", permission: "leave_requests.view" },
     ],
   },
   {

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { corsHeaders, corsOptionsResponse } from "@/lib/cors";
 import { studentIdFromAuthHeader } from "@/lib/studentApiToken";
 import { actorFromAdminApiToken } from "@/lib/adminApiToken";
-import { logAudit } from "@/lib/rbac";
+import { hasPermission, logAudit } from "@/lib/rbac";
 import { parseRouteId } from "@/lib/routeId";
 
 export async function OPTIONS(request: Request) {
@@ -98,6 +98,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const existing = await prisma.reviewPost.findUnique({ where: { id: postId } });
   if (!existing) return NextResponse.json({ error: "not_found" }, { status: 404, headers });
   if (studentId && existing.studentId !== studentId && !admin) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403, headers });
+  }
+  // 관리자 토큰이면 누구나 모든 글을 지울 수 있던 구멍을 막는다. 남이 쓴 글은 관리자 앱의 deleteReviewPost와
+  // 같은 기준(reviews.delete, 본사 계정)을 요구하고, 그 외에는 자기가 쓴 글(PATCH와 같은 소유 기준)만 지울 수 있다.
+  if (admin && existing.authorAdminName !== admin.name && (admin.role === "AGENT" || !hasPermission(admin, "reviews.delete"))) {
     return NextResponse.json({ error: "forbidden" }, { status: 403, headers });
   }
 

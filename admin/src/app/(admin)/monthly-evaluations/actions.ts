@@ -7,6 +7,7 @@ import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { languageForRegion, translateLessonEvaluation, shouldTranslate } from "@/lib/levelTestTranslation";
+import { requireHeadquarters } from "@/lib/agentScope";
 
 const MAX_LENGTH = 4000;
 
@@ -19,6 +20,7 @@ export async function saveMonthlyEvaluation(
 ) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "monthly_evaluations.update");
+  requireHeadquarters(actor);
 
   const content = String(formData.get("content") ?? "").trim();
   if (!content) {
@@ -91,6 +93,7 @@ export async function saveMonthlyEvaluation(
 export async function deleteMonthlyEvaluation(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "monthly_evaluations.delete");
+  requireHeadquarters(actor);
   await prisma.monthlyEvaluation.delete({ where: { id } });
   await logAudit({ actor, action: "DELETE", targetType: "MonthlyEvaluation", targetId: id });
   revalidatePath("/monthly-evaluations");

@@ -4,6 +4,7 @@ import { corsHeaders, corsOptionsResponse } from "@/lib/cors";
 import { actorFromAdminApiToken } from "@/lib/adminApiToken";
 import { requirePermission, logAudit, ForbiddenError } from "@/lib/rbac";
 import { parseRouteId } from "@/lib/routeId";
+import { requireHeadquarters } from "@/lib/agentScope";
 
 export async function OPTIONS(request: Request) {
   return corsOptionsResponse(request);
@@ -46,6 +47,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!actor) return NextResponse.json({ error: "login_required" }, { status: 401, headers });
   try {
     requirePermission(actor, "home_notices.update");
+    requireHeadquarters(actor);
   } catch (err) {
     if (err instanceof ForbiddenError) return NextResponse.json({ error: "forbidden" }, { status: 403, headers });
     throw err;
@@ -85,6 +87,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   if (!actor) return NextResponse.json({ error: "login_required" }, { status: 401, headers });
   try {
     requirePermission(actor, "home_notices.delete");
+    requireHeadquarters(actor);
   } catch (err) {
     if (err instanceof ForbiddenError) return NextResponse.json({ error: "forbidden" }, { status: 403, headers });
     throw err;

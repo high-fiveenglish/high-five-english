@@ -4,6 +4,8 @@
 // 구조)과 같은 형태로 만들어, 그 수작업을 이 화면 하나로 대체하는 것이 목적이다.
 import { prisma } from "./prisma";
 import { DEFAULT_SITE_ID } from "./constants";
+import { formatAppDate } from "./appTime";
+import { paidLeavePay } from "./paidLeavePolicy";
 
 export type AttendanceLabel = "출석" | "결석" | "유급휴가";
 
@@ -39,9 +41,55 @@ const UNIT_MINUTES = 25;
 const LEVEL_TEST_DURATION_MIN = 10;
 // 결석은 정상 수업료의 절반만 지급 — 사용자 지정 정책.
 const ABSENT_RATE_MULTIPLIER = 0.5;
-// 유급휴가는 수업 시간에 비례하지 않고, 레이트(25분 기준 1회분) × 8을 하루치로 지급 —
-// 사용자 지정 정책("기본급*8").
-const PAID_LEAVE_UNITS = 8;
+// 유급휴가(승인된 TeacherPaidLeave 1건) = 레이트 × 8, 그날 수업이 몇 건이든 1회만(paidLeavePolicy.paidLeavePay).
+// 일반 LEAVE(연기/휴강/강사 홀드/정전·인터넷 문제 등으로 수업이 LEAVE가 된 것)는 급여 0이라 이 통계에 행이 없다.
+
+/** 정규 수업 1건의 출석/결석 판정과 급여. 결석(MAKEUP_NEEDED)은 정상 수업료의 50%. */
+export function classSessionPay(
+  status: "COMPLETED" | "MAKEUP_NEEDED",
+  durationMin: number,
+  ratePerUnit: number,
+): { attendance: AttendanceLabel; sessionUnits: number; payPHP: number } {
+  const sessionUnits = durationMin / UNIT_MINUTES;
+  return status === "COMPLETED"
+    ? { attendance: "출석", sessionUnits, payPHP: Math.round(ratePerUnit * sessionUnits) }
+    : { attendance: "결석", sessionUnits, payPHP: Math.round(ratePerUnit * sessionUnits * ABSENT_RATE_MULTIPLIER) };
+}
+
+/** 승인된 유급휴가 1건의 통계 행. */
+export function paidLeaveStatRow(input: { teacherName: string; leaveDate: string; ratePerUnit: number }): TeacherStatRow {
+  return {
+    teacherName: input.teacherName,
+    studentLabel: "-",
+    dateLabel: input.leaveDate,
+    attendance: "유급휴가",
+    durationMin: 0,
+    agentName: "-",
+    sessionUnits: 0,
+    ratePerUnit: input.ratePerUnit,
+    payPHP: paidLeavePay(input.ratePerUnit),
+  };
+}
+
+export function summarizeStatRows(rows: readonly TeacherStatRow[]): TeacherStatSummaryRow[] {
+  const summaryMap = new Map<string, TeacherStatSummaryRow>();
+  for (const r of rows) {
+    const existing = summaryMap.get(r.teacherName) ?? {
+      teacherName: r.teacherName,
+      ratePerUnit: r.ratePerUnit,
+      presentUnits: 0,
+      absentUnits: 0,
+      paidLeaveCount: 0,
+      totalPayPHP: 0,
+    };
+    if (r.attendance === "출석") existing.presentUnits += r.sessionUnits;
+    else if (r.attendance === "결석") existing.absentUnits += r.sessionUnits;
+    else existing.paidLeaveCount += 1;
+    existing.totalPayPHP += r.payPHP;
+    summaryMap.set(r.teacherName, existing);
+  }
+  return Array.from(summaryMap.values()).sort((a, b) => a.teacherName.localeCompare(b.teacherName));
+}
 
 function toDateLabel(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -66,13 +114,15 @@ async function loadRatesByTeacher(teacherIds: number[]): Promise<Map<number, num
 }
 
 export async function buildTeacherStats(from: Date, to: Date): Promise<TeacherStatResult> {
-  const [sessions, levelTests] = await Promise.all([
+  const fromIso = formatAppDate(from);
+  const toIso = formatAppDate(to);
+  const [sessions, levelTests, paidLeaves] = await Promise.all([
     prisma.classSession.findMany({
       where: {
         siteId: DEFAULT_SITE_ID,
         deletedAt: null,
         scheduledAt: { gte: from, lt: to },
-        status: { in: ["COMPLETED", "MAKEUP_NEEDED", "LEAVE"] },
+        status: { in: ["COMPLETED", "MAKEUP_NEEDED"] },
       },
       include: {
         teacher: { select: { id: true, realName: true } },
@@ -94,25 +144,28 @@ export async function buildTeacherStats(from: Date, to: Date): Promise<TeacherSt
       },
       orderBy: { scheduledClassDatetime: "asc" },
     }),
+    // 승인된 유급휴가만 — 휴가일(KST 날짜)이 기간 안인 건. 같은 강사·같은 날은 DB unique라 1건이다.
+    prisma.teacherPaidLeave.findMany({
+      where: { siteId: DEFAULT_SITE_ID, status: "APPROVED", leaveDate: { gte: new Date(`${fromIso}T00:00:00Z`), lt: new Date(`${toIso}T00:00:00Z`) } },
+      include: { teacher: { select: { id: true, realName: true } } },
+      orderBy: { leaveDate: "asc" },
+    }),
   ]);
 
   const teacherIds = Array.from(
-    new Set([...sessions.map((s) => s.teacherId), ...levelTests.map((t) => t.teacherId!).filter(Boolean)]),
+    new Set([
+      ...sessions.map((s) => s.teacherId),
+      ...levelTests.map((t) => t.teacherId!).filter(Boolean),
+      ...paidLeaves.map((p) => p.teacherId),
+    ]),
   );
   const ratesByTeacher = await loadRatesByTeacher(teacherIds);
 
   const rows: TeacherStatRow[] = [];
 
   for (const s of sessions) {
-    const attendance: AttendanceLabel = s.status === "COMPLETED" ? "출석" : s.status === "MAKEUP_NEEDED" ? "결석" : "유급휴가";
     const ratePerUnit = ratesByTeacher.get(s.teacherId) ?? 0;
-    const sessionUnits = s.durationMin / UNIT_MINUTES;
-    const payPHP =
-      attendance === "출석"
-        ? Math.round(ratePerUnit * sessionUnits)
-        : attendance === "결석"
-          ? Math.round(ratePerUnit * sessionUnits * ABSENT_RATE_MULTIPLIER)
-          : Math.round(ratePerUnit * PAID_LEAVE_UNITS);
+    const { attendance, sessionUnits, payPHP } = classSessionPay(s.status as "COMPLETED" | "MAKEUP_NEEDED", s.durationMin, ratePerUnit);
 
     rows.push({
       teacherName: s.teacher.realName,
@@ -147,25 +200,11 @@ export async function buildTeacherStats(from: Date, to: Date): Promise<TeacherSt
     });
   }
 
+  for (const pl of paidLeaves) {
+    rows.push(paidLeaveStatRow({ teacherName: pl.teacher.realName, leaveDate: pl.leaveDate.toISOString().slice(0, 10), ratePerUnit: ratesByTeacher.get(pl.teacherId) ?? 0 }));
+  }
+
   rows.sort((a, b) => a.dateLabel.localeCompare(b.dateLabel) || a.teacherName.localeCompare(b.teacherName));
 
-  const summaryMap = new Map<string, TeacherStatSummaryRow>();
-  for (const r of rows) {
-    const existing = summaryMap.get(r.teacherName) ?? {
-      teacherName: r.teacherName,
-      ratePerUnit: r.ratePerUnit,
-      presentUnits: 0,
-      absentUnits: 0,
-      paidLeaveCount: 0,
-      totalPayPHP: 0,
-    };
-    if (r.attendance === "출석") existing.presentUnits += r.sessionUnits;
-    else if (r.attendance === "결석") existing.absentUnits += r.sessionUnits;
-    else existing.paidLeaveCount += 1;
-    existing.totalPayPHP += r.payPHP;
-    summaryMap.set(r.teacherName, existing);
-  }
-  const summary = Array.from(summaryMap.values()).sort((a, b) => a.teacherName.localeCompare(b.teacherName));
-
-  return { rows, summary };
+  return { rows, summary: summarizeStatRows(rows) };
 }

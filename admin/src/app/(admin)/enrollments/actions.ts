@@ -14,6 +14,7 @@ import { isWithinAvailableHours, timeStringToMinuteOfDay } from "@/lib/timeSlots
 import { countSessionsBlockingDeletion, deletionBlockedMessage } from "@/lib/enrollmentDeletion";
 import { Prisma, type EnrollmentStatus, type EnrollmentRequestStatus, type PaymentStatus } from "@/generated/prisma/client";
 import type { Actor } from "@/lib/rbac";
+import { requireHeadquarters, requireInScope } from "@/lib/agentScope";
 
 const REQUEST_STATUSES = ["NEW", "CONTACTED", "CONVERTED", "CANCELLED"] as const;
 
@@ -32,6 +33,7 @@ async function assertOwnsEnrollment(actor: Actor, enrollmentId: number): Promise
 export async function updateEnrollmentRequestStatus(id: number, status: EnrollmentRequestStatus) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "enrollment_requests.update");
+  requireHeadquarters(actor);
   if (!REQUEST_STATUSES.includes(status)) throw new Error("잘못된 상태값입니다.");
 
   await prisma.enrollmentRequest.update({ where: { id }, data: { status } });
@@ -339,6 +341,25 @@ export async function updateEnrollment(id: number, _prevState: { error?: string 
   redirect("/enrollments");
 }
 
+// 수강내역 화면에서 학생 연기 가능 횟수를 관리자가 조정한다(기본 정책값에 더하는 가감값). 검증(음수/이미 쓴 횟수보다 적게 금지, 사유 필수, 감사 로그)은
+// lib/reschedule.adjustLeaveQuota가 수강 단위 advisory lock 안에서 한다. 본사 계정(ADMIN/MANAGER)만 — 협력사(AGENT)는 볼 수만 있다.
+export async function adjustEnrollmentLeaveQuota(enrollmentId: number, newAdjustment: number, reason: string): Promise<{ error?: string }> {
+  const actor = await requireBackofficeActor();
+  requirePermission(actor, "enrollments.update");
+  if (actor.role === "AGENT") return { error: "협력사 계정은 학생 연기 횟수를 수정할 수 없습니다." };
+  if (!Number.isInteger(enrollmentId) || !Number.isInteger(newAdjustment)) return { error: "입력값이 올바르지 않습니다." };
+  const exists = await prisma.enrollment.findUnique({ where: { id: enrollmentId }, select: { studentId: true } });
+  if (!exists) return { error: "존재하지 않는 수강 건입니다." };
+  const { runTx } = await import("@/lib/appTransaction");
+  const { adjustLeaveQuota } = await import("@/lib/reschedule");
+  const result = await runTx((tx) => adjustLeaveQuota(tx, { enrollmentId, newAdjustment, reason, actor: { role: actor.role, id: actor.id, name: actor.name } }));
+  if (!result.ok) return { error: result.error };
+  revalidatePath("/enrollments");
+  revalidatePath(`/students/${exists.studentId}/sessions`);
+  revalidatePath("/student/sessions");
+  return {};
+}
+
 export async function updateEnrollmentStatus(id: number, status: EnrollmentStatus) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "enrollments.update");
@@ -354,7 +375,9 @@ export async function updateEnrollmentStatus(id: number, status: EnrollmentStatu
     await applyHold(id);
   } else if (existing.status === "HOLDING" && status !== "HOLDING") {
     const { releaseHold } = await import("@/lib/holdApply");
-    await releaseHold(id);
+    const released = await releaseHold(id, { role: actor.role, id: actor.id, name: actor.name });
+    // 해제하지 못했다면(수업을 배치할 슬롯이 없는 등) 수강은 홀드 상태 그대로 둔다.
+    if (released.error) return;
     if (status !== "ACTIVE") {
       await prisma.enrollment.update({ where: { id }, data: { status } });
     }
@@ -409,6 +432,7 @@ export async function updateEnrollmentPrice(
 export async function deleteEnrollment(id: number): Promise<{ error?: string }> {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "enrollments.delete");
+  await requireInScope(prisma, actor, "enrollment", id);
   // 수업(ClassSession)이 있으면 삭제를 막고 안내한다 — 어차피 FK(RESTRICT)로 실패하므로 오류 화면 대신 메시지를 돌려준다.
   const blocking = await countSessionsBlockingDeletion(prisma, id);
   if (blocking > 0) return { error: deletionBlockedMessage(blocking) };

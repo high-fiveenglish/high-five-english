@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { TeachersTable } from "./TeachersTable";
+import { requirePageActor } from "@/lib/pageAccess";
 
 const PAGE_SIZE = 20;
 
@@ -11,6 +12,7 @@ export default async function TeachersPage({
 }: {
   searchParams: Promise<{ filter?: string; page?: string }>;
 }) {
+  await requirePageActor("teachers.view", { denyAgent: true });
   const { filter, page: pageParam } = await searchParams;
   const showInactive = filter === "inactive";
   const page = Math.max(1, Number(pageParam) || 1);

@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "forbidden" }, { status: 403, headers });
   }
 
-  const result = await releaseHold(enrollmentId);
+  const result = await releaseHold(enrollmentId, { role: "STUDENT", id: studentId });
   if (result.error) {
     return NextResponse.json({ error: result.error }, { status: 400, headers });
   }

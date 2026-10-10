@@ -5,9 +5,10 @@
 import { prisma } from "./prisma";
 import { TEACHER_SUMMARY_SELECT } from "./teacherSelect";
 import { formatAppDate, formatAppTime } from "./appTime";
-import { applyClassLeave } from "./leaveApply";
-
-const EXTENDED_DAYS = 1;
+import { countLessons } from "./lessonCounts";
+import { summarizeLeaveQuota, usedFromLeaveRows, type LeaveQuotaSummary } from "./leavePolicy";
+import { RESCHEDULE_ERROR_MESSAGE, RescheduleError, rescheduleSession, type RescheduleErrorCode } from "./reschedule";
+import { runTx } from "./appTransaction";
 
 // Vite 사이트(src/lib/scheduling/types.ts)의 LessonStatus와 정확히 맞춘 값이다 — 문자열이
 // 조금이라도 다르면 그쪽 화면에서 "예정"으로도 안 뜨고 조용히 깨진다.
@@ -23,7 +24,7 @@ type ViteLessonStatus =
 
 function mapLessonStatus(session: {
   status: string;
-  leaveRequest: { requestedByRole: string; academyClosureId: number | null } | null;
+  leaveRequest: { requestedByRole: string; academyClosureId: number | null; finalSource?: string | null } | null;
 }): ViteLessonStatus {
   switch (session.status) {
     case "SCHEDULED":
@@ -38,13 +39,39 @@ function mapLessonStatus(session: {
       return "on_hold";
     case "LEAVE": {
       const lr = session.leaveRequest;
-      if (lr?.academyClosureId) return "academy_closed";
+      // 학생 연기가 나중에 학원 휴강으로 대체되면(finalSource) 학원 휴강으로 보인다.
+      if (lr?.academyClosureId || lr?.finalSource === "ACADEMY_CLOSURE") return "academy_closed";
       if (lr?.requestedByRole === "STUDENT") return "rescheduled";
       return "teacher_absent";
     }
     default:
       return "scheduled";
   }
+}
+
+// 정규/보충 분리 집계 + 학생 연기 횟수(lessonCounts.ts, leavePolicy.ts) — 두 스냅샷 함수와 관리자 화면이 같은 계산을 쓴다.
+function enrollmentCounts(
+  enrollment: { totalSessions: number; scheduleDays: string; packageMonths: number; leaveQuotaAdjustment: number },
+  sessions: readonly {
+    status: string;
+    isSupplement: boolean;
+    leaveRequest: { status: string; quotaImpact: number; source: string | null; requestedByRole: string; academyClosureId: number | null } | null;
+  }[],
+) {
+  const c = countLessons(sessions, enrollment.totalSessions);
+  return {
+    remainingLessons: c.regularRemaining,
+    supplementLessons: c.supplementTotal,
+    supplementTaken: c.supplementTaken,
+    providedLessons: c.providedLessons,
+    availableLessons: c.availableLessons,
+    leaveQuota: summarizeLeaveQuota({
+      scheduleDays: enrollment.scheduleDays,
+      packageMonths: enrollment.packageMonths,
+      adminAdjustment: enrollment.leaveQuotaAdjustment,
+      usedCount: usedFromLeaveRows(sessions.flatMap((s) => (s.leaveRequest ? [s.leaveRequest] : []))),
+    }),
+  };
 }
 
 const CLASS_METHOD_TO_PLATFORM: Record<string, "zoom" | "teams" | "voov"> = {
@@ -61,8 +88,17 @@ export type StudentClassroomSnapshot = {
     id: number;
     startDate: string;
     endDate: string;
+    /** 정규 등록 회차(보충수업과 무관) */
     totalLessons: number;
+    /** 정규 잔여 회차 — 보충수업은 정규 회차를 소모하지 않는다. */
     remainingLessons: number;
+    /** 보충수업(제공 가능한 것) 수 / 그 중 받은 것 / 받은 수업 합계(정규+보충) / 제공 가능 합계(정규 등록 회차+보충) */
+    supplementLessons: number;
+    supplementTaken: number;
+    providedLessons: number;
+    availableLessons: number;
+    /** 학생 연기 횟수(등록기간 전체 기준) */
+    leaveQuota: LeaveQuotaSummary;
     classDurationMin: number;
     meetingPlatform: "zoom" | "teams" | "voov";
     teacherId: number | null;
@@ -78,6 +114,8 @@ export type StudentClassroomSnapshot = {
     status: ViteLessonStatus;
     reason?: string;
     evaluationStatus: "not_started" | "completed";
+    /** 보충수업 여부 — 정규 수업과 구분해서 보여줘야 한다. */
+    isSupplement: boolean;
   }[];
   closures: { id: number; date: string; reason: string }[];
 };
@@ -114,10 +152,7 @@ export async function getStudentClassroomSnapshot(
     take: 60,
   });
 
-  const remainingLessons = Math.max(
-    0,
-    enrollment.totalSessions - sessions.filter((s) => s.status === "COMPLETED" || s.status === "MAKEUP_NEEDED").length,
-  );
+  const counts = enrollmentCounts(enrollment, sessions);
 
   const teacher = enrollment.teacher;
   const teacherMeetingLinks: Partial<Record<"zoom" | "teams" | "voov", string>> = {};
@@ -131,7 +166,7 @@ export async function getStudentClassroomSnapshot(
       startDate: formatAppDate(enrollment.startDate),
       endDate: formatAppDate(enrollment.endDate),
       totalLessons: enrollment.totalSessions,
-      remainingLessons,
+      ...counts,
       classDurationMin: enrollment.classDurationMin,
       meetingPlatform: CLASS_METHOD_TO_PLATFORM[enrollment.classMethod] ?? "zoom",
       teacherId: teacher?.id ?? null,
@@ -151,6 +186,7 @@ export async function getStudentClassroomSnapshot(
       status: mapLessonStatus(s),
       reason: s.leaveRequest?.reason ?? undefined,
       evaluationStatus: s.evaluation ? "completed" : "not_started",
+      isSupplement: s.isSupplement,
     })),
     closures: closures.map((c) => ({ id: c.id, date: formatAppDate(c.date), reason: c.reason })),
   };
@@ -187,11 +223,7 @@ export async function getStudentEnrollmentHistory(studentId: number): Promise<St
 
   return enrollments.map((enrollment) => {
     const enrollmentSessions = sessionsByEnrollment.get(enrollment.id) ?? [];
-    const remainingLessons = Math.max(
-      0,
-      enrollment.totalSessions -
-        enrollmentSessions.filter((s) => s.status === "COMPLETED" || s.status === "MAKEUP_NEEDED").length,
-    );
+    const counts = enrollmentCounts(enrollment, enrollmentSessions);
     const teacher = enrollment.teacher;
 
     return {
@@ -200,7 +232,7 @@ export async function getStudentEnrollmentHistory(studentId: number): Promise<St
         startDate: formatAppDate(enrollment.startDate),
         endDate: formatAppDate(enrollment.endDate),
         totalLessons: enrollment.totalSessions,
-        remainingLessons,
+        ...counts,
         classDurationMin: enrollment.classDurationMin,
         meetingPlatform: CLASS_METHOD_TO_PLATFORM[enrollment.classMethod] ?? "zoom",
         teacherId: teacher?.id ?? null,
@@ -215,6 +247,7 @@ export async function getStudentEnrollmentHistory(studentId: number): Promise<St
         status: mapLessonStatus(s),
         reason: s.leaveRequest?.reason ?? undefined,
         evaluationStatus: s.evaluation ? "completed" : "not_started",
+        isSupplement: s.isSupplement,
       })),
     };
   });
@@ -223,50 +256,32 @@ export async function getStudentEnrollmentHistory(studentId: number): Promise<St
 // 학생 셀프 연기 신청의 실제 처리 로직 — 쿠키 세션(student/(dashboard)/sessions/actions.ts
 // requestLeave)과 Bearer 토큰(api/public/classroom/reschedule) 양쪽에서 studentId만
 // 다르게 구해서 이 함수 하나를 공유한다.
+//
+// 학생이 직접 하는 학생 연기: 연기 횟수(quota) 차감 + 수업 시작 2시간 전까지만 + 정규 시퀀스 재배치(reschedule.ts).
+// 관리자가 학생 대신 누르는 "학생 연기"는 같은 재배치를 쓰되 2시간 제한만 없다(students/[id]/sessions/actions.ts).
 export async function applyStudentRequestedLeave(
   studentId: number,
   sessionId: number,
   reason: string,
-): Promise<{ error?: string; leaveRequestId?: number }> {
-  const session = await prisma.classSession.findUnique({ where: { id: sessionId } });
-  if (!session || session.studentId !== studentId) {
-    return { error: "본인 수업만 휴강 신청할 수 있습니다." };
+): Promise<{ error?: string; code?: RescheduleErrorCode; leaveRequestId?: number }> {
+  const owner = await prisma.classSession.findUnique({ where: { id: sessionId }, select: { studentId: true } });
+  if (!owner || owner.studentId !== studentId) {
+    return { error: RESCHEDULE_ERROR_MESSAGE.NOT_OWN_SESSION, code: "NOT_OWN_SESSION" };
   }
-  if (session.status !== "SCHEDULED") {
-    return { error: "예정된 수업만 휴강 신청할 수 있습니다." };
+  try {
+    const r = await runTx((tx) =>
+      rescheduleSession(tx, {
+        sessionId,
+        source: "STUDENT_POSTPONEMENT",
+        actor: { role: "STUDENT", id: studentId },
+        now: new Date(),
+        reason,
+        studentSelfService: true,
+      }),
+    );
+    return { leaveRequestId: r.leaveRequestId };
+  } catch (e) {
+    if (e instanceof RescheduleError) return { error: e.message, code: e.code };
+    throw e;
   }
-  if (session.scheduledAt.getTime() < Date.now()) {
-    return { error: "이미 지난 수업은 휴강 신청할 수 없습니다." };
-  }
-
-  const enrollment = await prisma.enrollment.findUnique({ where: { id: session.enrollmentId } });
-  if (!enrollment) {
-    return { error: "연결된 수강신청 정보를 찾을 수 없습니다." };
-  }
-
-  const leaveRequestId = await prisma.$transaction(async (tx) => {
-    await applyClassLeave(tx, {
-      classSessionId: sessionId,
-      enrollmentId: enrollment.id,
-      currentEndDate: enrollment.endDate,
-      extendedDays: EXTENDED_DAYS,
-    });
-    const created = await tx.leaveRequest.create({
-      data: {
-        siteId: enrollment.siteId,
-        classSessionId: sessionId,
-        enrollmentId: enrollment.id,
-        studentId,
-        reason: reason.trim() || null,
-        extendedDays: EXTENDED_DAYS,
-        status: "APPROVED",
-        requestedByRole: "STUDENT",
-        approvedById: null,
-        approvedAt: new Date(),
-      },
-    });
-    return created.id;
-  });
-
-  return { leaveRequestId };
 }

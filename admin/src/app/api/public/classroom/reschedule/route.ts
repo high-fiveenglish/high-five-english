@@ -40,7 +40,8 @@ export async function POST(request: Request) {
 
   const result = await applyStudentRequestedLeave(studentId, lessonId, reason);
   if (result.error) {
-    return NextResponse.json({ error: result.error }, { status: 400, headers });
+    // code: 마케팅 사이트가 안내 문구를 고를 수 있게 하는 기계가 읽는 사유(STUDENT_QUOTA_EXCEEDED, TOO_LATE, ALREADY_STARTED 등)
+    return NextResponse.json({ error: result.error, code: result.code }, { status: 400, headers });
   }
 
   const student = await prisma.student.findUnique({ where: { id: studentId } });

@@ -9,6 +9,7 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { findTeacherScheduleConflict } from "@/lib/scheduleConflict";
 import { parseAppDateTime } from "@/lib/appTime";
 import type { SessionStatus } from "@/generated/prisma/client";
+import { requireInScope } from "@/lib/agentScope";
 
 export async function createClassSession(_prevState: { error?: string } | undefined, formData: FormData) {
   const actor = await requireBackofficeActor();
@@ -22,6 +23,7 @@ export async function createClassSession(_prevState: { error?: string } | undefi
     return { error: "수강신청과 수업 일시는 필수입니다." };
   }
 
+  await requireInScope(prisma, actor, "enrollment", enrollmentId);
   const enrollment = await prisma.enrollment.findUnique({ where: { id: enrollmentId } });
   if (!enrollment || !enrollment.teacherId) {
     return { error: "선택한 수강신청에 배정된 강사가 없습니다. 강사를 먼저 배정해주세요." };
@@ -56,6 +58,7 @@ export async function createClassSession(_prevState: { error?: string } | undefi
 export async function updateClassSessionStatus(id: number, status: SessionStatus) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "schedules.update");
+  await requireInScope(prisma, actor, "session", id);
   await prisma.classSession.update({ where: { id }, data: { status } });
   await logAudit({ actor, action: "SCHEDULE_UPDATED", targetType: "ClassSession", targetId: id, description: `상태 변경: ${status}` });
   revalidatePath("/schedule");
@@ -64,6 +67,7 @@ export async function updateClassSessionStatus(id: number, status: SessionStatus
 export async function deleteClassSession(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "schedules.delete");
+  await requireInScope(prisma, actor, "session", id);
   await prisma.classSession.update({ where: { id }, data: { deletedAt: new Date() } });
   await logAudit({ actor, action: "SCHEDULE_CANCELLED", targetType: "ClassSession", targetId: id });
   revalidatePath("/schedule");
@@ -73,6 +77,7 @@ export async function deleteClassSession(id: number) {
 export async function restoreClassSession(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "schedules.update");
+  await requireInScope(prisma, actor, "session", id);
   await prisma.classSession.update({ where: { id }, data: { deletedAt: null } });
   await logAudit({ actor, action: "SCHEDULE_UPDATED", targetType: "ClassSession", targetId: id, description: "삭제 취소(복원)" });
   revalidatePath("/schedule");

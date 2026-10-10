@@ -79,9 +79,10 @@ async function main() {
     }
     check("migration.sql이 오류 없이 적용됨", applied, applyError);
 
-    // 3) 적용 후 DB == 현재 schema.prisma
-    const diff = prisma(["migrate", "diff", "--from-config-datasource", "--to-schema", "prisma/schema.prisma", "--exit-code"]);
-    check("적용 후 DB와 schema.prisma 사이에 차이 없음(migrate diff exit 0)", diff.code === 0, diff.out.slice(-400));
+    // 3) 적용 후 DB == 이 마이그레이션이 만든 스키마. 이후 마이그레이션(연기/유급휴가, test-postponementMigration.ts)이 schema.prisma를 더 바꾸므로
+    //    "이 마이그레이션 직후의 스키마"(= 다음 마이그레이션 적용 직전 스키마 fixture)와 비교한다.
+    const diff = prisma(["migrate", "diff", "--from-config-datasource", "--to-schema", "scripts/fixtures/schema-before-postponement.prisma", "--exit-code"]);
+    check("적용 후 DB와 이 마이그레이션 직후 스키마 사이에 차이 없음(migrate diff exit 0)", diff.code === 0, diff.out.slice(-400));
 
     // 4) 제약이 실제로 동작하는지
     const idx = await cleanup.query(`select indexname from pg_indexes where schemaname = $1 and indexname in ('class_sessions_generationKey_key','session_generation_batches_activeLock_key')`, [schema]);

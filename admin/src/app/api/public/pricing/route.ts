@@ -5,6 +5,7 @@ import { corsHeaders, corsOptionsResponse } from "@/lib/cors";
 import { actorFromAdminApiToken } from "@/lib/adminApiToken";
 import { requirePermission, logAudit, ForbiddenError } from "@/lib/rbac";
 import { normalizeDomain } from "@/lib/agencyBranding";
+import { requireHeadquarters } from "@/lib/agentScope";
 
 // 메인 마케팅 사이트의 가격표 섹션(src/services/pricingService.ts)이 호출하는
 // 공개 읽기 전용 엔드포인트. 응답 shape은 그 사이트의 PricingDuration/PricingRow
@@ -74,6 +75,7 @@ export async function PATCH(request: Request) {
   if (!actor) return NextResponse.json({ error: "login_required" }, { status: 401, headers });
   try {
     requirePermission(actor, "pricing.update");
+    requireHeadquarters(actor);
   } catch (err) {
     if (err instanceof ForbiddenError) return NextResponse.json({ error: "forbidden" }, { status: 403, headers });
     throw err;

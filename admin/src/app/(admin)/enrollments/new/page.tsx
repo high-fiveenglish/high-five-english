@@ -5,7 +5,7 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { parseScheduleDaysLabel } from "../scheduleUtils";
 import { EnrollmentCreateForm, type EnrollmentInitialValues } from "./EnrollmentCreateForm";
-import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePageActor } from "@/lib/pageAccess";
 import { WEEKDAYS } from "@/lib/weekdays";
 
 const WEEKDAY_LABEL: Record<number, string> = Object.fromEntries(WEEKDAYS.map((d) => [d.value, d.label]));
@@ -40,7 +40,7 @@ export default async function NewEnrollmentPage({
 }: {
   searchParams: Promise<{ studentId?: string; fromRequest?: string; renewFrom?: string; fromReservation?: string }>;
 }) {
-  const actor = await requireBackofficeActor();
+  const actor = await requirePageActor("enrollments.create");
   const scopeAgentId = actor.role === "AGENT" ? actor.agentId : undefined;
   const { studentId, fromRequest, renewFrom, fromReservation } = await searchParams;
 
