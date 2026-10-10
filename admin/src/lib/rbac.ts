@@ -24,9 +24,15 @@ export class ForbiddenError extends Error {
   }
 }
 
+// 권한 판정의 단일 기준 — requirePermission(서버 액션/API)과 페이지 접근 검사, 테스트가
+// 모두 이 함수를 쓴다. ADMIN은 항상 true, 그 외에는 역할 권한 목록에 키가 있어야 한다.
+export function hasPermission(actor: Actor, key: string): boolean {
+  if (actor.role === "ADMIN") return true;
+  return actor.permissions.includes(key);
+}
+
 export function requirePermission(actor: Actor, key: string): void {
-  if (actor.role === "ADMIN") return;
-  if (actor.permissions.includes(key)) return;
+  if (hasPermission(actor, key)) return;
   throw new ForbiddenError();
 }
 

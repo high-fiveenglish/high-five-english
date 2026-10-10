@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission, logAudit } from "@/lib/rbac";
+import { requireHeadquarters } from "@/lib/agentScope";
 
 export async function updateConsultChannel(
   id: number,
@@ -11,6 +12,7 @@ export async function updateConsultChannel(
 ) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "consult_channels.update");
+  requireHeadquarters(actor);
 
   const trimmedUrl = input.url.trim();
   if (trimmedUrl) {

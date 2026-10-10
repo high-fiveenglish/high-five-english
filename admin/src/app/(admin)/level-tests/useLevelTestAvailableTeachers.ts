@@ -37,6 +37,11 @@ export function useLevelTestAvailableTeachers({
         setTeachers(result);
         setTeacherId((prev) => (result.some((t) => String(t.id) === prev) ? prev : ""));
       })
+      .catch(() => {
+        // 일정을 잡을 권한이 없는 계정(예: 협력사)은 조회가 거부된다 — 화면은 그대로 두고 후보 목록만 비운다.
+        if (cancelled) return;
+        setTeachers(initialTeacher ? [initialTeacher] : []);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });

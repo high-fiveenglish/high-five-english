@@ -4,10 +4,12 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission, logAudit } from "@/lib/rbac";
+import { requireHeadquarters } from "@/lib/agentScope";
 
 export async function updateReviewViews(id: number, _prevState: { error?: string } | undefined, formData: FormData) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "reviews.delete");
+  requireHeadquarters(actor);
 
   const viewsRaw = String(formData.get("views") ?? "").trim();
   if (!/^\d+$/.test(viewsRaw)) {
@@ -24,6 +26,7 @@ export async function updateReviewViews(id: number, _prevState: { error?: string
 export async function deleteReviewPost(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "reviews.delete");
+  requireHeadquarters(actor);
 
   const existing = await prisma.reviewPost.findUnique({ where: { id } });
   if (!existing) return;

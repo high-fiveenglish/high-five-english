@@ -9,10 +9,12 @@ import { requirePermission, logAudit } from "@/lib/rbac";
 import { startTeacherImpersonation, stopTeacherImpersonation } from "@/lib/teacherAuth";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
 import type { AccountStatus, ApprovalStatus, Sex, TeacherGrade } from "@/generated/prisma/client";
+import { requireHeadquarters } from "@/lib/agentScope";
 
 export async function createTeacher(_prevState: { error?: string } | undefined, formData: FormData) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "teachers.create");
+  requireHeadquarters(actor);
 
   const realName = String(formData.get("realName") ?? "").trim();
   const nickname = String(formData.get("nickname") ?? "").trim();
@@ -58,6 +60,7 @@ export async function createTeacher(_prevState: { error?: string } | undefined, 
 export async function updateTeacher(id: number, _prevState: { error?: string } | undefined, formData: FormData) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "teachers.update");
+  requireHeadquarters(actor);
 
   const realName = String(formData.get("realName") ?? "").trim();
   const nickname = String(formData.get("nickname") ?? "").trim();
@@ -140,6 +143,7 @@ export async function updateTeacher(id: number, _prevState: { error?: string } |
 export async function deleteTeacher(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "teachers.delete");
+  requireHeadquarters(actor);
   await prisma.teacher.update({ where: { id }, data: { accountStatus: "INACTIVE" } });
   await logAudit({ actor, action: "ACCOUNT_DISABLED", targetType: "Teacher", targetId: id, description: "강사 비활성화" });
   revalidatePath("/teachers");
@@ -152,6 +156,7 @@ export async function deleteTeacher(id: number) {
 export async function impersonateTeacher(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "teachers.impersonate");
+  requireHeadquarters(actor);
   const teacher = await prisma.teacher.findUnique({ where: { id } });
   if (!teacher || teacher.accountStatus !== "ACTIVE") {
     throw new Error("대리 로그인할 수 없는 강사입니다.");
@@ -176,6 +181,7 @@ export async function endTeacherImpersonation() {
 export async function bulkHardDeleteTeachers(ids: number[]) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "teachers.delete");
+  requireHeadquarters(actor);
   if (ids.length === 0) return;
 
   const teachers = await prisma.teacher.findMany({
@@ -223,6 +229,7 @@ export async function bulkHardDeleteTeachers(ids: number[]) {
 export async function updateTeacherAccountStatus(id: number, accountStatus: AccountStatus) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "teachers.update");
+  requireHeadquarters(actor);
   await prisma.teacher.update({ where: { id }, data: { accountStatus } });
   await logAudit({
     actor,

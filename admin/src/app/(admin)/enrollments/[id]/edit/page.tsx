@@ -7,14 +7,16 @@ import { computeBasePriceKRW } from "@/lib/enrollmentPricing";
 import { EnrollmentCreateForm } from "../../new/EnrollmentCreateForm";
 import { parseScheduleDaysLabel } from "../../scheduleUtils";
 import { PaymentForm } from "./PaymentForm";
-import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePageActor, requirePageInScope } from "@/lib/pageAccess";
 import { parseRouteId } from "@/lib/routeId";
 
 export default async function EditEnrollmentPage({ params }: { params: Promise<{ id: string }> }) {
-  const actor = await requireBackofficeActor();
+  const actor = await requirePageActor("enrollments.update");
   const { id } = await params;
   const enrollmentId = parseRouteId(id);
   if (enrollmentId === null) notFound();
+  // 협력사 계정은 다른 협력사/본사 직영 수강 id를 직접 입력해도 어떤 데이터도 읽기 전에 404
+  await requirePageInScope(actor, "enrollment", enrollmentId);
 
   const [enrollment, teachers] = await Promise.all([
     prisma.enrollment.findUnique({ where: { id: enrollmentId }, include: { student: true } }),
@@ -22,7 +24,6 @@ export default async function EditEnrollmentPage({ params }: { params: Promise<{
   ]);
 
   if (!enrollment) notFound();
-  if (actor.role === "AGENT" && enrollment.agentId !== actor.agentId) notFound();
 
   // 수업 생성 배치로 이미 만들어진 수업이 있으면 안내한다 — 요일/시각/종료일을 바꿔도 그 수업들은 자동으로 바뀌지 않는다
   // (강사/수업 시간 변경만 예정 수업에 반영된다. 자동 재동기화는 아직 없음).

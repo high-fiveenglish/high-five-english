@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { formatAppDate } from "@/lib/appTime";
 import { labelForLangCode } from "@/lib/levelTestTranslation";
 import { LevelTestResultView } from "@/components/LevelTestResultView";
 import { parseRouteId } from "@/lib/routeId";
+import { requirePageActor, requirePageInScope } from "@/lib/pageAccess";
 
 // 관리자가 "확인"을 눌렀을 때 보는 화면 — 학생이 /student/level-tests/[id]에서 보는
 // 화면과 동일한 레이아웃/서식으로 결과를 보여준다(읽기 전용). 내용을 고치려면 "수정"
@@ -16,10 +16,12 @@ export default async function LevelTestResultPreviewPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireBackofficeActor();
+  const actor = await requirePageActor("level_tests.view");
   const { id } = await params;
   const levelTestId = parseRouteId(id);
   if (levelTestId === null) notFound();
+  // 협력사 계정은 자기 협력사 레벨테스트만 — 남의 id를 직접 입력하면 404
+  await requirePageInScope(actor, "levelTest", levelTestId);
 
   const levelTest = await prisma.levelTest.findUnique({
     where: { id: levelTestId },

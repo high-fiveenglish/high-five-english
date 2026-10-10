@@ -4,10 +4,12 @@ import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { restoreClassSession } from "../schedule/actions";
 import { RestoreButton } from "./RestoreButton";
 import { formatAppDateTime } from "@/lib/appTime";
+import { requirePageActor } from "@/lib/pageAccess";
 
 const fmtDateTime = formatAppDateTime;
 
 export default async function DeletedSessionsPage() {
+  await requirePageActor("schedules.view", { denyAgent: true });
   const [sessions, totalCount] = await Promise.all([
     prisma.classSession.findMany({
       where: { siteId: DEFAULT_SITE_ID, deletedAt: { not: null } },

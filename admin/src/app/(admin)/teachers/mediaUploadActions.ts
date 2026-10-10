@@ -5,6 +5,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { r2Client, R2_BUCKET_NAME, r2PublicUrl } from "@/lib/r2";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission } from "@/lib/rbac";
+import { requireHeadquarters } from "@/lib/agentScope";
 
 // 강사 사진/음성을 base64로 DB에 통째로 저장하던 방식(teachers API 응답이 18.9MB까지
 // 커지는 원인)을 R2로 옮기기 위한 POC. 브라우저가 Secret Access Key를 절대 보지
@@ -36,6 +37,7 @@ export async function getTeacherMediaUploadUrl(
 ): Promise<{ ok: true; uploadUrl: string; publicUrl: string } | { ok: false; error: string }> {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "teachers.update");
+  requireHeadquarters(actor);
 
   const extMap = kind === "photo" ? PHOTO_MIME_EXT : VOICE_MIME_EXT;
   const ext = extMap[contentType];

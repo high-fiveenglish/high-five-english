@@ -5,15 +5,19 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { TEACHER_SUMMARY_SELECT } from "@/lib/teacherSelect";
 import { EnrollmentCreateForm } from "../../../enrollments/new/EnrollmentCreateForm";
 import { parseRouteId } from "@/lib/routeId";
+import { requirePageActor, requirePageInScope } from "@/lib/pageAccess";
 
 export default async function StudentEnrollmentPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const actor = await requirePageActor("enrollments.create");
   const { id } = await params;
   const studentId = parseRouteId(id);
   if (studentId === null) notFound();
+  // 협력사 계정은 자기 협력사 학생만 — 다른 협력사/본사 직영 학생의 id를 직접 입력하면 404
+  await requirePageInScope(actor, "student", studentId);
 
   const [student, teachers] = await Promise.all([
     prisma.student.findUnique({ where: { id: studentId } }),

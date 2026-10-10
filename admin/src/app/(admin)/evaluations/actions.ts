@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission, logAudit } from "@/lib/rbac";
 import { languageForRegion, translateLessonEvaluation, shouldTranslate } from "@/lib/levelTestTranslation";
+import { requireHeadquarters } from "@/lib/agentScope";
 
 const MAX_LENGTH = 2000;
 
@@ -16,6 +17,7 @@ export async function saveEvaluationAdmin(
 ) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "evaluations.update");
+  requireHeadquarters(actor);
 
   const content = String(formData.get("content") ?? "").trim();
   const textbookName = String(formData.get("textbookName") ?? "").trim();

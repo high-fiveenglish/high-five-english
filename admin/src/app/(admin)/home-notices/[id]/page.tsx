@@ -4,8 +4,10 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { HomeNoticeForm } from "../HomeNoticeForm";
 import { updateHomeNotice } from "../actions";
 import { parseRouteId } from "@/lib/routeId";
+import { requirePageActor } from "@/lib/pageAccess";
 
 export default async function EditHomeNoticePage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePageActor("home_notices.view", { denyAgent: true });
   const { id } = await params;
   const noticeId = parseRouteId(id);
   if (noticeId === null) notFound();

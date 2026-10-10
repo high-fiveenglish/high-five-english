@@ -6,10 +6,12 @@ import { prisma } from "@/lib/prisma";
 import { requireBackofficeActor } from "@/lib/backofficeAuth";
 import { requirePermission, logAudit } from "@/lib/rbac";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
+import { requireHeadquarters } from "@/lib/agentScope";
 
 export async function createBulletin(_prevState: { error?: string } | undefined, formData: FormData) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "bulletins.create");
+  requireHeadquarters(actor);
 
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
@@ -39,6 +41,7 @@ export async function updateBulletin(
 ) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "bulletins.update");
+  requireHeadquarters(actor);
 
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
@@ -65,6 +68,7 @@ export async function updateBulletin(
 export async function deleteBulletin(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "bulletins.delete");
+  requireHeadquarters(actor);
 
   const existing = await prisma.bulletin.findUnique({ where: { id } });
   if (!existing || existing.siteId !== DEFAULT_SITE_ID) return;

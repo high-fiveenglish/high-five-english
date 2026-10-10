@@ -12,7 +12,7 @@ import { FILTER_TABS, buildEnrollmentWhere } from "./filters";
 import { formatScheduleDayTime } from "./scheduleUtils";
 import { formatAppDate, formatAppDateTime } from "@/lib/appTime";
 import { closeExpiredEnrollments } from "@/lib/enrollmentLifecycle";
-import { requireBackofficeActor } from "@/lib/backofficeAuth";
+import { requirePageActor } from "@/lib/pageAccess";
 
 const PAYMENT_STATUS_LABEL: Record<string, string> = { UNPAID: "미결제", PAID: "결제완료", FAILED: "결제실패" };
 const PAYMENT_STATUS_CLASS: Record<string, string> = {
@@ -68,7 +68,7 @@ export default async function EnrollmentsPage({
 }: {
   searchParams: Promise<{ filter?: string; q?: string; page?: string }>;
 }) {
-  const actor = await requireBackofficeActor();
+  const actor = await requirePageActor("enrollments.view");
   const scopeAgentId = actor.role === "AGENT" ? actor.agentId : undefined;
   const { filter, q, page: pageParam } = await searchParams;
   // 필터를 지정하지 않고 들어오면(메뉴 클릭 시 기본 진입) "진행중"을 기본으로 보여준다 —

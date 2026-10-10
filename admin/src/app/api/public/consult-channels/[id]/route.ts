@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { corsHeaders, corsOptionsResponse } from "@/lib/cors";
 import { actorFromAdminApiToken } from "@/lib/adminApiToken";
 import { requirePermission, logAudit, ForbiddenError } from "@/lib/rbac";
+import { requireHeadquarters } from "@/lib/agentScope";
 
 export async function OPTIONS(request: Request) {
   return corsOptionsResponse(request);
@@ -20,6 +21,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!actor) return NextResponse.json({ error: "login_required" }, { status: 401, headers });
   try {
     requirePermission(actor, "consult_channels.update");
+    requireHeadquarters(actor);
   } catch (err) {
     if (err instanceof ForbiddenError) return NextResponse.json({ error: "forbidden" }, { status: 403, headers });
     throw err;

@@ -5,6 +5,7 @@ import { corsHeaders, corsOptionsResponse } from "@/lib/cors";
 import { actorFromAdminApiToken } from "@/lib/adminApiToken";
 import { requirePermission, logAudit, ForbiddenError } from "@/lib/rbac";
 import { resolveAgentIdFromDomain } from "@/lib/agencyBranding";
+import { requireHeadquarters } from "@/lib/agentScope";
 
 // 메인 마케팅 사이트(Vite, src/services/homeNoticeService.ts)의 홈페이지 공지 목록 —
 // 비로그인 방문자도 읽는 공개 피드라 GET은 인증이 필요 없다. POST(작성)만 Vite 자체
@@ -58,6 +59,7 @@ export async function POST(request: Request) {
   if (!actor) return NextResponse.json({ error: "login_required" }, { status: 401, headers });
   try {
     requirePermission(actor, "home_notices.create");
+    requireHeadquarters(actor);
   } catch (err) {
     if (err instanceof ForbiddenError) return NextResponse.json({ error: "forbidden" }, { status: 403, headers });
     throw err;

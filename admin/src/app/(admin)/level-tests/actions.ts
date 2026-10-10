@@ -10,6 +10,7 @@ import { parseAppDateTime } from "@/lib/appTime";
 import { createLevelTestCore } from "@/lib/levelTestCreate";
 import { TERMINAL_PROGRESS_STATUSES } from "@/lib/levelTestOptions";
 import { languageForRegion, translateLevelTestResult, shouldTranslate } from "@/lib/levelTestTranslation";
+import { requireInScope } from "@/lib/agentScope";
 
 // 평가 점수 select는 "" | "1".."5"만 보내온다. 미선택(빈 문자열)은 아직 평가하지 않은
 // 영역이므로 null(레이더 차트에서 통째로 숨김 처리의 기준)로 저장한다.
@@ -68,6 +69,7 @@ export async function updateLevelTest(
 ): Promise<{ error?: string }> {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "level_tests.update");
+  await requireInScope(prisma, actor, "levelTest", id);
 
   const levelTest = await prisma.levelTest.findUnique({ where: { id }, include: { student: { select: { region: true } } } });
   if (!levelTest) {
@@ -166,6 +168,7 @@ export async function confirmLevelTestSchedule(
 ): Promise<{ error?: string }> {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "level_tests.update");
+  await requireInScope(prisma, actor, "levelTest", id);
 
   const testDate = String(formData.get("testDate") ?? "");
   const testTime = String(formData.get("testTime") ?? "");
@@ -215,6 +218,7 @@ export async function confirmLevelTestSchedule(
 export async function revertLevelTestConfirmation(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "level_tests.update");
+  await requireInScope(prisma, actor, "levelTest", id);
   const updated = await prisma.levelTest.update({
     where: { id },
     data: { teacherId: null, scheduledClassDatetime: null, progressStatus: "접수" },
@@ -228,6 +232,7 @@ export async function revertLevelTestConfirmation(id: number) {
 export async function setLevelTestOutcome(id: number, outcome: (typeof TERMINAL_PROGRESS_STATUSES)[number]) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "level_tests.update");
+  await requireInScope(prisma, actor, "levelTest", id);
   const updated = await prisma.levelTest.update({ where: { id }, data: { progressStatus: outcome } });
   await logAudit({ actor, action: "UPDATE", targetType: "LevelTest", targetId: id, description: `진행상태 변경: ${outcome}` });
   revalidateLevelTestViews(id, updated.studentId);
@@ -239,6 +244,7 @@ export async function setLevelTestOutcome(id: number, outcome: (typeof TERMINAL_
 export async function reopenLevelTestConfirmation(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "level_tests.update");
+  await requireInScope(prisma, actor, "levelTest", id);
   const updated = await prisma.levelTest.update({ where: { id }, data: { progressStatus: "수업확정" } });
   await logAudit({ actor, action: "UPDATE", targetType: "LevelTest", targetId: id, description: "수업확정 상태로 되돌림" });
   revalidateLevelTestViews(id, updated.studentId);
@@ -247,6 +253,7 @@ export async function reopenLevelTestConfirmation(id: number) {
 export async function deleteLevelTest(id: number) {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "level_tests.delete");
+  await requireInScope(prisma, actor, "levelTest", id);
   await prisma.levelTest.delete({ where: { id } });
   await logAudit({ actor, action: "DELETE", targetType: "LevelTest", targetId: id });
   revalidatePath("/level-tests");

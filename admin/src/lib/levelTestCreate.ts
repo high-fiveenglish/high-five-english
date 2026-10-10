@@ -9,6 +9,7 @@
 import { prisma } from "./prisma";
 import { requireBackofficeActor } from "./backofficeAuth";
 import { requirePermission, logAudit } from "./rbac";
+import { requireInScope } from "./agentScope";
 import { DEFAULT_SITE_ID } from "./constants";
 import { findTeacherScheduleConflict, LEVEL_TEST_DURATION_MIN } from "./scheduleConflict";
 import { parseAppDateTime } from "./appTime";
@@ -19,6 +20,8 @@ export type CreateLevelTestResult = { error: string; levelTestId?: undefined } |
 export async function createLevelTestCore(studentId: number, formData: FormData): Promise<CreateLevelTestResult> {
   const actor = await requireBackofficeActor();
   requirePermission(actor, "level_tests.create");
+  // 협력사 계정은 자기 협력사 학생에게만 등록할 수 있다(폼의 studentId를 직접 바꿔 보내는 경우 차단).
+  await requireInScope(prisma, actor, "student", studentId);
 
   const student = await prisma.student.findUnique({ where: { id: studentId } });
   if (!student || student.deletedAt) {
