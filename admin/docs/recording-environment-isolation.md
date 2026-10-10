@@ -41,10 +41,19 @@ enforce 로 가기 전에 아래를 Netlify 콘솔에서 사람이 확인해야 
 
 1. `APP_ENV` — **Context별로 값을 따로 설정**: Production = `production`, Deploy Preview = `preview`(Branch deploy를 쓰면 그것도 `preview`).
    **`All contexts`로 `production` 하나만 두거나, Deploy Preview에도 `production`이 적용되면 이 장치는 무력화됩니다**(2의 신뢰 기준이 거짓이 되므로).
-2. 위 변수들의 Scope에 **Functions** 포함.
+2. 위 변수들의 Scope에 **Functions** 포함. 함수 런타임에서 읽을 수 있는 Netlify 제공 변수는 `URL`·`SITE_NAME`·`SITE_ID` 뿐입니다(Netlify 문서).
+   - **`netlify.toml`에 적은 환경변수는 함수에서 읽히지 않습니다**(Netlify 문서). `APP_ENV` 등은 Netlify UI·CLI·API로 설정해야 합니다.
+   - Scope(Builds / Functions / Runtime 등) 지정은 Netlify 문서상 **Pro 이상 요금제의 기능**입니다. 이 사이트의 현재 요금제와 실제 Scope 구성은 **확인하지 않았습니다(미확인)** — 콘솔에서 사람이 확인해야 합니다. Scope를 지정할 수 없는 요금제라면 변수가 모든 Scope에 적용되므로 "Context별 값"과 "재배포"만 확인하면 됩니다(이 부분도 미확인).
+   - Context별 값(Production / Deploy Previews / Branch deploys)은 변수마다 따로 줄 수 있습니다(Netlify 문서). 변경은 **새 배포를 해야** 적용됩니다.
 3. `RECORDING_PROCESSING_SECRET` 은 Production 과 Deploy Preview 에서 **서로 다른 값**.
 4. 값 변경 후 **재배포**(Production은 새 배포, Preview는 새 커밋/재빌드).
 5. 정말 Preview가 `preview`를 보고 있는지는, 변수 값 자체가 아니라 observe 단계 로그의 `reason`(아래 8)이 의도대로 나오는지로 확인합니다.
+6. **운영 도메인 별칭 목록 점검**: 비운영 쪽 검사는 "운영 주소를 가리키면 거부"하는 차단 목록이라, 목록에 없는 운영 별칭은 통과합니다(로컬 실행으로 확인: `URL`이 `https://www.example.com`일 때 `https://example.com`은 통과). 다음을 모두 `PRODUCTION_SITE_ORIGIN`에 쉼표로 나열했는지 확인합니다.
+   - **apex ↔ www**: Netlify는 주 도메인이 www이면 apex를, apex이면 www를 자동으로 연결해 주므로, `URL`에 없는 쪽을 목록에 넣어야 합니다.
+   - 사이트에 붙은 **다른 사용자 정의 도메인·도메인 별칭**.
+   - **Netlify 기본 도메인**(`https://<SITE_NAME>.netlify.app`)은 코드가 `SITE_NAME`으로 자동 포함하므로 적지 않아도 됩니다(`SITE_NAME`은 함수 런타임에서 읽힘 — Netlify 문서).
+   - 별칭이 어떤 도메인들인지 이 작업에서 **조회하지 않았습니다(미확인)**.
+   - 참고: 호출 쪽은 리다이렉트를 따라가지 않으므로(문서 6절) 별칭을 `RECORDING_SITE_URL`로 지정하면(예: 자동 리다이렉트되는 쪽) 호출이 실패로 처리됩니다. 운영은 `RECORDING_SITE_URL`을 비우고 `URL`을 쓰는 것을 권장합니다.
 
 ## 4. 보안 모델의 한계 (리뷰 F1·F2)
 
@@ -70,6 +79,7 @@ enforce 로 가기 전에 아래를 Netlify 콘솔에서 사람이 확인해야 
 `fetch`는 기본으로 리다이렉트를 따라가며, `x-recording-processing-secret` 같은 사용자 정의 헤더는 다른 origin 으로도 그대로 다시 보냅니다(Node 24 undici에서 로컬 loopback으로 확인: 307은 POST·본문·헤더 유지, 301은 GET 으로 바뀌지만 헤더 유지, `authorization`만 제거).
 그래서 트리거는 `redirect: "manual"` 로 호출하고, **3xx 응답은 성공이 아니라 실패**로 처리합니다(레코드는 `TRANSCRIBED`에 남아 재시도 대상이 됨). 로그는 `recording-trigger-redirect` / `redirect_not_followed` 한 줄뿐이며 목적지 주소는 남기지 않습니다.
 기존 계약(2xx → true, 비 2xx·네트워크 오류·5초 타임아웃 → false)은 그대로입니다.
+**이 3xx 실패 처리는 기본 observe 모드에서도 적용되는, 이 PR의 유일한 의도된 동작 변경입니다**(예전에는 리다이렉트를 따라가 성공할 수 있었음). 운영 `URL`(주 도메인)은 리다이렉트하지 않을 것으로 추정하지만 실제로 확인하지는 않았습니다 — 배포 후 `redirect_not_followed` 로그가 없는지 확인하세요.
 
 ## 7. 운영 절차 (리뷰 F3)
 
@@ -77,11 +87,11 @@ enforce 로 가기 전에 아래를 Netlify 콘솔에서 사람이 확인해야 
 
 1. **배포 (observe)**: 이 PR을 병합·배포해도 동작은 같습니다. 환경변수는 아직 건드리지 않아도 됩니다.
 2. **변수 준비**: 3의 점검표대로 `APP_ENV`(Context별), Scope(Functions), 환경별 다른 `RECORDING_PROCESSING_SECRET`을 준비하고 **재배포**.
-3. **관찰 (observe)**: 운영 함수 로그에서 아래 두 종류가 **모두 0건**인지 확인합니다. 하루 이상 실제 녹음/복구 주기를 거친 뒤 판단합니다.
+3. **관찰 (observe)**: 먼저 **실효 모드 로그**(`recording-target-mode` / `mode_observe`)가 호출하는 쪽·받는 쪽 양쪽에서 보이는지 확인합니다(8). 아래 두 종류가 **모두 0건**인지는 그 뒤에 봅니다. 하루 이상 실제 녹음/복구 주기를 거친 뒤 판단합니다.
    - `recording-target-observe` (호출 쪽: 거부했을 사유) / `recording-target-config` (설정 오류)
    - 수신 쪽 `recording-target-observe` 의 `header_missing`, `header_mismatch`, `app_env_not_configured`
    함수 인스턴스마다 같은 사유는 한 번만 남으므로(F8) "건수 0"은 "해당 사유 없음"으로 읽고, 건수가 많다고 빈도가 높은 것은 아닙니다.
-4. **enforce**: `RECORDING_TARGET_GUARD=enforce`를 설정하고 재배포. 운영 처리 함수는 환경 헤더가 없는 호출(이 PR 이전 코드로 빌드된 오래된 Preview 등)과 `preview`/`development` 헤더 호출을 403 으로 거절합니다. 운영 배포는 호출자이자 수신자이므로 같은 배포 안에서 호출 쪽 규칙과 수신 쪽 검사가 함께 켜집니다.
+4. **enforce**: `RECORDING_TARGET_GUARD=enforce`를 설정하고 재배포. 재배포 후 **`recording-target-mode` / `mode_enforce` 로그가 실제로 보이는지** 확인합니다. `mode_observe`가 보이면 설정이 반영되지 않은 것입니다(변수가 Functions 런타임 Scope에 없거나, 재배포 누락, 값 오타 — 오타는 `guard_mode_invalid`도 함께 남음). 로그가 아예 없는 것은 "꺼짐"도 "켜짐"도 의미하지 않습니다(그 인스턴스가 아직 호출되지 않았을 수 있음). 운영 처리 함수는 환경 헤더가 없는 호출(이 PR 이전 코드로 빌드된 오래된 Preview 등)과 `preview`/`development` 헤더 호출을 403 으로 거절합니다. 운영 배포는 호출자이자 수신자이므로 같은 배포 안에서 호출 쪽 규칙과 수신 쪽 검사가 함께 켜집니다.
 5. **모니터링**: enforce 직후 `recording-target-denied` 로그와, `TRANSCRIBED`/`TEACHER_SPEAKER_CONFIRMED`에 오래 머무는 레코드(아래 7-2)를 확인합니다.
 
 ### 7-2. enforce 설정 오류가 일으키는 일 (확인된 코드 동작)
@@ -89,7 +99,7 @@ enforce 로 가기 전에 아래를 Netlify 콘솔에서 사람이 확인해야 
 처리 요청이 거절돼도 **레코드는 `TRANSCRIBED`(또는 `TEACHER_SPEAKER_CONFIRMED`)에 그대로 남고 실패로 확정되지 않습니다.** 복구 경로는 다음과 같습니다(`recordingRecovery.ts`, `netlify/functions/recover-transcribed-recordings.ts`, 테스트로 확인).
 
 - 예약 함수 `recover-transcribed-recordings`(15분마다)가 마지막 상태 변경 후 **10분이 지난** `TRANSCRIBED` **및** `TEACHER_SPEAKER_CONFIRMED` 레코드를 다시 트리거합니다. 설정을 고치면 다음 주기에 정상 처리됩니다.
-- **24시간 이상** 처리 요청이 계속 거절되면 복구가 포기하고 `ANALYSIS_FAILED`로 확정합니다(그 전에 설정을 고쳐야 합니다. 이후는 운영자가 수동 처리).
+- **24시간 이상** 처리 요청이 계속 거절되면 복구가 포기하고 `ANALYSIS_FAILED`로 확정합니다(그 전에 설정을 고쳐야 합니다). **앱에는 이 상태를 되돌리는 기능이 없습니다** — 아래 7-4.
 - 강사가 화자 확인 직후 트리거가 거절되면 확인은 저장되고 `triggered=false`가 되며, 같은 화자를 다시 누르면 재트리거됩니다.
 - 예약 함수는 **게시된(published) 배포에서만** 실행됩니다. Deploy Preview에서는 돌지 않습니다.
 
@@ -100,6 +110,26 @@ enforce 로 가기 전에 아래를 Netlify 콘솔에서 사람이 확인해야 
 - `RECORDING_TARGET_GUARD`를 제거하거나 `observe`로 되돌리고 **재배포**하면 즉시 예전 동작입니다(코드 롤백 불필요).
 - Netlify에서 이전 배포를 다시 게시하면 그 배포의 **환경변수 스냅샷**으로 돌아갑니다. 변수만 고치고 재배포하지 않으면 반영되지 않습니다.
 - 변수를 되돌렸는데도 거절이 계속되면, 거절된 레코드가 24시간 안에 다음 복구 주기로 재처리되는지 확인합니다.
+
+### 7-4. `ANALYSIS_FAILED`가 된 뒤의 복구 (현재 **미구현·미입증** — 절차 제안일 뿐)
+
+**코드로 확인된 사실**
+- 앱은 `ANALYSIS_FAILED`를 되돌리지 못합니다. 교사의 재업로드는 `not_retryable`로 거절됩니다(`recordingUpload.ts`의 `RETRYABLE_UPLOAD_STATES`는 `UPLOAD_FAILED`·`TRANSCRIPTION_FAILED`뿐 — transcript가 이미 있어 재업로드하면 전사 비용을 두 번 내기 때문). 처리 함수(`processRecording`)도 `TRANSCRIBED`·`TEACHER_SPEAKER_CONFIRMED`에서만 분석을 시작하고 그 밖의 상태는 아무것도 하지 않습니다(기존 테스트가 고정). 저장소에서 재분석 기능·스크립트는 키워드 검색으로 찾지 못했습니다(전수 확인은 아님).
+- 복구가 24시간 뒤 포기할 때 `errorMessage`는 정확히 `Background processing never started; automatic recovery gave up after 24h` 입니다(테스트가 코드·문서 일치를 확인). 이 문구가 있는 레코드만 "처리 요청이 시작되지 못해" 실패한 것이고, 분석 자체 실패(Claude 실패, transcript 없음 등)로 `ANALYSIS_FAILED`가 된 레코드와 구별됩니다.
+- 이 실패 확정은 `processingStatus`와 `errorMessage` **두 필드만** 바꿉니다(`recover-transcribed-recordings.ts`). `providerTranscriptId`, 저장된 발화(`transcriptUtterances`), 강사의 화자 선택(`confirmedTeacherSpeaker`)은 그대로 남습니다.
+- 복구 대상 판정은 `updatedAt`을 기준으로 합니다(스키마의 `@updatedAt`은 Prisma Client가 채우는 값). **상태만 되돌리고 `updatedAt`이 24시간 이상 오래된 채로 두면, 다음 15분 주기에 다시 `ANALYSIS_FAILED`로 확정되고 트리거는 하지 않습니다**(동작 테스트로 확인).
+
+**입증되지 않은 것 (그래서 구체적인 명령은 만들지 않았습니다)**
+- 운영 DB에서 상태를 되돌리는 안전한 방법(Prisma로 갱신하면 `updatedAt`이 갱신되지만, 직접 SQL이면 갱신되지 않을 수 있음 — 코드 기준 추정이며 실제로 시험하지 않았습니다).
+- 되돌릴 상태가 `TRANSCRIBED`인지 `TEACHER_SPEAKER_CONFIRMED`인지의 판정 규칙(코드상 `confirmedTeacherSpeaker`가 있고 저장된 발화가 있으면 후자일 것으로 **추정**되지만 시험하지 않았습니다).
+- 되돌린 뒤 남아 있는 `errorMessage`가 화면·후속 처리에 영향을 주는지.
+- AssemblyAI 쪽에 transcript가 24시간 이후에도 남아 있는지(우리 코드는 transcript를 삭제하지 않지만, 공급자의 보관 정책은 확인하지 않았습니다).
+- 되돌린 레코드가 정말 다음 복구 주기에 정상 처리돼 Claude가 한 번만 호출되는지(처리 로직은 가짜 DB 테스트로만 확인됨).
+
+**운영자가 지금 할 수 있는 안전한 행동(제안, 오너 승인 필요)**
+1. enforce 전환 전에: 복구가 포기하기 **전에** 잡을 수 있도록, `TRANSCRIBED`/`TEACHER_SPEAKER_CONFIRMED`에 **1시간 넘게** 머무는 레코드를 enforce 직후 며칠 동안 사람이 확인합니다(복구 유예 10분 + 주기 15분을 감안한 임의 기준). 이를 자동으로 알려 주는 코드·알림은 **현재 없습니다**(미구현).
+2. 24시간이 지나 `ANALYSIS_FAILED`가 된 레코드가 생기면: 원인 설정을 먼저 고치고(실효 모드 로그로 확인), 해당 레코드의 `errorMessage`가 위 문구인지로 범위를 정한 뒤, **개발자와 오너가 별도 승인으로** 복구 방법을 결정합니다. 승인 전에는 운영 데이터를 직접 고치지 않습니다.
+3. 후속으로 필요한 것(이 PR 범위 밖): 위 "입증되지 않은 것"을 비운영 DB(저장소의 임베디드 Postgres 통합 테스트 방식)에서 검증하는 검토된 복구 스크립트와 테스트. 이것이 생기기 전까지 이 절은 완료된 기능이 아니라 제안입니다.
 
 ## 8. 로그 사유 코드 (값·URL·비밀은 절대 남기지 않음)
 
@@ -115,10 +145,12 @@ enforce 로 가기 전에 아래를 Netlify 콘솔에서 사람이 확인해야 
 | | `header_missing`, `header_mismatch`, `app_env_not_configured` | 수신 쪽 환경 헤더 검사 |
 | `recording-target-config` | `guard_mode_invalid`, `production_site_origin_entry_invalid`, `site_name_invalid` | 설정 값 자체의 문제(모드와 무관하게 로그) |
 | `recording-trigger-redirect` | `redirect_not_followed` | 처리 함수가 3xx 로 응답 |
+| `recording-target-mode` | `mode_observe`, `mode_enforce` | **실효 모드**(이 인스턴스가 실제로 적용하는 모드). 호출하는 쪽(트리거 첫 호출)·받는 쪽(처리 함수 첫 요청)에서 인스턴스당 한 번. 설정이 반영됐는지 양성으로 확인하는 용도. 값·URL·환경변수 내용은 남기지 않음 |
 
 운영(`APP_ENV=production`)에서 `PRODUCTION_SITE_ORIGIN`의 잘못된 항목은 거부 사유로 쓰지 않고(운영 트리거를 설정 오타로 막지 않기 위해) `recording-target-config`로만 로그합니다.
 
 ## 9. 테스트로 확인한 것 / 하지 않은 것
 
 확인(로컬, `scripts/test-recordingTarget.ts` 및 기존 녹음 테스트): 규칙 표, observe/enforce, 환경 간 호출(Preview→Production 403, Production→Production 통과, 헤더 없는 구형 호출자→enforce 403), 가드 값 오타·빈 문자열, 끝 점·사용자 정의 도메인·`SITE_NAME` 별칭, 잘못된 `PRODUCTION_SITE_ORIGIN`, 301/302/303/307/308 리다이렉트(로컬 loopback 서버로 비밀값 헤더가 다른 origin 에 가지 않음), 실제 Netlify 함수 모듈을 통한 환경 검사(403/401/503), 기본 로그 경로의 비노출, 설정 오류 시 상태 유지·재시도·24시간 한계.
-확인하지 않음: 실제 Netlify 환경변수 값·Scope, 운영/Preview URL 호출, 운영 로그, 실제 AssemblyAI·Claude·R2 호출. 함수 모듈 테스트는 DB 접근 전에 거절되는 경로만 실행하며, 통과 경로는 `processRecording` 테스트(`test-recordingProcessing.ts`)가 별도로 다룹니다.
+실효 모드 로그와 `ANALYSIS_FAILED` 문서가 기대는 코드 사실(실패 확정 문구, 보존되는 필드, `updatedAt` 기준 재실패)도 테스트로 고정되어 있습니다.
+확인하지 않음: 실제 Netlify 환경변수 값·Scope·요금제, 운영/Preview URL 호출, 운영 로그, 실제 AssemblyAI·Claude·R2 호출. 함수 모듈 테스트는 DB 접근 전에 거절되는 경로만 실행하며, 통과 경로는 `processRecording` 테스트(`test-recordingProcessing.ts`)가 별도로 다룹니다.

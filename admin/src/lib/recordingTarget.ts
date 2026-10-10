@@ -175,6 +175,15 @@ export function logTargetEventOnce(log: TargetLog, message: string, reason: stri
 function logOnce(log: TargetLog, kind: "denied" | "observe", reason: string, mode: GuardMode) {
   logTargetEventOnce(log, kind === "denied" ? "recording-target-denied" : "recording-target-observe", reason, mode);
 }
+/**
+ * 이 인스턴스가 실제로 적용하는 모드를 인스턴스당 한 번 로그로 남긴다(reason = mode_observe | mode_enforce, 값·URL·환경변수 내용 없음).
+ * "enforce 를 설정했는데 실제로는 observe" 인 경우(변수가 함수 런타임 Scope 에 없음, 재배포 누락, 오타)를 로그에서 양성 신호로 확인하기 위한 것이다.
+ * 로그가 없다는 것만으로는 켜졌는지 꺼졌는지 알 수 없다.
+ */
+export function logEffectiveGuardMode(env: EnvLike, log: TargetLog = defaultTargetLog) {
+  const mode = readGuardMode(env);
+  logTargetEventOnce(log, "recording-target-mode", mode === "enforce" ? "mode_enforce" : "mode_observe", mode);
+}
 function logConfigIssues(env: EnvLike, log: TargetLog, mode: GuardMode) {
   for (const issue of diagnoseRecordingConfig(env)) logTargetEventOnce(log, "recording-target-config", issue, mode);
 }
@@ -212,6 +221,7 @@ export function readRecordingEnvCheck(env: EnvLike, log: TargetLog = defaultTarg
   const parsed = parseAppEnv(env.APP_ENV);
   const { mode, invalid } = readGuardModeDetailed(env);
   if (invalid) logTargetEventOnce(log, "recording-target-config", "guard_mode_invalid", mode);
+  logEffectiveGuardMode(env, log);
   return { mode, appEnv: parsed.ok ? parsed.appEnv : null };
 }
 

@@ -685,6 +685,7 @@ async function reviewFixTests() {
       }
     }
     assert(w.lines.every((l) => !l.includes(SECRET)), "함수 모듈 경유 로그에 비밀값 없음");
+    assert(w.lines.some((l) => l.startsWith("recording-target-mode") && l.includes("mode_enforce")), "함수 모듈 경유: 실효 모드(mode_enforce)가 로그에 남음");
   }
 
   // ── (9) 기본 로그 경로(log 옵션 없음)가 URL·비밀값을 노출하지 않는다 ──
@@ -707,7 +708,7 @@ async function reviewFixTests() {
       w.restore();
     }
     const text = w.lines.join("\n");
-    for (const code of ["site_url_unset", "guard_mode_invalid", "production_site_origin_entry_invalid", "site_name_invalid", "redirect_not_followed", "recording-target-observe", "recording-target-denied", "recording-target-config"]) {
+    for (const code of ["site_url_unset", "guard_mode_invalid", "production_site_origin_entry_invalid", "site_name_invalid", "redirect_not_followed", "recording-target-observe", "recording-target-denied", "recording-target-config", "recording-target-mode", "mode_observe", "mode_enforce"]) {
       assert(text.includes(code), `기본 로그 경로: ${code} 기록됨`);
     }
     assert(!text.includes(SECRET) && !text.includes("example.com") && !text.includes("elsewhere") && !text.includes("https://") && !text.includes("nonsense") && !text.includes("bad name") && !text.includes("enforced"), "기본 로그 경로: 비밀값·URL·입력 값이 로그에 없음");
@@ -804,6 +805,108 @@ async function reviewFixTests() {
     // 코드 사실: 예약 복구 함수는 TEACHER_SPEAKER_CONFIRMED 도 대상으로 포함한다(리뷰 전제와 다름 — 문서에 사실대로 기록)
     const rec = fs.readFileSync(path.join(__dirname, "..", "netlify/functions/recover-transcribed-recordings.ts"), "utf8");
     assert(/processingStatus: \{ in: \["TRANSCRIBED", "TEACHER_SPEAKER_CONFIRMED"\] \}/.test(rec), "정적: recover-transcribed-recordings 는 TRANSCRIBED 와 TEACHER_SPEAKER_CONFIRMED 를 함께 재트리거 대상으로 삼음");
+  }
+
+  // ── (N4) 실효 모드 로그: 모드·사유 코드만, 인스턴스당 1회 ──
+  {
+    const collect = () => {
+      const entries: { message: string; reason: string; mode: string }[] = [];
+      return { entries, log: (message: string, d: { reason: string; mode: string }) => entries.push({ message, reason: d.reason, mode: d.mode }) };
+    };
+    const modeLines = (es: { message: string; reason: string; mode: string }[]) => es.filter((e) => e.message === "recording-target-mode");
+    // 보내는 쪽: 트리거 호출 때마다가 아니라 인스턴스당 한 번
+    for (const [label, guard, reason, mode] of [
+      ["enforce", "enforce", "mode_enforce", "enforce"],
+      ["미설정(변수가 런타임에 없는 경우와 구별되지 않음 → observe)", undefined, "mode_observe", "observe"],
+      ["observe", "observe", "mode_observe", "observe"],
+      ["오타(enforced) → observe + 설정 진단", "enforced", "mode_observe", "observe"],
+    ] as [string, string | undefined, string, string][]) {
+      resetRecordingTargetLogDedupe();
+      const c = collect();
+      const trigger = createRecordingTrigger({ env: { RECORDING_TARGET_GUARD: guard, APP_ENV: "production", URL: PROD, RECORDING_PROCESSING_SECRET: SECRET }, fetchImpl: stubFetch(202).fetchImpl, log: c.log });
+      await trigger(1);
+      await trigger(2);
+      await trigger(3);
+      const ml = modeLines(c.entries);
+      assert(ml.length === 1 && ml[0].reason === reason && ml[0].mode === mode, `실효 모드 로그(보내는 쪽, ${label}): 3회 호출해도 ${reason} 1줄 (실제 ${JSON.stringify(ml)})`);
+      assert(guard !== "enforced" || c.entries.some((e) => e.message === "recording-target-config" && e.reason === "guard_mode_invalid"), `실효 모드 로그(${label}): 오타면 guard_mode_invalid 도 함께 남음`);
+      assert(!JSON.stringify(c.entries).includes(PROD) && !JSON.stringify(c.entries).includes(SECRET) && !JSON.stringify(c.entries).includes("enforced"), `실효 모드 로그(${label}): URL·비밀값·입력 값 없음`);
+    }
+    // 주소·비밀값이 없어 호출을 못 하는 경우에도 모드는 남는다(설정 점검용)
+    {
+      resetRecordingTargetLogDedupe();
+      const c = collect();
+      const s = stubFetch(202);
+      await createRecordingTrigger({ env: { RECORDING_TARGET_GUARD: "enforce" }, fetchImpl: s.fetchImpl, log: c.log })(1);
+      assert(s.calls.length === 0 && modeLines(c.entries).length === 1 && modeLines(c.entries)[0].reason === "mode_enforce", "실효 모드 로그: 호출하지 못한 경우에도 남음");
+    }
+    // 받는 쪽: readRecordingEnvCheck 가 한 번만 남기고, 반환 값은 그대로
+    {
+      resetRecordingTargetLogDedupe();
+      const c = collect();
+      const c1 = readRecordingEnvCheck({ RECORDING_TARGET_GUARD: "enforce", APP_ENV: "production" }, c.log);
+      readRecordingEnvCheck({ RECORDING_TARGET_GUARD: "enforce", APP_ENV: "production" }, c.log);
+      assert(c1.mode === "enforce" && c1.appEnv === "production" && modeLines(c.entries).length === 1 && modeLines(c.entries)[0].reason === "mode_enforce", "실효 모드 로그(받는 쪽): enforce 1줄, 반환 값 변화 없음");
+      // 모드가 바뀌면(재배포 후 새 인스턴스를 흉내) 새 사유로 다시 남는다
+      readRecordingEnvCheck({ APP_ENV: "production" }, c.log);
+      assert(modeLines(c.entries).map((e) => e.reason).join() === "mode_enforce,mode_observe", "실효 모드 로그: 모드가 달라지면 새 사유로 기록");
+    }
+    // 기존 로그의 의미는 그대로: 거부/관찰 로그 건수는 모드 로그와 별개(selectRecordingSite 는 모드 로그를 내지 않는다)
+    {
+      resetRecordingTargetLogDedupe();
+      const c = collect();
+      selectRecordingSite({ APP_ENV: "preview", URL: PROD }, c.log);
+      assert(modeLines(c.entries).length === 0, "selectRecordingSite 자체는 모드 로그를 내지 않음(웹훅 주소 계산 등 기존 호출의 로그 건수 불변)");
+    }
+  }
+
+  // ── (N1) ANALYSIS_FAILED 문서가 기대는 코드 사실을 고정한다(복구 도구가 아니라 사실 확인) ──
+  {
+    const ADMIN = path.join(__dirname, "..");
+    const EXHAUSTED_MESSAGE = "Background processing never started; automatic recovery gave up after 24h";
+    const recSrc = fs.readFileSync(path.join(ADMIN, "src/lib/recordingRecovery.ts"), "utf8");
+    assert(recSrc.includes(EXHAUSTED_MESSAGE), "정적: 복구가 24시간 뒤 포기할 때 쓰는 errorMessage 가 문서에 인용한 문구와 같음");
+    const doc = fs.readFileSync(path.join(ADMIN, "docs/recording-environment-isolation.md"), "utf8");
+    assert(doc.includes(EXHAUSTED_MESSAGE), "정적: 문서가 위 errorMessage 를 그대로 인용함(코드와 문서 동기)");
+    const fn = fs.readFileSync(path.join(ADMIN, "netlify/functions/recover-transcribed-recordings.ts"), "utf8");
+    const exhaustedBlock = /async markRecoveryExhausted\([^)]*\) \{([\s\S]*?)\n    \},/.exec(fn)?.[1] ?? "";
+    const exhaustedData = /data: \{([^}]*)\}/.exec(exhaustedBlock)?.[1].replace(/\s+/g, " ").trim();
+    assert(exhaustedData === 'processingStatus: "ANALYSIS_FAILED", errorMessage', "정적: 복구의 실패 확정(markRecoveryExhausted)은 processingStatus·errorMessage 두 필드만 바꿈(transcript id·발화·화자 선택은 보존)");
+    const schema = fs.readFileSync(path.join(ADMIN, "prisma/schema.prisma"), "utf8");
+    const model = /model AudioRecording \{[\s\S]*?\n\}/.exec(schema)?.[0] ?? "";
+    assert(/updatedAt\s+DateTime\s+@updatedAt/.test(model) && /providerTranscriptId\s+String\?/.test(model) && /transcriptUtterances\s+Json\?/.test(model) && /confirmedTeacherSpeaker\s+String\?/.test(model), "정적: AudioRecording 에 updatedAt(@updatedAt)·providerTranscriptId·transcriptUtterances·confirmedTeacherSpeaker 가 있음");
+    const up = fs.readFileSync(path.join(ADMIN, "src/lib/recordingUpload.ts"), "utf8");
+    assert(/RETRYABLE_UPLOAD_STATES[^=]*=\s*Object\.freeze\(\["UPLOAD_FAILED", "TRANSCRIPTION_FAILED"\]\)/.test(up), "정적: 재업로드 가능한 상태는 UPLOAD_FAILED·TRANSCRIPTION_FAILED 뿐(ANALYSIS_FAILED 는 앱에서 재업로드 불가)");
+    // 상태만 되돌리고 updatedAt 을 갱신하지 않으면(예: 갱신 없이 값만 바꾼 수동 조작) 복구가 다시 실패로 확정하고 트리거는 하지 않는다
+    {
+      const now2 = new Date("2026-01-10T12:00:00Z");
+      const messages: string[] = [];
+      let triggers = 0;
+      const stale = { id: 9, updatedAt: new Date(now2.getTime() - 30 * 3600 * 1000), status: "TRANSCRIBED" as string };
+      const report = await recoverStuckTranscribedRecordings(
+        {
+          async findStuckTranscribed(olderThan) {
+            return stale.status === "TRANSCRIBED" && stale.updatedAt < olderThan ? [{ id: stale.id, updatedAt: stale.updatedAt }] : [];
+          },
+          async markRecoveryExhausted(id, msg) {
+            messages.push(msg);
+            stale.status = "ANALYSIS_FAILED";
+          },
+          async triggerProcessing() {
+            triggers++;
+            return true;
+          },
+          async findStuckAnalyzing() {
+            return [];
+          },
+          async markAnalysisAbandoned() {
+            return false;
+          },
+        },
+        now2,
+      );
+      assert(report.exhausted.join() === "9" && triggers === 0 && messages[0] === EXHAUSTED_MESSAGE && stale.status === "ANALYSIS_FAILED", "복구 동작: 상태를 되돌려도 updatedAt 이 24시간 이상 오래돼 있으면 다음 주기에 다시 ANALYSIS_FAILED 로 확정되고 트리거는 하지 않음");
+    }
   }
 
   // ── (F7) envCheck 는 필수 인자: 시그니처에서 ? 가 없어야 하고, 함수 진입점이 4번째 인자로 넘긴다 ──

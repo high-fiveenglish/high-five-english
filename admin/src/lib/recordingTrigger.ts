@@ -7,7 +7,7 @@
 // 호출 대상 사이트는 recordingTarget.ts 가 정한다(비운영이 운영 처리 함수를 부르지 않도록 — 그쪽 설명 참고).
 // 호출에는 비밀값 헤더와 함께 이 배포의 환경(APP_ENV)을 알리는 x-recording-source-env 를 싣는다.
 import { getRecordingProcessingSecret, RECORDING_PROCESSING_SECRET_HEADER, RECORDING_SOURCE_ENV_HEADER } from "./recordingProcessingAuth";
-import { defaultTargetLog, logTargetEventOnce, parseAppEnv, readGuardMode, selectRecordingSite, type EnvLike, type TargetLog } from "./recordingTarget";
+import { defaultTargetLog, logEffectiveGuardMode, logTargetEventOnce, parseAppEnv, readGuardMode, selectRecordingSite, type EnvLike, type TargetLog } from "./recordingTarget";
 
 const TRIGGER_TIMEOUT_MS = 5000;
 
@@ -26,6 +26,7 @@ export interface RecordingTriggerOptions {
 export function createRecordingTrigger(options: RecordingTriggerOptions = {}): (audioRecordingId: number) => Promise<boolean> {
   return async (audioRecordingId: number) => {
     const env = options.env ?? process.env;
+    logEffectiveGuardMode(env, options.log ?? defaultTargetLog);
     const siteUrl = selectRecordingSite(env, options.log);
     const secret = getRecordingProcessingSecret(env);
     if (!siteUrl || !secret) return false;

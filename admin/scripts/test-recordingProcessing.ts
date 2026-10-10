@@ -18,7 +18,7 @@ import {
 } from "../src/lib/recordingRecovery";
 
 /** These tests exercise processing logic, not the environment guard: the default (observe) check is passed explicitly because the parameter is required. */
-const OBSERVE_ENV_CHECK = readRecordingEnvCheck({});
+const OBSERVE_ENV_CHECK = readRecordingEnvCheck({}, () => {});
 
 let pass = 0;
 let fail = 0;
