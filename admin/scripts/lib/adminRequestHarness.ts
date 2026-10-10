@@ -69,3 +69,45 @@ export async function attempt(fn: () => Promise<unknown>): Promise<Outcome> {
     return { kind: classifyThrown(err), error: err };
   }
 }
+
+// ── 외부 연동 격리 ──────────────────────────────────────────────────────────────────
+// 앱 코드를 그대로 부르는 테스트라서, 로컬 셸에 운영 키가 있으면 서버 액션이 실제 Google Sheets / R2 / AI / AssemblyAI에
+// 접근할 수 있다. ① 외부 서비스 환경변수를 지우고(아무 연동도 설정되어 있지 않으면 앱은 "건너뜀"으로 동작한다)
+// ② 로컬(localhost) 밖으로 나가는 모든 TCP 연결을 막아 기록한다. 테스트는 마지막에 기록이 비어 있는지 확인한다.
+import net from "node:net";
+
+const EXTERNAL_ENV = /^(GOOGLE_|R2_|ANTHROPIC_|ASSEMBLYAI_|RECORDING_|KAKAO_|AWS_|SSO_SHARED_SECRET|MARKETING_SITE_URL|NETLIFY_|CLAUDE_)/;
+export const clearedEnvKeys: string[] = [];
+export const blockedExternalConnections: string[] = [];
+
+export function isolateExternalServices() {
+  for (const key of Object.keys(process.env)) {
+    if (EXTERNAL_ENV.test(key)) {
+      clearedEnvKeys.push(key);
+      delete process.env[key];
+    }
+  }
+  process.env.SSO_SHARED_SECRET = "rbac-integration-test-sso-secret"; // 서명 키만 가짜 값으로(임의 외부 서비스 아님)
+
+  const proto = net.Socket.prototype as unknown as { connect: (...args: unknown[]) => unknown };
+  const original = proto.connect;
+  proto.connect = function (this: unknown, ...args: unknown[]) {
+    // net.connect()는 Socket.connect([옵션, 콜백]) 처럼 배열 하나로 넘겨 부른다
+    const first = Array.isArray(args[0]) ? (args[0] as unknown[])[0] : args[0];
+    let host = "localhost";
+    if (first && typeof first === "object") {
+      const o = first as { host?: string; path?: string };
+      if (o.path) return original.apply(this, args); // unix socket
+      host = o.host ?? "localhost";
+    } else if (typeof first === "number" || (typeof first === "string" && /^\d+$/.test(first))) {
+      host = typeof args[1] === "string" ? (args[1] as string) : "localhost";
+    } else if (typeof first === "string") {
+      return original.apply(this, args); // path
+    }
+    if (!["localhost", "127.0.0.1", "::1", "0.0.0.0"].includes(host)) {
+      blockedExternalConnections.push(host);
+      throw new Error(`blocked external connection to ${host}`);
+    }
+    return original.apply(this, args);
+  };
+}

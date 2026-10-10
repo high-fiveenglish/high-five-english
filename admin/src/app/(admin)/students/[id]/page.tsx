@@ -4,7 +4,7 @@ import { DEFAULT_SITE_ID } from "@/lib/constants";
 import { StudentEditForm } from "./StudentEditForm";
 import { ConsultationNotes } from "./ConsultationNotes";
 import { formatAppDateTime } from "@/lib/appTime";
-import { requirePageActor } from "@/lib/pageAccess";
+import { requirePageActor, requirePageInScope } from "@/lib/pageAccess";
 import { parseRouteId } from "@/lib/routeId";
 
 const fmtDateTime = formatAppDateTime;
@@ -18,6 +18,8 @@ export default async function EditStudentPage({
   const { id } = await params;
   const studentId = parseRouteId(id);
   if (studentId === null) notFound();
+  // 협력사 계정은 다른 협력사/본사 직영 학생의 id를 직접 입력해도 어떤 데이터도 읽기 전에 404
+  await requirePageInScope(actor, "student", studentId);
 
   const [student, notes, agents] = await Promise.all([
     prisma.student.findUnique({ where: { id: studentId } }),
@@ -32,8 +34,6 @@ export default async function EditStudentPage({
   ]);
 
   if (!student) notFound();
-  // AGENT는 다른 협력사 학생 상세로 URL을 직접 쳐서 들어와도 막는다.
-  if (actor.role === "AGENT" && student.agentId !== actor.agentId) notFound();
 
   return (
     <div className="flex flex-col gap-6">

@@ -12,7 +12,8 @@
 // 실행(admin 디렉터리): TEST_DATABASE_URL=... npx tsx scripts/test-rbacAccess.integration.ts
 import fs from "node:fs";
 import path from "node:path";
-import { attempt, clearCookies, type Outcome } from "./lib/adminRequestHarness";
+import net from "node:net";
+import { attempt, blockedExternalConnections, clearCookies, clearedEnvKeys, isolateExternalServices, type Outcome } from "./lib/adminRequestHarness";
 import type { Actor } from "../src/lib/rbac";
 
 const raw = process.env.TEST_DATABASE_URL;
@@ -31,6 +32,8 @@ if (!["localhost", "127.0.0.1"].includes(url.hostname) || !/test/i.test(url.path
 }
 process.env.DATABASE_URL = raw;
 process.env.ADMIN_SESSION_SECRET = "rbac-integration-test-secret";
+// 외부 연동 격리(Google Sheets / R2 / AI / AssemblyAI 등) — 앱 모듈을 불러오기 전에 반드시 먼저
+isolateExternalServices();
 
 let passed = 0;
 let failed = 0;
@@ -156,6 +159,19 @@ async function main() {
   async function actAs(who: Who) {
     clearCookies();
     await createBackofficeSession(users[who].id);
+  }
+
+  // ───────── 0-a. 외부 연동 격리 자체 검사 ─────────
+  {
+    check("외부 연동 환경변수가 남아 있지 않음", !Object.keys(process.env).some((k) => /^(GOOGLE_SHEETS_|R2_|ANTHROPIC_|ASSEMBLYAI_)/.test(k)), clearedEnvKeys.join(","));
+    let blocked = false;
+    try {
+      net.connect({ host: "example.invalid", port: 443 }).on("error", () => {});
+    } catch {
+      blocked = true;
+    }
+    check("localhost 밖으로 나가는 연결은 차단되고 기록됨", blocked && blockedExternalConnections.includes("example.invalid"));
+    blockedExternalConnections.length = 0; // 자체 검사 기록은 비우고, 이후 테스트 중 새로 생기는 기록만 본다
   }
 
   // ───────── 0. 권한 판정 단위 ─────────
@@ -293,6 +309,25 @@ async function main() {
     check("협력사(기본 권한): 남의 수업 취소 차단", o2.kind === "forbidden", describe(o2));
     check("   └ 남의 수업 상태 그대로", (await prisma.classSession.findUniqueOrThrow({ where: { id: cB.id } })).status === "SCHEDULED");
   }
+  // 레벨테스트 폼의 강사 가용성 조회(공용 서버 액션) — 조회 권한(level_tests.view)만으로는 모든 강사의 근무시간·일정 충돌을 볼 수 없다
+  {
+    const availability = async (who: Who) => {
+      await actAs(who);
+      const mod = await import("../src/lib/teacherAvailability");
+      return attempt(() => mod.getAvailableTeachersForLevelTestSlot("2027-02-01", "10:00"));
+    };
+    const a = await availability("AGENT_A");
+    check("협력사(level_tests.view만 보유): 레벨테스트 강사 가용성 조회 차단", a.kind === "forbidden", describe(a));
+    const b = await availability("AGENT_B");
+    check("협력사 B도 동일하게 차단", b.kind === "forbidden", describe(b));
+    const m = await availability("MANAGER");
+    check("본사 MANAGER(level_tests.update 보유): 가용성 조회 정상", m.kind === "ok" && Array.isArray((m as { value: unknown }).value), describe(m));
+    const ad = await availability("ADMIN");
+    check("ADMIN: 가용성 조회 정상", ad.kind === "ok", describe(ad));
+    clearCookies();
+    const anon = await attempt(async () => (await import("../src/lib/teacherAvailability")).getAvailableTeachersForLevelTestSlot("2027-02-01", "10:00"));
+    check("로그인 없이 가용성 조회 → redirect", anon.kind === "redirect", describe(anon));
+  }
   await actAs("MANAGER");
   {
     const o = await act("students/[id]/sessions/actions", "getAvailableTeachersForSlot", "2027-02-01T10:00", 25);
@@ -374,6 +409,8 @@ async function main() {
     check("협력사: 자기 협력사 휴강 되돌리기 정상(회귀)", (await prisma.academyClosure.count({ where: { id: closureA.id } })) === 0);
     const own6 = await act("students/[id]/sessions/actions", "getAvailableTeachersForSlot", "2027-02-01T10:00", 25);
     check("협력사(schedules.create 부여) 강사 근무가능시간 조회 허용", own6.kind === "ok", describe(own6));
+    const own7 = await attempt(async () => (await import("../src/lib/teacherAvailability")).getAvailableTeachersForLevelTestSlot("2027-02-01", "10:00"));
+    check("협력사(level_tests.create/update 부여) 레벨테스트 가용성 조회 허용 — 권한이 있으면 동작", own7.kind === "ok", describe(own7));
   }
   // 협력사 B도 A의 레코드를 건드릴 수 없다(대칭)
   await actAs("AGENT_B");
@@ -496,6 +533,7 @@ async function main() {
   }
 
   await prisma.$disconnect();
+  check("테스트 중 localhost 밖으로 나간 연결이 없음", blockedExternalConnections.length === 0, blockedExternalConnections.join(","));
   console.log(failed === 0 ? `PASS: ${passed} checks` : `FAILED: ${failed} failed / ${passed} passed`);
   process.exit(failed === 0 ? 0 : 1);
 }
