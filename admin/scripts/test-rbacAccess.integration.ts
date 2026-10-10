@@ -132,6 +132,19 @@ async function main() {
   const cHQ = await mkSession(eHQ);
   const cA2 = await mkSession(eA);
   const cB2 = await mkSession(eB);
+  // 월평가서 상세 화면 허용 경로용 픽스처: 주 2회(월·수) 수강 + 완료된 과거 수업 8개(= 1회차 완료, 회차 길이 8)
+  const sM = await mkStudent("m", null);
+  const eM = await prisma.enrollment.create({
+    data: {
+      siteId: 1, studentId: sM.id, teacherId: teacher.id, agentId: null, packageMonths: 1, classMethod: "zoom", scheduleDays: "월수", classTime: "10:00",
+      classDurationMin: 25, totalSessions: 8, startDate: new Date("2026-09-07T00:00:00Z"), endDate: new Date("2026-10-05T00:00:00Z"), status: "ACTIVE",
+    },
+  });
+  for (let i = 0; i < 8; i++) {
+    await prisma.classSession.create({
+      data: { siteId: 1, enrollmentId: eM.id, studentId: sM.id, teacherId: teacher.id, durationMin: 25, status: "COMPLETED", scheduledAt: new Date(Date.UTC(2026, 8, 7 + i, 1, 0, 0)) },
+    });
+  }
   const mkLevelTest = (studentId: number, agentId: number | null) =>
     prisma.levelTest.create({ data: { siteId: 1, studentId, agentId, progressStatus: "접수", classMethod: "zoom", englishLevel: "beginner" } });
   const ltA = await mkLevelTest(sA.id, agentA.id);
@@ -208,6 +221,11 @@ async function main() {
     { page: "reservations/new/page", ADMIN: "ok", MANAGER: "ok", AGENT_A: "nf" },
     { page: "evaluations/page", ADMIN: "ok", MANAGER: "ok", AGENT_A: "nf" },
     { page: "monthly-evaluations/page", ADMIN: "ok", MANAGER: "ok", AGENT_A: "nf" },
+    // 평가서 상세 — 허용 경로(실제 수업/완료된 회차가 있는 경우)와 "없는 대상은 404" 대조군을 함께 둔다
+    { page: "evaluations/[id]/page", props: { params: { id: String(cA.id) } }, ADMIN: "ok", MANAGER: "ok", AGENT_A: "nf" },
+    { page: "evaluations/[id]/page", props: { params: { id: "999999" } }, ADMIN: "nf", MANAGER: "nf", AGENT_A: "nf" },
+    { page: "monthly-evaluations/[enrollmentId]/[cycleNumber]/page", props: { params: { enrollmentId: String(eM.id), cycleNumber: "1" } }, ADMIN: "ok", MANAGER: "ok", AGENT_A: "nf" },
+    { page: "monthly-evaluations/[enrollmentId]/[cycleNumber]/page", props: { params: { enrollmentId: String(eM.id), cycleNumber: "2" } }, ADMIN: "nf", MANAGER: "nf", AGENT_A: "nf" },
     { page: "schedule/new/page", ADMIN: "ok", MANAGER: "ok", AGENT_A: "nf" },
     // 협력사에도 열려 있는 화면 — 정상 접근 회귀
     { page: "page", ADMIN: "ok", MANAGER: "ok", AGENT_A: "ok" },
