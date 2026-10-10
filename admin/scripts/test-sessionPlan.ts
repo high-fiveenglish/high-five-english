@@ -396,14 +396,27 @@ for (const rel of ["src/lib/sessionPlan.ts", "src/lib/sessionPlanData.ts", "src/
 }
 {
   // 이번 PR이 바꾸지 않기로 한 기존 로직의 핵심 의미를 고정(tripwire). 의도적으로 바꾸는 후속 PR은 이 항목을 함께 갱신해야 한다.
-  const leave = read("src/lib/leaveApply.ts");
-  check("leaveApply: 세션을 LEAVE로 바꾸고 endDate를 extendedDays만큼 늘림", /status:\s*"LEAVE"/.test(leave) && /newEndDate\.setDate\(newEndDate\.getDate\(\) \+ params\.extendedDays\)/.test(leave) && !/classSession\.create/.test(leave));
+  // 휴강/연기는 lib/reschedule.ts 한 곳(정규 수업 재배치 cascade)이다. 계획기/생성 실행기는 여전히 이 코드를 import하지 않는다.
+  const leave = read("src/lib/reschedule.ts");
+  const leaveCode = leave.replace(/\/\/.*$/gm, "");
+  check(
+    "reschedule: 수업을 LEAVE로 바꾸고, 정규 수업(isSupplement=false) 1개를 다음 유효 슬롯에 배치하며, totalSessions는 건드리지 않음",
+    /status:\s*"LEAVE"/.test(leaveCode) && /isSupplement:\s*false/.test(leaveCode) && /findNextFreeRegularSlot/.test(leaveCode) && !/totalSessions:/.test(leaveCode) && !/planClassSessions|executeGeneration/.test(leaveCode),
+  );
   const hold = read("src/lib/holdApply.ts");
-  check("holdApply: 예정 수업을 HOLD로 멈추고 해제 시 7의 배수 일수만큼 밀며 endDate도 연장", /data:\s*\{\s*status:\s*"HOLD"\s*\}/.test(hold) && /Math\.ceil\(heldDays \/ 7\) \* 7/.test(hold) && /endDate:\s*newEndDate/.test(hold) && !/classSession\.create/.test(hold));
+  check("holdApply: 예정 수업을 HOLD로 멈추고 해제 시 7의 배수 일수만큼 밀며 endDate도 연장", /data:\s*\{\s*status:\s*"HOLD"\s*\}/.test(hold) && /Math\.ceil\(heldDays \/ 7\) \* 7/.test(hold) && /endDate:\s*newEndDate/.test(hold) && !/classSession\.create\(/.test(hold));
+  check(
+    "holdApply: 해제 시 밀린 정규 수업이 휴강/점유/충돌 자리면 reschedule과 같은 다음 유효 슬롯 규칙(findNextFreeRegularSlot)을 쓰고, advisory lock 아래에서 처리",
+    /findNextFreeRegularSlot\(/.test(hold) && /lockAll\(tx/.test(hold) && /closureDates/.test(hold) && /evaluationStateOf\(/.test(hold),
+  );
   const leaveActions = read("src/app/(admin)/leave-requests/actions.ts");
-  check("createAcademyClosure: 이미 존재하는 해당일 SCHEDULED 수업만 LEAVE 처리(수업을 만들지 않음)", /export async function createAcademyClosure/.test(leaveActions) && /status:\s*"SCHEDULED"/.test(leaveActions) && !/classSession\.create/.test(leaveActions) && /applyClassLeave\(tx/.test(leaveActions));
+  const closureFlow = read("src/lib/academyClosureFlow.ts");
+  check(
+    "createAcademyClosure: lib/academyClosureFlow.registerAcademyClosure로 위임하고, 그 날 SCHEDULED 수업만 재배치(source=ACADEMY_CLOSURE)",
+    /export async function createAcademyClosure/.test(leaveActions) && /registerAcademyClosure\(tx/.test(leaveActions) && /status:\s*"SCHEDULED"/.test(closureFlow) && /source:\s*"ACADEMY_CLOSURE"/.test(closureFlow),
+  );
   const classroom = read("src/lib/studentClassroom.ts");
-  check("remainingLessons: totalSessions - (COMPLETED|MAKEUP_NEEDED) 계산이 그대로", /enrollment\.totalSessions - sessions\.filter\(\(s\) => s\.status === "COMPLETED" \|\| s\.status === "MAKEUP_NEEDED"\)\.length/.test(classroom));
+  check("remainingLessons: 정규/보충을 분리하는 countLessons(정규 totalSessions - 정규 COMPLETED|MAKEUP_NEEDED)를 쓴다", /countLessons\(sessions, enrollment\.totalSessions\)/.test(classroom) && /remainingLessons:\s*c\.regularRemaining/.test(classroom));
   const enrollActions = read("src/app/(admin)/enrollments/actions.ts");
   const deleteFn = enrollActions.slice(enrollActions.indexOf("export async function deleteEnrollment"));
   check(

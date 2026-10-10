@@ -204,6 +204,8 @@ async function main() {
     { page: "home-notices/[id]/page", props: { params: { id: String(notice.id) } }, ADMIN: "ok", MANAGER: "ok", AGENT_A: "nf" },
     { page: "consult-channels/page", ADMIN: "ok", MANAGER: "ok", AGENT_A: "nf" },
     { page: "reviews/page", ADMIN: "ok", MANAGER: "ok", AGENT_A: "nf" },
+    // PR #15: 정규 강사 유급휴가 — 본사 전용(leave_requests.view)
+    { page: "teacher-paid-leaves/page", ADMIN: "ok", MANAGER: "ok", AGENT_A: "nf" },
     { page: "reservations/page", ADMIN: "ok", MANAGER: "ok", AGENT_A: "nf" },
     { page: "reservations/new/page", ADMIN: "ok", MANAGER: "ok", AGENT_A: "nf" },
     { page: "evaluations/page", ADMIN: "ok", MANAGER: "ok", AGENT_A: "nf" },
@@ -450,6 +452,11 @@ async function main() {
       ["reservations/actions", "createReservation", [undefined, fd({})]],
       ["reservations/actions", "cancelReservation", [`${resB.id}`]],
       ["enrollments/actions", "updateEnrollmentRequestStatus", [1, "CONTACTED"]],
+      // PR #15: 정규 강사 유급휴가 액션(leave_requests.update 부여 상태에서도 협력사는 차단)
+      ["teacher-paid-leaves/actions", "createPaidLeave", [undefined, fd({ teacherId: String(teacher.id), leaveDate: "2027-03-10" })]],
+      ["teacher-paid-leaves/actions", "approvePaidLeaveAction", [1]],
+      ["teacher-paid-leaves/actions", "rejectPaidLeaveAction", [1]],
+      ["teacher-paid-leaves/actions", "revokePaidLeaveAction", [1]],
     ];
     for (const [rel, name, args] of hq) {
       const o = await act(rel, name, ...args);

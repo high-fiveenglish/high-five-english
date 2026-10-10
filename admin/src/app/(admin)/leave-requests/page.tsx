@@ -22,6 +22,27 @@ const REQUEST_TYPE_LABEL: Record<string, string> = {
   TEACHER: "강사",
 };
 
+// 재배치 사유(source) — 새 방식으로 처리된 건에만 있다. 옛 건은 requestedByRole로 표시한다.
+const SOURCE_LABEL: Record<string, string> = {
+  STUDENT_POSTPONEMENT: "학생 연기",
+  ADMIN_POSTPONEMENT: "관리자 연기",
+  TEACHER_HOLD: "강사 홀드",
+  ACADEMY_CLOSURE: "학원 휴강",
+  PAID_LEAVE: "유급휴가",
+  OTHER_UNPAID_LEAVE: "무급 휴강",
+};
+
+function requestTypeCell(lr: { requestedByRole: string; source: string | null; finalSource: string | null; executedByRole: string | null; supersededByClosureId: number | null; quotaImpact: number }): string {
+  if (!lr.source) return REQUEST_TYPE_LABEL[lr.requestedByRole] ?? lr.requestedByRole;
+  const finalLabel = SOURCE_LABEL[lr.finalSource ?? lr.source] ?? lr.source;
+  const parts = [finalLabel];
+  // 관리자가 학생 대신 누른 학생 연기: 사유는 학생 연기, 실행자만 관리자
+  if (lr.source === "STUDENT_POSTPONEMENT" && lr.executedByRole && lr.executedByRole !== "STUDENT") parts.push(`(${REQUEST_TYPE_LABEL[lr.executedByRole] ?? lr.executedByRole} 대행)`);
+  if (lr.supersededByClosureId !== null) parts.push("← 학생 연기가 학원 휴강으로 대체됨(횟수 복구)");
+  else if (lr.quotaImpact === 1) parts.push("· 학생 연기 횟수 -1");
+  return parts.join(" ");
+}
+
 const STATUS_LABEL: Record<string, string> = {
   PENDING: "대기중",
   APPROVED: "승인됨",
@@ -225,13 +246,16 @@ function LeaveRequestTable({
           {leaveRequests.map((lr, i) => (
             <tr key={lr.id} className="border-b border-slate-100 last:border-0">
               <td className="px-4 py-3 text-slate-500">{totalCount - i}</td>
-              <td className="px-4 py-3 text-slate-600">{REQUEST_TYPE_LABEL[lr.requestedByRole] ?? lr.requestedByRole}</td>
+              <td className="px-4 py-3 text-slate-600">{requestTypeCell(lr)}</td>
               <td className="px-4 py-3 text-slate-500">{fmtDateTime(lr.createdAt)}</td>
               <td className="px-4 py-3 font-medium text-slate-900">{lr.student.name}</td>
               <td className="px-4 py-3 text-slate-600">{lr.classSession.teacher.realName}</td>
               <td className="px-4 py-3 text-slate-600">{fmtDateTime(lr.classSession.scheduledAt)}</td>
               <td className="px-4 py-3 text-slate-500">{lr.reason ?? "-"}</td>
-              <td className="px-4 py-3 text-slate-600">+{lr.extendedDays}일</td>
+              <td className="px-4 py-3 text-slate-600">
+                +{lr.extendedDays}일
+                {lr.replacementSessionId !== null && <span className="ml-1 text-xs text-slate-400">(정규 수업 재배치)</span>}
+              </td>
               <td className="px-4 py-3">
                 <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${STATUS_STYLE[lr.status]}`}>
                   {STATUS_LABEL[lr.status]}

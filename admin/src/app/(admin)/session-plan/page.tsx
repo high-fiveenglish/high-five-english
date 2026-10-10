@@ -109,6 +109,7 @@ function RowDetails({ row }: { row: EnrollmentPlanRow }) {
 
       {row.skippedStartedToday.length > 0 && <p>오늘 이미 시작한(또는 지금 시작하는) 수업이라 만들지 않음: {row.skippedStartedToday.map(shortDate).join(", ")}</p>}
 
+      {row.skippedPaidLeave.length > 0 && <p>담당 강사의 승인된 유급휴가일이라 만들지 않음: {row.skippedPaidLeave.map(shortDate).join(", ")}</p>}
       {row.skippedClosure.length > 0 && <p>휴강일이라 만들지 않음: {row.skippedClosure.map(shortDate).join(", ")} (종료일은 연장하지 않음)</p>}
 
       {row.timeVerification === "UNVERIFIED" && (
@@ -200,7 +201,7 @@ export default async function SessionPlanPage({ searchParams }: { searchParams: 
         <Card
           label="건너뛴 세션"
           value={summary.sessionsSkipped.total}
-          hint={`과거 ${summary.sessionsSkipped.pastDates} · 오늘 시작 ${summary.sessionsSkipped.startedToday} · 휴강 ${summary.sessionsSkipped.closure} · 기존 ${summary.sessionsSkipped.alreadyExisting} · 충돌 보류 ${summary.sessionsSkipped.withheldByConflict}`}
+          hint={`과거 ${summary.sessionsSkipped.pastDates} · 오늘 시작 ${summary.sessionsSkipped.startedToday} · 휴강 ${summary.sessionsSkipped.closure} · 유급휴가 ${summary.sessionsSkipped.paidLeave} · 기존 ${summary.sessionsSkipped.alreadyExisting} · 충돌 보류 ${summary.sessionsSkipped.withheldByConflict}`}
         />
         <Card label="ACTIVE 아님(계산 제외)" value={summary.nonActiveExcluded} hint="HOLDING/APPLIED/PAID" />
       </div>

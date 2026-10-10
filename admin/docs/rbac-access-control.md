@@ -56,6 +56,7 @@
 | `/schedule`, `/pricing` | `schedules.view`, `pricing.view` | 자기 협력사 범위(기존) |
 | `/leave-requests` | 전체수업휴강 탭 `academy_closures.view`, 그 외 `leave_requests.view` | 전체수업휴강 탭으로 고정(기존) |
 | `/settlements`, `/student-holds` | `enrollments.view`(기존) | 자기 협력사 |
+| `/teacher-paid-leaves` | `leave_requests.view` (액션은 `leave_requests.update` + 본사 전용) | 차단 |
 | `/accounts`, `/permissions`, `/audit-log`, `/session-plan` | ADMIN만(기존) | 차단 |
 | `/`, `/my-profile` | 로그인(역할별 화면) | 자기 협력사 통계 / 본인 정보 |
 

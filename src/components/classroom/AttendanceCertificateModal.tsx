@@ -54,6 +54,11 @@ export function AttendanceCertificateModal({
             <StatTile label="수강수" value={`${stats.takenLessons}회`} />
             <StatTile label="잔여강의수" value={`${stats.remainingLessons}회`} />
           </div>
+          {(stats.supplementTaken ?? 0) > 0 && (
+            <p className="mt-2 text-[11px] text-slate-500">
+              ※ 위 회차는 정규 수업 기준입니다. 별도로 진행한 보충수업 {stats.supplementTaken}회가 있어 실제 받은 수업은 총 {stats.providedLessons}회입니다(보충수업은 정규 회차에 포함되지 않습니다).
+            </p>
+          )}
         </div>
 
         <div className="mt-5">

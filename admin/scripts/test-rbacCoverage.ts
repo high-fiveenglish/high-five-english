@@ -146,6 +146,8 @@ const PAGES: Record<string, PagePolicy> = {
   "level-tests/[id]/result/page.tsx": P("level_tests.view", { scope: "levelTest" }),
   "schedule/page.tsx": P("schedules.view"),
   "pricing/page.tsx": P("pricing.view"),
+  // PR #15(연기·유급휴가)에서 추가된 화면
+  "teacher-paid-leaves/page.tsx": P("leave_requests.view", HQ),
 };
 
 const adminPages = walk(ADMIN).filter((f) => f.endsWith("page.tsx"));
@@ -206,6 +208,7 @@ type ActionPolicy = {
   scope?: string; // requireInScope(prisma, actor, "<kind>", ...)
   inline?: RegExp; // 소속 검사를 그 함수 안에서 직접 구현한 기존 코드(변경보다 먼저여야 함)
   also?: RegExp[];
+  alsoUnordered?: true; // 검사를 트랜잭션 안의 도메인 함수에 위임하는 경우 — 순서는 위임 대상 파일을 따로 검사한다
   note?: string;
 };
 const A = (perm: string, o: Omit<ActionPolicy, "perm"> = {}): ActionPolicy => ({ perm, ...o });
@@ -222,6 +225,8 @@ const ACTIONS: Record<string, Record<string, ActionPolicy>> = {
   "enrollments/actions.ts": {
     updateEnrollmentRequestStatus: A("enrollment_requests.update", H),
     findAvailableTeachersForSchedule: A("enrollments.view"),
+    // PR #15: 연기 횟수 조정은 본사 전용(협력사 계정은 오류 반환)
+    adjustEnrollmentLeaveQuota: A("enrollments.update", { also: [/actor\.role === "AGENT"\) return \{ error/], note: "협력사 계정 거부" }),
     createEnrollment: A("enrollments.create", { inline: /student\.agentId !== actor\.agentId/ }),
     updateEnrollment: A("enrollments.update", { inline: /existing\.agentId !== actor\.agentId/ }),
     updateEnrollmentStatus: A("enrollments.update", { inline: /existing\.agentId !== actor\.agentId/ }),
@@ -236,7 +241,8 @@ const ACTIONS: Record<string, Record<string, ActionPolicy>> = {
     rejectLeaveRequest: A("leave_requests.update", { scope: "leaveRequest" }),
     revertLeaveRequest: A("leave_requests.revert", { scope: "leaveRequest" }),
     createAcademyClosure: A("academy_closures.create", { inline: /agentId/ }),
-    revertAcademyClosure: A("academy_closures.revert", { inline: /closure\.agentId !== actor\.agentId/ }),
+    // PR #15: 소속 검사가 lib/academyClosureFlow.ts(트랜잭션 안, 잠금·변경 전)로 옮겨졌다 — 아래 별도 검사 참고
+    revertAcademyClosure: A("academy_closures.revert", { also: [/agentScopeId: actor\.role === "AGENT" \? actor\.agentId : null/], alsoUnordered: true, note: "협력사 범위를 도메인 함수에 전달" }),
   },
   "level-tests/actions.ts": {
     createLevelTest: { also: [/createLevelTestCore\(/], note: "권한·소속 검사는 createLevelTestCore(level_tests.create + 학생 소속)" },
@@ -275,6 +281,9 @@ const ACTIONS: Record<string, Record<string, ActionPolicy>> = {
   },
   "students/[id]/level-test/actions.ts": { createLevelTestForStudent: { also: [/createLevelTestCore\(/], note: "권한·소속 검사는 createLevelTestCore" } },
   "students/[id]/sessions/actions.ts": {
+    // PR #15에서 추가된 액션 — 학생 소속은 assertStudentInScope(오류 반환)로 확인
+    resetEvaluation: A("schedules.update", { inline: /assertStudentInScope\(actor, studentId\)/ }),
+    adjustStudentLeaveQuota: A("enrollments.update", { inline: /assertStudentInScope\(actor, studentId\)/ }),
     getAvailableTeachersForSlot: A("schedules.create"),
     addSupplementSession: A("schedules.create", { scope: "student" }),
     applyStudentLeave: A("leave_requests.update", { scope: "student" }),
@@ -292,6 +301,13 @@ const ACTIONS: Record<string, Record<string, ActionPolicy>> = {
     updateTeacherAccountStatus: A("teachers.update", H),
   },
   "teachers/mediaUploadActions.ts": { getTeacherMediaUploadUrl: A("teachers.update", H) },
+  // PR #15: 정규 강사 유급휴가 — 모든 액션이 actorForPaidLeave()(leave_requests.update + 본사 전용)를 먼저 부른다
+  "teacher-paid-leaves/actions.ts": {
+    createPaidLeave: { also: [/actorForPaidLeave\(\)/], note: "actorForPaidLeave" },
+    approvePaidLeaveAction: { also: [/actorForPaidLeave\(\)/], note: "actorForPaidLeave" },
+    rejectPaidLeaveAction: { also: [/actorForPaidLeave\(\)/], note: "actorForPaidLeave" },
+    revokePaidLeaveAction: { also: [/actorForPaidLeave\(\)/], note: "actorForPaidLeave" },
+  },
 };
 
 // src/lib 아래 "use server" — 클라이언트가 직접 호출할 수 있는 서버 액션이다
@@ -330,7 +346,7 @@ function checkAction(label: string, body: string, policy: ActionPolicy) {
     check(`${label}: ${policy.note ?? re}`, re.test(body));
     const ai = firstIndex(body, re);
     const firstData = firstIndex(body, DATA_ACCESS);
-    check(`${label}: 검사/위임이 데이터 접근보다 먼저`, ai >= 0 && (firstData < 0 || ai < firstData));
+    if (!policy.alsoUnordered) check(`${label}: 검사/위임이 데이터 접근보다 먼저`, ai >= 0 && (firstData < 0 || ai < firstData));
   }
   if (!policy.perm && !policy.anyPerm && !policy.also && !policy.note) check(`${label}: 검사 정의가 비어 있음`, false);
   void idxs;
@@ -383,6 +399,21 @@ for (const f of allServerFiles) {
 }
 for (const key of Object.keys(ACTIONS)) check(`ACTIONS 표의 파일 ${key}가 실제로 존재`, fs.existsSync(path.join(ADMIN, key)));
 for (const key of Object.keys(LIB_ACTIONS)) check(`LIB_ACTIONS 표의 파일 ${key}가 실제로 존재`, fs.existsSync(path.join(SRC, key)));
+
+// PR #15 위임 대상 검사: 도우미/도메인 함수 안에 실제 검사가 있는지
+{
+  const paid = read(path.join(ADMIN, "teacher-paid-leaves/actions.ts"));
+  const helper = /async function actorForPaidLeave\(\)\s*\{([\s\S]*?)\n\}/.exec(paid)?.[1] ?? "";
+  const iLogin = helper.indexOf("requireBackofficeActor()");
+  const iPerm = helper.indexOf('requirePermission(actor, "leave_requests.update")');
+  const iHq = helper.indexOf("requireHeadquarters(actor)");
+  check("teacher-paid-leaves: actorForPaidLeave가 로그인 → leave_requests.update → 본사 전용 순서", iLogin >= 0 && iLogin < iPerm && iPerm < iHq);
+  const flow = read(path.join(SRC, "lib/academyClosureFlow.ts"));
+  const revert = /export async function revertAcademyClosure\b[\s\S]*/.exec(flow)?.[0] ?? "";
+  const scopeAt = revert.indexOf("if (input.agentScopeId && closure.agentId !== input.agentScopeId) return null;");
+  const firstWrite = firstIndex(revert, /lockClosureDay\(|\.delete\(|revertReschedule\(/);
+  check("academyClosureFlow.revertAcademyClosure: 협력사 범위 검사가 잠금·변경보다 먼저", scopeAt >= 0 && scopeAt < firstWrite);
+}
 
 // ───────────────────────── 4. 모든 API 라우트 ─────────────────────────
 // 종류를 반드시 선언한다. 같은 종류는 같은 검사를 받는다.

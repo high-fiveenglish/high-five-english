@@ -19,6 +19,7 @@ import {
   type ExecuteResult,
 } from "../src/lib/sessionGeneration";
 import { countSessionsBlockingDeletion } from "../src/lib/enrollmentDeletion";
+import { approvePaidLeave, requestPaidLeave } from "../src/lib/teacherPaidLeave";
 
 const raw = process.env.TEST_DATABASE_URL;
 if (!raw) {
@@ -586,6 +587,123 @@ test("수강 삭제 가드: 소프트 삭제된 세션 포함 세션이 있으�
     fkBlocked = true;
   }
   check("가드 없이 삭제를 시도하면 FK가 막음(안내 메시지가 필요한 이유)", fkBlocked);
+});
+
+const eqStr = (a: string[], b: string[]) => JSON.stringify(a) === JSON.stringify(b);
+// ── 승인된 강사 유급휴가일에는 정규 수업을 만들지 않는다(계획기 + 실행기의 락 안 재계획) ─────────────────────────────────────────────────
+const GA = { role: "ADMIN" as const, id: 1, name: "admin" };
+async function mkRegularTeacher() {
+  const t = await mkTeacher();
+  return db.teacher.update({ where: { id: t.id }, data: { employmentType: "REGULAR" } });
+}
+/** 유급휴가 요청 + 승인(관리자). 승인은 강사 락을 먼저 잡고 그 날 수업을 재배치한다. */
+async function approveLeave(teacherId: number, iso: string) {
+  const req = await db.$transaction((tx) => requestPaidLeave(tx, { teacherId, leaveDate: iso, actor: GA, siteId: 1, now: NOW }));
+  if (!req.ok) throw new Error(req.error);
+  const res = await db.$transaction((tx) => approvePaidLeave(tx, { paidLeaveId: req.paidLeaveId, actor: GA, now: NOW }), { timeout: 60_000, maxWait: 30_000 });
+  if (!res.ok) throw new Error(res.error);
+  return res;
+}
+const activeOnDay = (teacherId: number, iso: string) =>
+  db.classSession.count({
+    where: { teacherId, deletedAt: null, status: { in: ["SCHEDULED", "COMPLETED", "HOLD"] }, scheduledAt: { gte: new Date(`${iso}T00:00:00+09:00`), lt: new Date(new Date(`${iso}T00:00:00+09:00`).getTime() + 86_400_000) } },
+  });
+const keyDates = async (enrollmentId: number) => (await db.classSession.findMany({ where: { enrollmentId, status: { not: "LEAVE" } }, orderBy: { scheduledAt: "asc" } })).map((s) => s.generationKey?.split(":")[1] ?? "-");
+
+test("유급휴가: 이미 승인된 날짜에는 정규 수업이 생성되지 않고 미리보기에도 표시된다(다른 강사·다른 수강은 영향 없음)", async () => {
+  await reset();
+  const t1 = await mkRegularTeacher();
+  const e1 = await mkSimple("화", "19:00", 25, t1.id); // 10/6, 10/13, 10/20, 10/27
+  const e2 = await mkSimple("화", "19:00"); // 다른 강사
+  const ap = await approveLeave(t1.id, "2026-10-13");
+  check("(전제) 아직 수업이 없으므로 승인은 재배치 0건", ap.ok && ap.movedSessions === 0);
+  const p = await previewGeneration(db, { mode: "FULL", enrollmentIds: [e1.id, e2.id], asOf: NOW });
+  const r1 = p.scopeRows.find((r) => r.enrollmentId === e1.id)!;
+  check("미리보기: 10/13 제외 + skippedPaidLeave에 표시", r1.skippedPaidLeave.join() === "2026-10-13" && r1.plannedSessions.map((s) => s.date).join() === "2026-10-06,2026-10-20,2026-10-27", r1.plannedSessions.map((s) => s.date).join());
+  await run("FULL", [e1.id, e2.id]);
+  check("실행: 그 강사의 수강은 3건(10/13 없음)", eqStr(await keyDates(e1.id), ["2026-10-06", "2026-10-20", "2026-10-27"]), (await keyDates(e1.id)).join());
+  check("그 날 그 강사의 수업은 하나도 없음", (await activeOnDay(t1.id, "2026-10-13")) === 0);
+  check("다른 강사의 수강은 영향 없음(4건, 10/13 포함)", eqStr(await keyDates(e2.id), ["2026-10-06", "2026-10-13", "2026-10-20", "2026-10-27"]));
+});
+
+test("유급휴가: 미리보기 뒤에 승인되면 옛 미리보기 지문으로는 실행이 거부되고(PLAN_HASH_MISMATCH) 세션·배치가 하나도 생기지 않음", async () => {
+  await reset();
+  const t = await mkRegularTeacher();
+  const e = await mkSimple("화", "19:00", 25, t.id);
+  const ids = [e.id];
+  const p = await previewGeneration(db, { mode: "PILOT", enrollmentIds: ids, asOf: NOW }); // 10/13 포함
+  check("(전제) 승인 전 미리보기는 4건(10/13 포함)", p.expectedSessions === 4);
+  await approveLeave(t.id, "2026-10-13");
+  const before = await counts();
+  const code = await gateCode(() => executeGeneration(db, { mode: "PILOT", enrollmentIds: ids, asOf: NOW, expectedPlanHash: p.planHash, expectedSessions: p.expectedSessions, actorLabel: "itest", now: () => NOW }));
+  check("옛 계획으로 실행하면 PLAN_HASH_MISMATCH", code === "PLAN_HASH_MISMATCH", code);
+  const after = await counts();
+  check("아무것도 만들어지지 않음(세션/배치/항목 0)", after.sessions === before.sessions && after.sessions === 0 && after.batches === 0 && after.items === 0, JSON.stringify(after));
+  // 새로 미리보기하면 정상 실행(3건)
+  const p2 = await previewGeneration(db, { mode: "PILOT", enrollmentIds: ids, asOf: NOW });
+  check("새 미리보기는 3건", p2.expectedSessions === 3);
+});
+
+test("유급휴가: 실행기가 강사 락을 잡기 직전에 승인이 커밋되면 락 안 재계획이 STALE로 처리(해당 수강만), 다른 수강은 정상 생성", async () => {
+  await reset();
+  const t1 = await mkRegularTeacher();
+  const e1 = await mkSimple("화", "19:00", 25, t1.id);
+  const e2 = await mkSimple("목", "19:00");
+  let done = false;
+  const r = await run("FULL", [e1.id, e2.id], {
+    hooks: {
+      insideEnrollmentTx: async (id) => {
+        // 이 시점의 실행기 트랜잭션은 배치 행 잠금만 쥐고 있고 강사 락은 아직이다 — 승인이 먼저 끝까지 커밋된다.
+        if (id === e1.id && !done) {
+          done = true;
+          await approveLeave(t1.id, "2026-10-13");
+        }
+      },
+    },
+  });
+  const byId = new Map(r.items.map((i) => [i.enrollmentId, i]));
+  check("승인이 먼저 끝났으므로 그 수강은 STALE, 세션 0건(미리보기 계획으로 생성하지 않음)", byId.get(e1.id)?.outcome === "STALE" && (await db.classSession.count({ where: { enrollmentId: e1.id } })) === 0, JSON.stringify(byId.get(e1.id)));
+  check("다른 수강은 정상 생성(4건)", byId.get(e2.id)?.outcome === "GENERATED" && (await db.classSession.count({ where: { enrollmentId: e2.id } })) === 4);
+  check("그 날 그 강사의 수업 없음", (await activeOnDay(t1.id, "2026-10-13")) === 0);
+});
+
+test("유급휴가: 생성이 먼저 끝난 뒤 승인하면 승인이 그 날 생성된 수업을 재배치(정규 회차 유지, 휴가일에 활성 수업 없음)", async () => {
+  await reset();
+  const t = await mkRegularTeacher();
+  const e = await mkSimple("화", "19:00", 25, t.id);
+  await run("FULL", [e.id]);
+  check("(전제) 4건 생성, 10/13 포함", eqStr(await keyDates(e.id), ["2026-10-06", "2026-10-13", "2026-10-20", "2026-10-27"]));
+  const ap = await approveLeave(t.id, "2026-10-13");
+  check("승인: 정규 1건 재배치", ap.movedSessions === 1);
+  check("그 날 활성 수업 0건, 정규 4개 유지(대체는 11/3)", (await activeOnDay(t.id, "2026-10-13")) === 0 && eqStr(await keyDates(e.id), ["2026-10-06", "2026-10-20", "2026-10-27", "2026-11-03"]), (await keyDates(e.id)).join());
+});
+
+test("동시성(반복): 실행기와 유급휴가 승인이 동시에 같은 강사 락을 다퉈도 휴가일에 활성 수업이 남지 않고, 결과는 GENERATED(승인이 재배치) 또는 STALE(생성 안 함)", async () => {
+  await reset();
+  let generated = 0;
+  let stale = 0;
+  for (let round = 0; round < 4; round++) {
+    const t = await mkRegularTeacher();
+    const e = await mkSimple("화", "19:00", 25, t.id);
+    const holder: { approval: Promise<unknown> | null } = { approval: null };
+    const r = await run("FULL", [e.id], {
+      hooks: {
+        // 기다리지 않고 승인을 시작한다 — 실행기의 다음 단계(강사 락 요청)와 경쟁한다.
+        insideEnrollmentTx: (id) => {
+          if (id === e.id && !holder.approval) holder.approval = approveLeave(t.id, "2026-10-13");
+        },
+      },
+    });
+    await holder.approval;
+    const outcome = r.items.find((i) => i.enrollmentId === e.id)?.outcome;
+    const active = (await db.classSession.count({ where: { enrollmentId: e.id, status: { not: "LEAVE" } } }));
+    if (outcome === "GENERATED") generated++;
+    if (outcome === "STALE") stale++;
+    check(`라운드 ${round + 1}: 휴가일(10/13)에 활성 수업 0건`, (await activeOnDay(t.id, "2026-10-13")) === 0);
+    check(`라운드 ${round + 1}: ${outcome} — GENERATED면 정규 4개(승인이 하나를 뒤로 미룸), STALE이면 0개`, (outcome === "GENERATED" && active === 4) || (outcome === "STALE" && active === 0), `${outcome} active=${active}`);
+    check(`라운드 ${round + 1}: 유급휴가 승인 1건`, (await db.teacherPaidLeave.count({ where: { teacherId: t.id, status: "APPROVED" } })) === 1);
+  }
+  console.log(`  (참고) 생성 먼저 ${generated}회, 승인 먼저(STALE) ${stale}회`);
 });
 
 // ---------------------------------------------------------------------------------------------------------------------

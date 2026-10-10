@@ -4,12 +4,12 @@
 // db 클라이언트(일반/트랜잭션)를 인자로 받는다.
 import type { PrismaClient } from "@/generated/prisma/client";
 import { DEFAULT_SITE_ID } from "@/lib/constants";
-import { appDayStart } from "@/lib/appTime";
+import { appDayStart, formatAppDate } from "@/lib/appTime";
 import { LEVEL_TEST_DURATION_MIN } from "@/lib/scheduleConflict";
 import { planClassSessions, type PlanInput, type PlanResult } from "@/lib/sessionPlan";
 
 /** 로더가 쓰는 모델만 — 일반 클라이언트와 $transaction 콜백의 tx 둘 다 받는다. */
-export type PlanDb = Pick<PrismaClient, "enrollment" | "classSession" | "levelTest" | "academyClosure">;
+export type PlanDb = Pick<PrismaClient, "enrollment" | "classSession" | "levelTest" | "academyClosure" | "teacherPaidLeave">;
 
 /**
  * 현재 DB 상태를 읽어 계획 입력을 만든다.
@@ -18,6 +18,8 @@ export type PlanDb = Pick<PrismaClient, "enrollment" | "classSession" | "levelTe
  *    영향을 주지 않는다(대신 그 이전 세션은 "이미 존재하는 session" 목록에 나오지 않는다).
  *  - 강사 일정: 위 기간 이후의 레벨테스트(수업과 같은 강사 시간을 점유).
  *  - 휴강: 오늘 이후의 AcademyClosure. 생성 이력: 생성 배치로 만들어진 적 있는 수강(삭제된 세션 포함).
+ *  - 유급휴가: 오늘(KST) 이후 날짜의 승인된(APPROVED) TeacherPaidLeave — 그 강사의 그 날에는 정규 수업을 만들지 않는다.
+ *    실행기가 락 안에서 이 로더를 다시 호출하므로, 미리보기 뒤에 승인된 유급휴가도 실행 시점에 반영된다(계획이 달라져 STALE).
  */
 export async function loadSessionPlanInput(db: PlanDb, asOf: Date = new Date()): Promise<PlanInput> {
   const horizonStart = appDayStart(asOf, -1);
@@ -92,6 +94,14 @@ export async function loadSessionPlanInput(db: PlanDb, asOf: Date = new Date()):
     select: { date: true, agentId: true },
   });
 
+  const paidLeaves =
+    teacherIds.length === 0
+      ? []
+      : await db.teacherPaidLeave.findMany({
+          where: { teacherId: { in: teacherIds }, status: "APPROVED", leaveDate: { gte: new Date(`${formatAppDate(todayStart)}T00:00:00Z`) } },
+          select: { teacherId: true, leaveDate: true },
+        });
+
   return {
     asOf,
     enrollments: enrollments.map((e) => ({
@@ -128,6 +138,7 @@ export async function loadSessionPlanInput(db: PlanDb, asOf: Date = new Date()):
         : [],
     ),
     closures,
+    teacherPaidLeaves: paidLeaves.map((l) => ({ teacherId: l.teacherId, date: l.leaveDate })),
     alreadyGeneratedEnrollmentIds: generated.map((g) => g.enrollmentId),
   };
 }
